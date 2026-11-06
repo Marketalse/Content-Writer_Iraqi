@@ -6,7 +6,8 @@ output:
   labels_in_order: ["Hook:", "Content:", "CTA:"]
   hook: "A couple of words that grab attention so the reader keeps going. 15 words or fewer. A question, a surprise, or a sharp claim about the reader's business."
   content: "One intro line, then exactly 3 numbered points written as 1. 2. 3. Each point: a short title and at most one line of explanation. The 3rd point is the most important."
-  cta: "One line, 25 words or fewer, with one clear reason to follow or act. It is the last line of the reply."
+  cta: "One line, 25 words or fewer, with one clear reason to follow or act. It is the last line of the reply. Exactly one call to action."
+  keywords: "Carousel and LinkedIn only: one line after the CTA, starting with Keywords:, with 3 to 6 search keywords separated by commas. No hashtags."
   owner_note: "Optional. After the CTA, a line starting with NOTE FOR OWNER: is shown only to the owner and is never published."
 
 example: |

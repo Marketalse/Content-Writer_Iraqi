@@ -1,16 +1,17 @@
 """Quality gate for generated content.
 
-Every format replies with a labelled caption: Hook, Content (intro + 3 numbered
-points), CTA. check(fmt, text) returns a list of failures (empty = passes).
-generate_checked() retries once with the failures listed, then returns the draft
-with the failures for the owner to review.
+Formats:
+  story, reel   timed script: [0-3s] HOOK | SPOKEN ... ; CONTENT lines with 1. 2. 3.; CTA last
+  carousel, linkedin  labelled caption: Hook:, Content: (intro + 1. 2. 3.), CTA:, then Keywords:
+check(fmt, text) returns failures (empty = passes). generate_checked() retries once with the
+failures listed and returns the draft with any remaining failures for the owner.
 """
 
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from llm import generate
+from llm import Result, generate
 
 ROOT = Path(__file__).resolve().parent.parent
 PHRASES_FILE = ROOT / "knowledge" / "copywriting" / "ai_phrases_ar.yaml"
@@ -21,10 +22,17 @@ DIACRITICS = re.compile(r"[ً-ْـ]")
 KEYCAP = re.compile(r"([0-9])️?⃣")
 ARABIC_DIGITS = str.maketrans("٠١٢٣٤٥٦٧٨٩", "0123456789")
 SECTION = re.compile(r"^\s*(Hook|Content|CTA)\s*:", re.MULTILINE | re.IGNORECASE)
+KEYWORDS = re.compile(r"^\s*Keywords\s*:\s*(.*)$", re.MULTILINE | re.IGNORECASE)
 NUMBERED = re.compile(r"^\s*[1-3١-٣][.)]\s+\S", re.MULTILINE)
+SCRIPT_POINT = re.compile(r"^[1-3١-٣][.)]\s")
+TIMED_LABEL = re.compile(r"\[\s*\d+\s*-\s*\d+\s*s\s*\]\s*\**\s*(HOOK|CONTENT|CTA)\b", re.IGNORECASE)
 OWNER_NOTE = re.compile(r"\*{0,2}NOTE FOR OWNER:?\*{0,2}", re.IGNORECASE)
+
+ASK_VERBS = {"اكتب", "اكتبلي", "دز", "دزلي", "دزه", "تابع", "تابعني", "احفظ", "شارك",
+             "ارسل", "اضغط", "سجل", "اطلب", "راسل", "شوف", "جرب", "صوت", "علّق", "علق"}
 HOOK_MAX_CHARS = {"carousel": 125, "linkedin": 210}
 HASHTAG_LIMITS = {"story": 0, "linkedin": 0, "reel": 5, "carousel": 5}
+KEYWORDS_REQUIRED = {"carousel", "linkedin"}
 
 
 def _norm(s: str) -> str:
@@ -43,6 +51,10 @@ def _words(s: str) -> int:
     return len(s.split())
 
 
+def _hashtags(text: str) -> list[str]:
+    return re.findall(r"#\S+", text)
+
+
 def _fields(text: str, label: str) -> list[str]:
     """Values of 'LABEL: value' fields. A line may hold several fields split by ' | '."""
     out = []
@@ -54,14 +66,10 @@ def _fields(text: str, label: str) -> list[str]:
     return out
 
 
-def _hashtags(text: str) -> list[str]:
-    return re.findall(r"#\S+", text)
-
-
 def _invented_numbers(text: str) -> list[str]:
     t = text.translate(ARABIC_DIGITS)
     t = re.sub(r"\{\{.*?\}\}", " ", t)          # placeholders are allowed
-    t = re.sub(r"\[[^\]]*\]", " ", t)            # timing labels like [8-14s]
+    t = re.sub(r"\[[^\]]*\]", " ", t)           # timing labels like [8-14s]
     t = KEYCAP.sub(" ", t)                      # 1️⃣ markers
     t = re.sub(r"(?m)^\s*\d+[.)]\s", " ", t)    # 1. list markers
     bad = []
@@ -92,7 +100,6 @@ def _label(raw: str) -> str:
 
 
 def _sections(text: str) -> dict[str, list[str]]:
-    """Map each label (Hook, Content, CTA) to the text after it, up to the next label."""
     found = list(SECTION.finditer(text))
     out: dict[str, list[str]] = {}
     for i, m in enumerate(found):
@@ -101,12 +108,22 @@ def _sections(text: str) -> dict[str, list[str]]:
     return out
 
 
-def _caption(text: str) -> list[str]:
+def split_keywords(text: str) -> tuple[str, str]:
+    """Return (caption without the Keywords line, keywords text)."""
+    m = None
+    for m in KEYWORDS.finditer(text):
+        pass
+    if m is None:
+        return text, ""
+    return text[: m.start()].rstrip(), m.group(1).strip()
+
+
+def _caption(main: str) -> list[str]:
     fails = []
-    order = [_label(m.group(1)) for m in SECTION.finditer(text)]
+    order = [_label(m.group(1)) for m in SECTION.finditer(main)]
     if order != ["Hook", "Content", "CTA"]:
         return [f"the reply must have the labels Hook:, Content:, CTA: in that order (found {order or 'none'})"]
-    secs = _sections(text)
+    secs = _sections(main)
     hook, content, cta = secs["Hook"][0], secs["Content"][0], secs["CTA"][0]
     if _words(hook) > 15:
         fails.append(f"Hook has {_words(hook)} words, must be 15 or fewer")
@@ -115,18 +132,28 @@ def _caption(text: str) -> list[str]:
         fails.append(f"Content has {len(points)} numbered points, must be exactly 3 (1. 2. 3.)")
     if _words(cta) > 25:
         fails.append(f"CTA has {_words(cta)} words, must be 25 or fewer")
-    total = _words(text.split("NOTE FOR OWNER")[0])
+    sentences = [s for s in re.split(r"[.!؟?]+", cta) if s.strip()]
+    words = re.findall(r"[\u0621-\u064Aa-zA-Z]+", cta)
+    asks = [w for w in words if w in ASK_VERBS or (w.startswith("و") and w[1:] in ASK_VERBS)]
+    if len(sentences) > 1 or len(asks) > 1:
+        fails.append("CTA has more than one ask; keep exactly one call to action")
+    total = _words(main)
     if not 40 <= total <= 160:
         fails.append(f"caption has {total} words, must be 40 to 160")
     return fails
 
 
-TIMED_LABEL = re.compile(r"\[\s*\d+\s*-\s*\d+\s*s\s*\]\s*\**\s*(HOOK|CONTENT|CTA)\b", re.IGNORECASE)
-SCRIPT_POINT = re.compile(r"^[1-3١-٣][.)]\s")
+def _readability(text: str) -> list[str]:
+    for para in re.split(r"\n\s*\n", text):
+        if _words(para) > 60:
+            return [f"a paragraph has {_words(para)} words, max 60 (split it with a blank line)"]
+    return []
+
+
+TIMED_LIMIT_NOTE = "spoken total"
 
 
 def _timed(text: str) -> list[str]:
-    """Story and reel: HOOK, CONTENT lines with 3 numbered points, CTA last, timed."""
     fails = []
     labels = [m.group(1).upper() for m in TIMED_LABEL.finditer(text)]
     if not labels:
@@ -150,35 +177,35 @@ def _timed(text: str) -> list[str]:
     return fails
 
 
-def _readability(text: str) -> list[str]:
-    fails = []
-    for para in re.split(r"\n\s*\n", text):
-        if _words(para) > 60:
-            fails.append(f"a paragraph has {_words(para)} words, max 60 (split it with a blank line)")
-            break
-    return fails
-
-
 def check(fmt: str, text: str) -> list[str]:
     if fmt in ("story", "reel"):
-        fails = _common(text) + _timed(text)
+        fails = _common(text) + _timed(text) + _readability(text)
         if fmt == "story" and not _fields(text, "STICKER"):
             fails.append("story needs one STICKER in the CTA line")
-    else:
-        fails = _common(text) + _caption(text) + _readability(text)
-        hook_chars = len(_sections(text).get("Hook", [""])[0])
-        max_chars = HOOK_MAX_CHARS.get(fmt)
-        if max_chars and hook_chars > max_chars:
-            fails.append(f"Hook is {hook_chars} characters; {fmt} cuts the caption after {max_chars}")
+        if len(_hashtags(text)) > HASHTAG_LIMITS[fmt]:
+            fails.append(f"{len(_hashtags(text))} hashtags, max {HASHTAG_LIMITS[fmt]} for {fmt}")
+        return fails
+
+    main, keywords = split_keywords(text)
+    fails = _common(text) + _caption(main) + _readability(text)
+    if fmt in KEYWORDS_REQUIRED:
+        n = _words(keywords)
+        if not keywords:
+            fails.append("missing the Keywords: line (3 to 6 search keywords at the end)")
+        elif not 3 <= n <= 6:
+            fails.append(f"Keywords line has {n} words, must be 3 to 6")
+    hook = _sections(main).get("Hook", [""])[0]
+    max_chars = HOOK_MAX_CHARS.get(fmt)
+    if max_chars and len(hook) > max_chars:
+        fails.append(f"Hook is {len(hook)} characters; {fmt} cuts the caption after {max_chars}")
     limit = HASHTAG_LIMITS.get(fmt, 5)
-    tags = _hashtags(text)
-    if len(tags) > limit:
-        fails.append(f"{len(tags)} hashtags, max {limit} for {fmt}")
+    if len(_hashtags(text)) > limit:
+        fails.append(f"{len(_hashtags(text))} hashtags, max {limit} for {fmt}")
     return fails
 
 
 def split_owner_note(text: str) -> tuple[str, str]:
-    """Separate the publishable caption from the NOTE FOR OWNER block (never published)."""
+    """Separate the publishable reply from the NOTE FOR OWNER block (never published)."""
     m = OWNER_NOTE.search(text)
     if not m:
         return text.strip(), ""
@@ -187,31 +214,39 @@ def split_owner_note(text: str) -> tuple[str, str]:
 
 @dataclass
 class Checked:
-    text: str            # publishable caption only
+    text: str                 # publishable reply only
     provider: str
     refused: bool = False
     failures: list[str] = field(default_factory=list)
     attempts: int = 1
-    owner_note: str = ""  # for the owner only; never publish
+    owner_note: str = ""      # for the owner only; never publish
+    calls: list[Result] = field(default_factory=list)
 
 
-async def generate_checked(fmt: str, system: str, topic: str) -> Checked:
+async def generate_checked(fmt: str, system: str, topic: str,
+                           angle: str = "", notes: str = "") -> Checked:
     base = f"الموضوع: {topic}"
+    if angle:
+        base += f"\nالزاوية: {angle}"
+    if notes:
+        base += f"\nتحليل الجمهور:\n{notes}"
     prompt = base
+    calls: list[Result] = []
     result = None
     failures: list[str] = []
     for attempt in range(1, MAX_ATTEMPTS + 1):
         result = await generate(system, prompt)
+        calls.append(result)
         if result.refused or not result.text:
-            return Checked(result.text, result.provider, result.refused, [], attempt)
+            return Checked(result.text, result.provider, result.refused, [], attempt, calls=calls)
         content, note = split_owner_note(result.text)
         failures = check(fmt, content)
         if not failures:
-            return Checked(content, result.provider, False, [], attempt, note)
+            return Checked(content, result.provider, False, [], attempt, note, calls)
         prompt = (
             base
-            + "\n\nالنسخة السابقة فيها هذي المشاكل، صححها وأعد كتابة الرد كامل بنفس الشكل (Hook / Content / CTA):\n- "
+            + "\n\nالنسخة السابقة فيها هذي المشاكل، صححها وأعد كتابة الرد كامل بنفس الشكل:\n- "
             + "\n- ".join(failures)
         )
     content, note = split_owner_note(result.text)
-    return Checked(content, result.provider, False, failures, MAX_ATTEMPTS, note)
+    return Checked(content, result.provider, False, failures, MAX_ATTEMPTS, note, calls)
