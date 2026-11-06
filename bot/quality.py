@@ -111,21 +111,26 @@ def _instagram(text: str) -> list[str]:
     return fails
 
 
+NUMBERED = re.compile(r"^\s*[1-3١-٣][.)]\s+\S", re.MULTILINE)
+
+
 def _linkedin(text: str) -> list[str]:
     fails = []
+    lines = [l.strip() for l in text.splitlines() if l.strip()]
+    if not lines:
+        return ["empty caption"]
     n = _words(text)
-    if not 120 <= n <= 220:
-        fails.append(f"caption has {n} words, must be 120 to 220")
-    first = next((l for l in text.splitlines() if l.strip()), "")
-    if not first.startswith("💡"):
-        fails.append("first line must start with 💡 (problem line)")
-    positions = [text.find(e) for e in ("🔥", "📌", "🤔")]
-    if min(positions) < 0:
-        fails.append("missing one of the block markers 🔥 📌 🤔")
-    elif positions != sorted(positions):
-        fails.append("block markers must come in the order 🔥, 📌, 🤔")
-    if any(int(d) >= 4 for d, _ in [(m.group(1), m) for m in KEYCAP.finditer(text)]):
-        fails.append("more than 3 levels (only 1️⃣ 2️⃣ 3️⃣ allowed)")
+    if not 50 <= n <= 150:
+        fails.append(f"caption has {n} words, must be 50 to 150")
+    if _words(lines[0]) > 15:
+        fails.append(f"hook has {_words(lines[0])} words, must be 15 or fewer")
+    points = NUMBERED.findall(text)
+    if len(points) != 3:
+        fails.append(f"found {len(points)} numbered points, must be exactly 3 (١. ٢. ٣.)")
+    if NUMBERED.search(lines[-1]):
+        fails.append("the CTA must be the last line, not a numbered point")
+    elif _words(lines[-1]) > 25:
+        fails.append(f"CTA has {_words(lines[-1])} words, must be 25 or fewer")
     if _hashtags(text):
         fails.append("LinkedIn captions have no hashtags")
     return fails
