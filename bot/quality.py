@@ -74,19 +74,23 @@ def _common(text: str) -> list[str]:
     return fails
 
 
+def _label(raw: str) -> str:
+    return "CTA" if raw.upper() == "CTA" else raw.capitalize()
+
+
 def _sections(text: str) -> dict[str, list[str]]:
     """Map each label (Hook, Content, CTA) to the text after it, up to the next label."""
     found = list(SECTION.finditer(text))
     out: dict[str, list[str]] = {}
     for i, m in enumerate(found):
         end = found[i + 1].start() if i + 1 < len(found) else len(text)
-        out.setdefault(m.group(1).capitalize(), []).append(text[m.end():end].strip())
+        out.setdefault(_label(m.group(1)), []).append(text[m.end():end].strip())
     return out
 
 
 def _caption(text: str) -> list[str]:
     fails = []
-    order = [m.group(1).capitalize() for m in SECTION.finditer(text)]
+    order = [_label(m.group(1)) for m in SECTION.finditer(text)]
     if order != ["Hook", "Content", "CTA"]:
         return [f"the reply must have the labels Hook:, Content:, CTA: in that order (found {order or 'none'})"]
     secs = _sections(text)
