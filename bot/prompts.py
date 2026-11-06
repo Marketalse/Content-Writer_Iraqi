@@ -20,6 +20,16 @@ FORMATS = {
 
 FORMULAS = ROOT / "knowledge" / "formulas" / "formulas.md"
 
+# Short labels for the Telegram buttons (the model reads the full descriptions in ANGLES).
+ANGLE_BUTTONS = {
+    "myth": "🙅 خرافة ✅ حقيقة",
+    "tip": "💡 نصيحة سريعة",
+    "behind": "🎥 من الكواليس",
+    "pain": "😓 مشكلة زبون",
+    "offer": "🎁 عرض أو دعوة",
+    "flip": "🔄 غلطة وتصحيح",
+}
+
 ANGLES = {
     "myth": "Myth-busting: a belief, then the truth",
     "tip": "Quick tip: one thing to do today",

@@ -33,7 +33,7 @@ load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
 from pipeline import run_pipeline  # noqa: E402
 from postlog import log_post, mark_published  # noqa: E402
-from prompts import ANGLES, FORMATS, build_system_prompt  # noqa: E402
+from prompts import ANGLE_BUTTONS, ANGLES, FORMATS, build_system_prompt  # noqa: E402
 
 logging.basicConfig(format="%(asctime)s %(levelname)s %(name)s: %(message)s", level=logging.INFO)
 # httpx logs every request URL, and the Telegram token is part of that URL. Keep it out of logs.
@@ -63,7 +63,7 @@ def _format_keyboard() -> InlineKeyboardMarkup:
 def _angle_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
         [InlineKeyboardButton(text, callback_data=f"ang:{key}")]
-        for key, text in ANGLES.items()
+        for key, text in ANGLE_BUTTONS.items()
     ])
 
 
@@ -141,7 +141,7 @@ async def on_angle_chosen(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if key not in ANGLES:
         return
     context.chat_data["angle"] = key
-    await query.edit_message_text(f"الزاوية: {ANGLES[key]}. هسة دزلي الموضوع كتابةً.")
+    await query.edit_message_text(f"الزاوية: {ANGLE_BUTTONS[key]}. هسة دزلي الموضوع كتابةً.")
 
 
 async def on_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
