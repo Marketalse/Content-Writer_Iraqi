@@ -142,13 +142,25 @@ def check(fmt: str, text: str) -> list[str]:
     return fails
 
 
+OWNER_NOTE = re.compile(r"\*{0,2}NOTE FOR OWNER:?\*{0,2}", re.IGNORECASE)
+
+
+def split_owner_note(text: str) -> tuple[str, str]:
+    """Separate the publishable script from the NOTE FOR OWNER block (never published)."""
+    m = OWNER_NOTE.search(text)
+    if not m:
+        return text.strip(), ""
+    return text[: m.start()].strip(), text[m.end():].strip()
+
+
 @dataclass
 class Checked:
-    text: str
+    text: str            # publishable content only
     provider: str
     refused: bool = False
     failures: list[str] = field(default_factory=list)
     attempts: int = 1
+    owner_note: str = ""  # for the owner only; never publish
 
 
 async def generate_checked(fmt: str, system: str, topic: str) -> Checked:
@@ -160,12 +172,14 @@ async def generate_checked(fmt: str, system: str, topic: str) -> Checked:
         result = await generate(system, prompt)
         if result.refused or not result.text:
             return Checked(result.text, result.provider, result.refused, [], attempt)
-        failures = check(fmt, result.text)
+        content, note = split_owner_note(result.text)
+        failures = check(fmt, content)
         if not failures:
-            return Checked(result.text, result.provider, False, [], attempt)
+            return Checked(content, result.provider, False, [], attempt, note)
         prompt = (
             base
             + "\n\nالنسخة السابقة فيها هذي المشاكل، صححها وأعد كتابة النص كامل بنفس الفورمة:\n- "
             + "\n- ".join(failures)
         )
-    return Checked(result.text, result.provider, False, failures, MAX_ATTEMPTS)
+    content, note = split_owner_note(result.text)
+    return Checked(content, result.provider, False, failures, MAX_ATTEMPTS, note)

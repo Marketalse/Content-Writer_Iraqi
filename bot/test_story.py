@@ -50,6 +50,9 @@ async def main():
         print("QUALITY CHECK FAILED:\n- " + "\n- ".join(result.failures))
     print("-" * 60)
     print(result.text or "(empty answer)")
+    if result.owner_note:
+        print("-" * 60)
+        print("OWNER NOTE (do not publish):\n" + result.owner_note)
 
 
 asyncio.run(main())
