@@ -27,6 +27,10 @@ def _read() -> list[dict]:
     return [json.loads(l) for l in LOG.read_text(encoding="utf-8").splitlines() if l.strip()]
 
 
+def read_all() -> list[dict]:
+    return _read()
+
+
 def log_post(record: dict) -> str:
     LOG.parent.mkdir(parents=True, exist_ok=True)
     pid = datetime.now().strftime("%Y%m%d%H%M%S")

@@ -9,7 +9,9 @@ Environment variables (see .env.example):
   TELEGRAM_BOT_TOKEN  required
   ANTHROPIC_API_KEY   required (writer and checker)
   NOUS_API_KEY        optional (fallback)
-  ALLOWED_CHAT_IDS    optional, comma-separated chat IDs allowed to use the bot
+  OWNER_CHAT_ID       your Telegram chat ID: unlimited access and /pilot commands
+  ALLOWED_CHAT_IDS    optional, comma-separated chat IDs with unlimited access
+  Pilot users are added with /pilot add (see bot/pilot.py)
 """
 
 import logging
@@ -33,6 +35,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
 from pipeline import run_pipeline  # noqa: E402
+from pilot import add as pilot_add, check as pilot_check, list_text, quota_text, set_active, is_owner  # noqa: E402
 from postlog import log_post, mark_published  # noqa: E402
 from prompts import ANGLE_BUTTONS, ANGLES, FORMATS, build_system_prompt  # noqa: E402
 
@@ -48,10 +51,17 @@ _allowed = {int(x) for x in os.getenv("ALLOWED_CHAT_IDS", "").split(",") if x.st
 SYSTEM_PROMPTS = {fmt: build_system_prompt(fmt) for fmt in FORMATS}
 
 
+def _chat_id(update: Update) -> int:
+    return update.effective_chat.id
+
+
 def _allowed_chat(update: Update) -> bool:
-    if not _allowed:
+    """Owner and allowlisted chats are unlimited. Pilots are checked again before each generation."""
+    cid = _chat_id(update)
+    if is_owner(cid) or cid in _allowed:
         return True
-    return update.effective_chat is not None and update.effective_chat.id in _allowed
+    from pilot import get_pilot
+    return bool(get_pilot(cid) and get_pilot(cid).get("active"))
 
 
 def _format_keyboard() -> InlineKeyboardMarkup:
@@ -110,6 +120,41 @@ async def cmd_cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("تمام، صفّرنا كلشي. /start حتى تبدي من جديد.")
 
 
+async def cmd_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text(f"رقم حسابك: {_chat_id(update)}\nارسله لصاحب البوت حتى يفعّلك.")
+
+
+async def cmd_quota(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not _allowed_chat(update):
+        await update.message.reply_text("الحساب مو مفعّل للتجربة. ارسل /id لصاحب البوت.")
+        return
+    await update.message.reply_text(quota_text(_chat_id(update)))
+
+
+async def cmd_pilot(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Owner only: /pilot add <chat_id> <name> [posts] [usd] | list | stop <chat_id> | resume <chat_id>"""
+    if not is_owner(_chat_id(update)):
+        return
+    args = context.args or []
+    if not args or args[0] == "list":
+        await update.message.reply_text(list_text())
+        return
+    try:
+        if args[0] == "add":
+            cid, name = int(args[1]), args[2]
+            posts = int(args[3]) if len(args) > 3 else 10
+            usd = float(args[4]) if len(args) > 4 else 1.0
+            pilot_add(cid, name, posts, usd)
+            await update.message.reply_text(f"تم تفعيل {name} ({cid}): {posts} منشور، ${usd:.2f}")
+        elif args[0] in ("stop", "resume"):
+            ok = set_active(int(args[1]), args[0] == "resume")
+            await update.message.reply_text("تم." if ok else "هذا الرقم مو مسجل.")
+        else:
+            await update.message.reply_text("الأوامر: add, list, stop, resume")
+    except (IndexError, ValueError):
+        await update.message.reply_text("الصيغة غلط. مثال: /pilot add 123456 Sara 10 1.0")
+
+
 async def cmd_published(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not _allowed_chat(update):
         return
@@ -163,6 +208,12 @@ async def on_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("اختار الزاوية 👇", reply_markup=_angle_keyboard())
         return
 
+    cid = _chat_id(update)
+    ok, msg = pilot_check(cid)
+    if not ok:
+        await update.message.reply_text(msg)
+        return
+
     topic = update.message.text.strip()
     status = await update.message.reply_text("عاد أكتبلك… ⏳")
     try:
@@ -184,7 +235,7 @@ async def on_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     pid = log_post({
-        "format": fmt, "angle": angle, "topic": topic, "provider": checked.provider,
+        "chat_id": cid, "format": fmt, "angle": angle, "topic": topic, "provider": checked.provider,
         "attempts": checked.attempts, "failures": checked.failures,
         "calls": len(run.calls), "input_tokens": run.input_tokens,
         "output_tokens": run.output_tokens, "cost_usd": round(run.cost_usd, 6),
@@ -210,6 +261,9 @@ def main():
     app.add_handler(CommandHandler("format", cmd_format))
     app.add_handler(CommandHandler("cancel", cmd_cancel))
     app.add_handler(CommandHandler("published", cmd_published))
+    app.add_handler(CommandHandler("id", cmd_id))
+    app.add_handler(CommandHandler("quota", cmd_quota))
+    app.add_handler(CommandHandler("pilot", cmd_pilot))
     app.add_handler(CallbackQueryHandler(on_format_chosen, pattern=r"^fmt:"))
     app.add_handler(CallbackQueryHandler(on_angle_chosen, pattern=r"^ang:"))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, on_text))
