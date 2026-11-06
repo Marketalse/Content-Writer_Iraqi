@@ -21,7 +21,8 @@ load_dotenv(ENV_FILE)
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import asyncio  # noqa: E402
 
-from llm import LLMError, generate  # noqa: E402
+from llm import LLMError  # noqa: E402
+from quality import generate_checked  # noqa: E402
 from prompts import build_system_prompt  # noqa: E402
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
@@ -41,10 +42,12 @@ topic = " ".join(args).strip() or DEFAULT_TOPIC
 
 async def main():
     try:
-        result = await generate(build_system_prompt(fmt), f"الموضوع: {topic}")
+        result = await generate_checked(fmt, build_system_prompt(fmt), topic)
     except LLMError as exc:
         sys.exit(f"Generation failed: {exc}")
-    print(f"provider={result.provider} refused={result.refused}")
+    print(f"provider={result.provider} refused={result.refused} attempts={result.attempts}")
+    if result.failures:
+        print("QUALITY CHECK FAILED:\n- " + "\n- ".join(result.failures))
     print("-" * 60)
     print(result.text or "(empty answer)")
 
