@@ -20,7 +20,19 @@ example: |
 
   CTA: اذا ممتابعني بعدك ما اتصور، راح اطلعلك مرة ثانية.
 
+# Source: ShareB, "Instagram Caption Strategy (2026)" (https://shareb.io/blog/instagram-caption-strategy)
+hook_patterns:
+  - "Most people get this wrong… (a belief the reader holds)"
+  - "Nobody talks about this… (a hidden problem)"
+  - "You're doing this wrong… (a direct challenge)"
+  - "Have you experienced this? (a question about the reader's own situation)"
+readability:
+  - "Short lines. No paragraph longer than 60 words."
+  - "Value first, promotion second: the useful content comes before the ask."
+  - "One call to action only."
+
 checks:
+  hook_max_chars: {carousel: 125, linkedin: 210}
   total_words: {min: 40, max: 160}
   hashtags: {story: 0, linkedin: 0, reel: 5, carousel: 5}
   greeting: none

@@ -23,6 +23,7 @@ ARABIC_DIGITS = str.maketrans("٠١٢٣٤٥٦٧٨٩", "0123456789")
 SECTION = re.compile(r"^\s*(Hook|Content|CTA)\s*:", re.MULTILINE | re.IGNORECASE)
 NUMBERED = re.compile(r"^\s*[1-3١-٣][.)]\s+\S", re.MULTILINE)
 OWNER_NOTE = re.compile(r"\*{0,2}NOTE FOR OWNER:?\*{0,2}", re.IGNORECASE)
+HOOK_MAX_CHARS = {"carousel": 125, "linkedin": 210}
 HASHTAG_LIMITS = {"story": 0, "linkedin": 0, "reel": 5, "carousel": 5}
 
 
@@ -149,13 +150,26 @@ def _timed(text: str) -> list[str]:
     return fails
 
 
+def _readability(text: str) -> list[str]:
+    fails = []
+    for para in re.split(r"\n\s*\n", text):
+        if _words(para) > 60:
+            fails.append(f"a paragraph has {_words(para)} words, max 60 (split it with a blank line)")
+            break
+    return fails
+
+
 def check(fmt: str, text: str) -> list[str]:
     if fmt in ("story", "reel"):
         fails = _common(text) + _timed(text)
         if fmt == "story" and not _fields(text, "STICKER"):
             fails.append("story needs one STICKER in the CTA line")
     else:
-        fails = _common(text) + _caption(text)
+        fails = _common(text) + _caption(text) + _readability(text)
+        hook_chars = len(_sections(text).get("Hook", [""])[0])
+        max_chars = HOOK_MAX_CHARS.get(fmt)
+        if max_chars and hook_chars > max_chars:
+            fails.append(f"Hook is {hook_chars} characters; {fmt} cuts the caption after {max_chars}")
     limit = HASHTAG_LIMITS.get(fmt, 5)
     tags = _hashtags(text)
     if len(tags) > limit:
