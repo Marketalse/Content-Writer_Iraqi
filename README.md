@@ -1,1 +1,46 @@
 # Content-Writer_Iraqi
+
+مولّد محتوى باللهجة العراقية (ستوري، كاروسيل، ريلز، لينكدإن) مربوط بتلگرام، مبني على Claude API.
+
+## البنية
+
+```
+guidelines/iraqi_dialect_style_guide.md   دليل اللهجة والنبرة (مشترك لكل الفورمات)
+formats/stories/guide.md                  قواعد الستوري
+formats/carousels/guide.md                قواعد الكاروسيل
+formats/reels/guide.md                    قواعد الريلز
+formats/linkedin/guide.md                 قواعد لينكدإن
+bot/prompts.py                            يبني الـ system prompt من الملفات أعلاه
+bot/bot.py                                بوت تلگرام + استدعاء Claude
+```
+
+## التشغيل
+
+1. **أنشئ بوت:** كلّم [@BotFather](https://t.me/BotFather) في تلگرام، سوّ `/newbot`، وخذ التوكن.
+2. **جهّز المفاتيح:**
+   ```bash
+   cp .env.example .env
+   ```
+   عبّي `TELEGRAM_BOT_TOKEN` و `ANTHROPIC_API_KEY` بملف `.env`.
+3. **ثبّت وشغّل:**
+   ```bash
+   cd bot
+   pip install -r requirements.txt
+   python bot.py
+   ```
+4. بتلگرام: `/start` ← اختار النوع ← دز الموضوع.
+
+## الأوامر
+
+| الأمر | الوظيفة |
+|---|---|
+| `/start` | بداية + اختيار النوع |
+| `/format` | تغيير النوع |
+| `/cancel` | تصفير الاختيار |
+
+## ملاحظات
+
+- الموديل: `claude-opus-5-5`. الـ system prompt ثابت ومُخزّن بالكاش (`cache_control`)، فالطلبات المتكررة أرخص وأسرع. راقب `cache_read` بالـ logs.
+- تقييد الاستخدام: حط `ALLOWED_CHAT_IDS` بالـ `.env` حتى ما يستعمله أي أحد.
+- لتعديل النبرة أو القواعد، عدّل ملفات `guidelines/` و `formats/`. ما تحتاج تغيّر الكود.
+- الحالة (اختيار النوع) محفوظة بالذاكرة، فإذا انتهى التشغيل ينمسح.
