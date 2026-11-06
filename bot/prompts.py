@@ -29,13 +29,8 @@ ANGLES = {
     "flip": "Problem flip: the reader's wrong belief, then the right one",
 }
 
-# Story and reel: LinkedIn blocks inside a timed script. Carousel and LinkedIn: labelled caption.
-OUTPUT_SPEC = {
-    "story": "timed_caption.yaml",
-    "reel": "timed_caption.yaml",
-    "linkedin": "caption.yaml",
-    "carousel": "caption.yaml",
-}
+# Every format replies in the emoji text layout (knowledge/formats/caption.yaml).
+OUTPUT_SPEC = {fmt: "caption.yaml" for fmt in ("story", "reel", "carousel", "linkedin")}
 
 BASE_INSTRUCTIONS = """أنت كاتب محتوى محترف متخصص باللهجة العراقية (البغدادية المفهومة بكل العراق).
 تكتب حصراً باللهجة العراقية. استخدم گ و چ بشكل طبيعي (مثل: گدر، أگلكم، چيبس، أحچي) كما في أسلوب صاحب الحساب.

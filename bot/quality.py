@@ -32,7 +32,6 @@ ASK_VERBS = {"اكتب", "اكتبلي", "دز", "دزلي", "دزه", "تابع
              "ارسل", "اضغط", "سجل", "اطلب", "راسل", "شوف", "جرب", "صوت", "علّق", "علق"}
 HOOK_MAX_CHARS = {"carousel": 125, "linkedin": 210}
 HASHTAG_LIMITS = {"story": 0, "linkedin": 0, "reel": 5, "carousel": 5}
-KEYWORDS_REQUIRED = {"carousel", "linkedin"}
 
 
 def _norm(s: str) -> str:
@@ -118,28 +117,33 @@ def split_keywords(text: str) -> tuple[str, str]:
     return text[: m.start()].rstrip(), m.group(1).strip()
 
 
-def _caption(main: str) -> list[str]:
+EMOJI_LAYOUT = ["🎬", "🔥", "🤔", "🎯", "💰", "📩", "🚀", "📊"]
+
+
+def _layout(main: str) -> list[str]:
     fails = []
-    order = [_label(m.group(1)) for m in SECTION.finditer(main)]
-    if order != ["Hook", "Content", "CTA"]:
-        return [f"the reply must have the labels Hook:, Content:, CTA: in that order (found {order or 'none'})"]
-    secs = _sections(main)
-    hook, content, cta = secs["Hook"][0], secs["Content"][0], secs["CTA"][0]
-    if _words(hook) > 15:
-        fails.append(f"Hook has {_words(hook)} words, must be 15 or fewer")
-    points = NUMBERED.findall(content)
-    if len(points) != 3:
-        fails.append(f"Content has {len(points)} numbered points, must be exactly 3 (1. 2. 3.)")
-    if _words(cta) > 25:
-        fails.append(f"CTA has {_words(cta)} words, must be 25 or fewer")
-    sentences = [s for s in re.split(r"[.!؟?]+", cta) if s.strip()]
+    lines = [l.strip() for l in main.splitlines() if l.strip()]
+    if len(lines) != len(EMOJI_LAYOUT):
+        fails.append(f"the reply must have {len(EMOJI_LAYOUT)} lines with markers "
+                     f"{' '.join(EMOJI_LAYOUT)} (found {len(lines)})")
+    for i, (line, marker) in enumerate(zip(lines, EMOJI_LAYOUT)):
+        if not line.startswith(marker):
+            fails.append(f"line {i + 1} must start with {marker}")
+    if len(lines) < len(EMOJI_LAYOUT):
+        return fails
+    limits = [15, 20, 25, 25, 25, 25, 20, 30]
+    for i, (line, limit) in enumerate(zip(lines, limits)):
+        body = line[len(EMOJI_LAYOUT[i]):].strip()
+        if _words(body) > limit:
+            fails.append(f"line {i + 1} ({EMOJI_LAYOUT[i]}) has {_words(body)} words, max {limit}")
+    cta = lines[6][len("🚀"):].strip()
     words = re.findall(r"[\u0621-\u064Aa-zA-Z]+", cta)
     asks = [w for w in words if w in ASK_VERBS or (w.startswith("و") and w[1:] in ASK_VERBS)]
-    if len(sentences) > 1 or len(asks) > 1:
-        fails.append("CTA has more than one ask; keep exactly one call to action")
+    if len(asks) > 1:
+        fails.append("the 🚀 line has more than one ask; keep exactly one call to action")
     total = _words(main)
     if not 40 <= total <= 160:
-        fails.append(f"caption has {total} words, must be 40 to 160")
+        fails.append(f"reply has {total} words, must be 40 to 160")
     return fails
 
 
@@ -178,29 +182,13 @@ def _timed(text: str) -> list[str]:
 
 
 def check(fmt: str, text: str) -> list[str]:
-    if fmt in ("story", "reel"):
-        fails = _common(text) + _timed(text) + _readability(text)
-        if fmt == "story" and not _fields(text, "STICKER"):
-            fails.append("story needs one STICKER in the CTA line")
-        if len(_hashtags(text)) > HASHTAG_LIMITS[fmt]:
-            fails.append(f"{len(_hashtags(text))} hashtags, max {HASHTAG_LIMITS[fmt]} for {fmt}")
-        return fails
-
-    main, keywords = split_keywords(text)
-    fails = _common(text) + _caption(main) + _readability(text)
-    if fmt in KEYWORDS_REQUIRED:
-        n = _words(keywords)
-        if not keywords:
-            fails.append("missing the Keywords: line (3 to 6 search keywords at the end)")
-        elif not 3 <= n <= 6:
-            fails.append(f"Keywords line has {n} words, must be 3 to 6")
-    hook = _sections(main).get("Hook", [""])[0]
-    max_chars = HOOK_MAX_CHARS.get(fmt)
-    if max_chars and len(hook) > max_chars:
-        fails.append(f"Hook is {len(hook)} characters; {fmt} cuts the caption after {max_chars}")
+    main, _ = split_keywords(text)
+    fails = _common(text) + _layout(main) + _readability(text)
     limit = HASHTAG_LIMITS.get(fmt, 5)
     if len(_hashtags(text)) > limit:
         fails.append(f"{len(_hashtags(text))} hashtags, max {limit} for {fmt}")
+    if fmt == "story" and not any(l.strip().startswith("📊") for l in main.splitlines()):
+        fails.append("story needs the 📊 line (the poll sticker)")
     return fails
 
 

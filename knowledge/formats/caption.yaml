@@ -1,41 +1,39 @@
-# Final reply format for EVERY format (story, reel, carousel, LinkedIn).
-# The reply is a labelled caption with three blocks, in this order: Hook, Content, CTA.
-# This overrides any timed script or storyboard described above. Do not write seconds or SPOKEN/ON SCREEN lines.
+# Final reply format for EVERY format (story, reel, carousel, LinkedIn). It is a text message with 8 lines,
+# each starting with a fixed marker, in this exact order:
+#   🎬 hook  ·  🔥 follow-up question  ·  🤔 the problem  ·  🎯 point 1  ·  💰 point 2  ·  📩 point 3  ·  🚀 CTA  ·  📊 options
+# This overrides any timed script, storyboard, or labelled block format described above.
+# No seconds, no SPOKEN / ON SCREEN, no Hook: / Content: / CTA: labels, no Keywords line.
 
-output:
-  labels_in_order: ["Hook:", "Content:", "CTA:"]
-  hook: "A couple of words that grab attention so the reader keeps going. 15 words or fewer. A question, a surprise, or a sharp claim about the reader's business."
-  content: "One intro line, then exactly 3 numbered points written as 1. 2. 3. Each point: a short title and at most one line of explanation. The 3rd point is the most important."
-  cta: "One line, 25 words or fewer, with one clear reason to follow or act. It is the last line of the reply. Exactly one call to action."
-  keywords: "Carousel and LinkedIn only: one line after the CTA, starting with Keywords:, with 3 to 6 search keywords separated by commas. No hashtags."
-  owner_note: "Optional. After the CTA, a line starting with NOTE FOR OWNER: is shown only to the owner and is never published."
+layout:
+  - {marker: "🎬", job: "The hook. 15 words or fewer. Stops the scroll: a claim or question about the reader's business."}
+  - {marker: "🔥", job: "A follow-up question that makes the reader keep reading. 20 words or fewer."}
+  - {marker: "🤔", job: "The problem, or the belief that is holding the reader back. 25 words or fewer."}
+  - {marker: "🎯", job: "Point 1, starting with 'أول شي:'. 25 words or fewer."}
+  - {marker: "💰", job: "Point 2, starting with 'ثاني شي:'. 25 words or fewer."}
+  - {marker: "📩", job: "Point 3, starting with 'ثالث شي:'. The most important point. 25 words or fewer."}
+  - {marker: "🚀", job: "The one call to action, as a question or a single ask. 20 words or fewer. Exactly one ask."}
+  - {marker: "📊", job: "Options the reader can choose from, as a short either/or line. Story uses it as the interactive poll."}
+
+rules:
+  - "Exactly 8 non-empty lines, in the order above. A blank line between lines is allowed."
+  - "Each line starts with its marker. No other lines before, between, or after them."
+  - "Baghdadi, with گ and چ used naturally. No greeting, no sign-off, no hashtags unless the format allows them (carousel and reel: up to 5)."
+  - "Figures are {{رقمك}} placeholders. Never invent numbers."
+  - "NOTE FOR OWNER: optional, after the 8 lines. Never published."
 
 example: |
-  Hook: تدري ليش مبيعاتك واكعة؟ تعرف سالفة الدولار شلون راح تأثر عليك؟
+  🎬 تنشر كل يوم وماكو مبيعات؟ 🤯
 
-  Content:
-  مبيعاتك حتى تزيدها انت تحتاج تنتبه لجهود التسويق، لان هاي 3 نقاط جداً مهمة، و3 نقطة اهم شي لازم تسويها:
-  1. افهم العرض التسويقي
-  2. ابني نص بيعي للعرض التسويقي يتناسب وي شخصيتك كبائع
-  3. تواصل وي كل عملائك بشكل مستمر
+  🔥 كل يوم تنشر، بس محد يشتري منك؟ تدري ليش؟
 
-  CTA: اذا ممتابعني بعدك ما اتصور، راح اطلعلك مرة ثانية.
+  🤔 يمكن المشكلة مو بمنتجك ولا بسعرك… يمكن إنت دا تنشر بالمكان الغلط!
 
-# Source: ShareB, "Instagram Caption Strategy (2026)" (https://shareb.io/blog/instagram-caption-strategy)
-hook_patterns:
-  - "Most people get this wrong… (a belief the reader holds)"
-  - "Nobody talks about this… (a hidden problem)"
-  - "You're doing this wrong… (a direct challenge)"
-  - "Have you experienced this? (a question about the reader's own situation)"
-readability:
-  - "Short lines. No paragraph longer than 60 words."
-  - "Value first, promotion second: the useful content comes before the ask."
-  - "One call to action only."
+  🎯 أول شي: اختار منصة وحدة، المكان اللي زباينك فعلاً موجودين بيه.
 
-checks:
-  hook_max_chars: {carousel: 125, linkedin: 210}
-  total_words: {min: 40, max: 160}
-  hashtags: {story: 0, linkedin: 0, reel: 5, carousel: 5}
-  greeting: none
-  invented_numbers: none
-  numbered_points: 3
+  💰 ثاني شي: نزل منتج واحد، خلي سعره واضح، واطلب منهم يدزّولك رسالة.
+
+  📩 ثالث شي: لا تنخدع باللايكات! احسب الرسائل الجدية، مو المشاهدات.
+
+  🚀 هسه گلّي، من تجربتك وين يجيك زباين أكثر؟
+
+  📊 تيك توك ⚡ لو إنستغرام؟ 📸
