@@ -14,6 +14,7 @@ Environment variables (see .env.example):
 
 import logging
 import os
+import re
 import sys
 from pathlib import Path
 
@@ -65,6 +66,12 @@ def _angle_keyboard() -> InlineKeyboardMarkup:
         [InlineKeyboardButton(text, callback_data=f"ang:{key}")]
         for key, text in ANGLE_BUTTONS.items()
     ])
+
+
+def _to_html(text: str) -> str:
+    """Telegram HTML: escape the text, then turn **bold** into <b>bold</b>."""
+    escaped = text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+    return re.sub(r"\*\*(.+?)\*\*", r"<b>\1</b>", escaped)
 
 
 def _chunks(text: str, size: int = TELEGRAM_LIMIT):
@@ -185,7 +192,7 @@ async def on_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await status.delete()
     for part in _chunks(checked.text):
-        await update.message.reply_text(part)
+        await update.message.reply_text(_to_html(part), parse_mode="HTML")
     if checked.failures:
         await update.message.reply_text("⚠️ تحقق يدوي قبل النشر:\n- " + "\n- ".join(checked.failures))
     if checked.owner_note:

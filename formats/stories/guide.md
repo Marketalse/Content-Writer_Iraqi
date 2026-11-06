@@ -1,9 +1,9 @@
 # Instagram Story text post (5 posts a day)
 
-Reply in the emoji layout from `knowledge/formats/caption.yaml`:
-🎬 hook · 🔥 follow-up question · 🤔 problem · 🎯 point 1 · 💰 point 2 · 📩 point 3 · 🚀 CTA · 📊 poll options.
+Reply in the three-block layout from `knowledge/formats/caption.yaml`:
+🪝 Hook · 💬 Content (intro, then 📊 🔥 💡 points) · 🫵 CTA.
 
-- The 📊 line is the interactive poll sticker, so it must be an either/or choice.
+- End the CTA with a question so viewers can answer with a poll or question sticker.
 - No hashtags. No greeting. No sign-off. Baghdadi, with گ and چ used naturally.
 - Figures are `{{رقمك}}` placeholders.
 

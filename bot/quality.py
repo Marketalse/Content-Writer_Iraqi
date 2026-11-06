@@ -117,33 +117,59 @@ def split_keywords(text: str) -> tuple[str, str]:
     return text[: m.start()].rstrip(), m.group(1).strip()
 
 
-EMOJI_LAYOUT = ["🎬", "🔥", "🤔", "🎯", "💰", "📩", "🚀", "📊"]
+HEADERS = [("🪝", "Hook"), ("💬", "Content"), ("🫵", "CTA")]
+POINT_MARKERS = ["📊", "🔥", "💡"]
 
 
 def _layout(main: str) -> list[str]:
+    """Three blocks: Hook, Content (intro + 3 points 📊 🔥 💡), CTA with one ask."""
     fails = []
-    lines = [l.strip() for l in main.splitlines() if l.strip()]
-    if len(lines) != len(EMOJI_LAYOUT):
-        fails.append(f"the reply must have {len(EMOJI_LAYOUT)} lines with markers "
-                     f"{' '.join(EMOJI_LAYOUT)} (found {len(lines)})")
-    for i, (line, marker) in enumerate(zip(lines, EMOJI_LAYOUT)):
-        if not line.startswith(marker):
-            fails.append(f"line {i + 1} must start with {marker}")
-    if len(lines) < len(EMOJI_LAYOUT):
+    plain = [l.replace("**", "").strip() for l in main.splitlines() if l.strip()]
+    idx = []
+    for marker, label in HEADERS:
+        found = [i for i, l in enumerate(plain) if l.startswith(marker) and label.lower() in l.lower()]
+        if len(found) != 1:
+            fails.append(f"the {marker} {label} header must appear exactly once")
+            return fails
+        idx.append(found[0])
+    if idx != sorted(idx):
+        fails.append("the blocks must come in the order Hook, Content, CTA")
         return fails
-    limits = [15, 20, 25, 25, 25, 25, 20, 30]
-    for i, (line, limit) in enumerate(zip(lines, limits)):
-        body = line[len(EMOJI_LAYOUT[i]):].strip()
-        if _words(body) > limit:
-            fails.append(f"line {i + 1} ({EMOJI_LAYOUT[i]}) has {_words(body)} words, max {limit}")
-    cta = lines[6][len("🚀"):].strip()
-    words = re.findall(r"[\u0621-\u064Aa-zA-Z]+", cta)
-    asks = [w for w in words if w in ASK_VERBS or (w.startswith("و") and w[1:] in ASK_VERBS)]
-    if len(asks) > 1:
-        fails.append("the 🚀 line has more than one ask; keep exactly one call to action")
+    h, c, cta = idx
+    hook_body = plain[h + 1:c]
+    content_body = plain[c + 1:cta]
+    cta_body = plain[cta + 1:]
+
+    if not hook_body:
+        fails.append("the Hook block is empty")
+    elif _words(" ".join(hook_body)) > 25:
+        fails.append(f"Hook has {_words(' '.join(hook_body))} words, max 25")
+
+    points = [l for l in content_body if l[:1] in POINT_MARKERS or any(l.startswith(m) for m in POINT_MARKERS)]
+    point_markers = [next(m for m in POINT_MARKERS if l.startswith(m)) for l in points]
+    if point_markers != POINT_MARKERS:
+        fails.append(f"Content needs exactly 3 points marked 📊 then 🔥 then 💡 (found {point_markers})")
+    intro = [l for l in content_body if l not in points]
+    if not intro:
+        fails.append("Content needs a short intro line before the points")
+    for l in points:
+        if _words(l) > 40:
+            fails.append(f"point '{l[:30]}' has {_words(l)} words, max 40")
+
+    if len(cta_body) != 1:
+        fails.append(f"CTA must be exactly one line (found {len(cta_body)})")
+    else:
+        cta = cta_body[0]
+        if _words(cta) > 25:
+            fails.append(f"CTA has {_words(cta)} words, max 25")
+        words = re.findall(r"[\u0621-\u064Aa-zA-Z]+", cta)
+        asks = [w for w in words if w in ASK_VERBS or (w.startswith("و") and w[1:] in ASK_VERBS)]
+        if len(asks) > 1:
+            fails.append("CTA has more than one ask; keep exactly one call to action")
+
     total = _words(main)
-    if not 40 <= total <= 160:
-        fails.append(f"reply has {total} words, must be 40 to 160")
+    if not 50 <= total <= 200:
+        fails.append(f"reply has {total} words, must be 50 to 200")
     return fails
 
 
@@ -187,8 +213,8 @@ def check(fmt: str, text: str) -> list[str]:
     limit = HASHTAG_LIMITS.get(fmt, 5)
     if len(_hashtags(text)) > limit:
         fails.append(f"{len(_hashtags(text))} hashtags, max {limit} for {fmt}")
-    if fmt == "story" and not any(l.strip().startswith("📊") for l in main.splitlines()):
-        fails.append("story needs the 📊 line (the poll sticker)")
+    if fmt == "story" and not re.search(r"[?؟]", main.split("🫵")[-1] if "🫵" in main else main):
+        fails.append("story needs a question in the CTA so viewers can answer with the sticker")
     return fails
 
 
