@@ -42,6 +42,17 @@ def _words(s: str) -> int:
     return len(s.split())
 
 
+def _fields(text: str, label: str) -> list[str]:
+    """Values of 'LABEL: value' fields. A line may hold several fields split by ' | '."""
+    out = []
+    for line in text.splitlines():
+        for part in line.split("|"):
+            part = re.sub(r"\[[^\]]*\]", " ", part).replace("*", " ").strip()
+            if part.upper().startswith(label + ":"):
+                out.append(part[len(label) + 1:].strip().strip("*").strip())
+    return out
+
+
 def _hashtags(text: str) -> list[str]:
     return re.findall(r"#\S+", text)
 
