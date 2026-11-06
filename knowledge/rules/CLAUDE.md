@@ -11,7 +11,7 @@ Formats: short video, long video story, story question stickers, posts.
   `knowledge/dialect/iraqi_words.csv`.
   If a formal Arabic word has an entry, use the Iraqi word. **Not in the sheet = standard Arabic is fine.**
 - Rows where Iraqi and Arabic are the same (e.g. يظن، إنه، أداة) are fine as-is.
-- Spelling: **ك not گ, ج not چ** (كال، هيج).
+- Spelling: **گ and چ are used on purpose** (گدر، أگلكم، چيبس، أحچي), same as the owner's posts. Both forms are fine; do not "correct" گ or چ to ك or ج.
 - Egyptian, Gulf and Levantine words are blocked (`knowledge/dialect/other_dialects.yaml`, `enabled: true`).
 
 ## Growing the word sheet (always do this)
