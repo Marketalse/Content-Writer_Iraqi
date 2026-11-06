@@ -1,0 +1,37 @@
+# Render Blueprint: lets you deploy the bot from the Render dashboard with no terminal.
+# Dashboard: New -> Blueprint -> pick this repo and branch. Then fill in the secret values.
+# Cost: the Hobby workspace is free, but a background worker and a disk are paid
+# (about $7 a month for the smallest worker, plus $0.25 a month per GB of disk).
+
+services:
+  - type: worker
+    name: iraqi-content-bot
+    runtime: python
+    plan: starter
+    region: frankfurt            # any region is fine; pick the one closest to you
+    branch: claude/festive-meitner-3m5y3a
+    autoDeploy: true
+    buildCommand: pip install -r bot/requirements.txt
+    startCommand: python bot/bot.py
+    disk:
+      name: bot-data
+      mountPath: /var/data       # pilot limits and post log are stored here
+      sizeGB: 1
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.8
+      - key: STATE_DIR
+        value: /var/data
+      - key: ANTHROPIC_MODEL
+        value: claude-sonnet-5-5
+      - key: ANTHROPIC_FAST_MODEL
+        value: claude-haiku-5-5
+      # Secrets: entered in the Render dashboard only. Never commit them.
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: OWNER_CHAT_ID
+        sync: false
+      - key: NOUS_API_KEY
+        sync: false
