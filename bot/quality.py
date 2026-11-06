@@ -119,6 +119,8 @@ def _story(text: str) -> list[str]:
         fails.append("story needs SPOKEN lines for each beat (found fewer than 4)")
     if not _fields(text, "STICKER"):
         fails.append("missing the STICKER field (every story needs one interactive sticker)")
+    if _hashtags(text):
+        fails.append("stories have no hashtags; remove them")
     return fails
 
 
