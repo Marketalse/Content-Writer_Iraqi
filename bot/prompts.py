@@ -1,45 +1,68 @@
-"""Builds the stable system prompt from the guideline files.
+"""Builds the stable system prompt from the repo's knowledge base.
 
-The system prompt is identical on every request, so it is cached by the API
-(see cache_control in bot.py). Keep it byte-stable: do not put timestamps or
-per-user data in it.
+The system prompt is identical on every request for a given format, so the API
+caches it (see cache_control in bot.py). Keep it byte-stable: no timestamps or
+per-user data in it. Files are read once at import time.
 """
 
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+KB = ROOT / "knowledge"
+TRANSCRIPT_LIMIT = 12000  # chars of creator examples sent per request
 
 FORMATS = {
-    "story": ("📱 ستوري", ROOT / "formats" / "stories" / "guide.md"),
-    "carousel": ("🖼️ كاروسيل", ROOT / "formats" / "carousels" / "guide.md"),
-    "reel": ("🎥 ريل", ROOT / "formats" / "reels" / "guide.md"),
-    "linkedin": ("💼 لينكدإن", ROOT / "formats" / "linkedin" / "guide.md"),
+    "story": ("📱 ستوري", ROOT / "formats" / "stories" / "guide.md", "story_questions.yaml"),
+    "carousel": ("🖼️ كاروسيل", ROOT / "formats" / "carousels" / "guide.md", "post.yaml"),
+    "reel": ("🎥 ريل", ROOT / "formats" / "reels" / "guide.md", "short_video.yaml"),
+    "linkedin": ("💼 لينكدإن", ROOT / "formats" / "linkedin" / "guide.md", "post.yaml"),
 }
 
-STYLE_GUIDE = ROOT / "guidelines" / "iraqi_dialect_style_guide.md"
-
 BASE_INSTRUCTIONS = """أنت كاتب محتوى محترف متخصص باللهجة العراقية (البغدادية المفهومة بكل العراق).
-تكتب حصراً باللهجة العراقية، بالحروف الصحيحة (گ، چ، پ) حسب الدليل أدناه.
-تلتزم بقواعد الفورمة المطلوبة من حيث الطول، الهيكل، النبرة، والإخراج.
+تكتب حصراً باللهجة العراقية، بالحروف الصحيحة (ك وج، وليس گ وچ) حسب الدليل.
+تلتزم بقواعد الفورمة المطلوبة من حيث الطول والهيكل والنبرة والإخراج.
+استخدم كلمات قاموس العراقي بدل الفصحى كلما توفر مقابل، وتجنب كلمات اللهجات الأخرى.
+تجنب العبارات المكتوبة بأسلوب الذكاء الاصطناعي أو المقالات الرسمية (انظر القائمة).
 لا تكتب مقدمات مثل "أكيد، هذا المحتوى" — ابدأ بالمحتوى مباشرة.
-إذا المعلومات ناقصة (مثلاً السعر أو اسم البراند)، اكتب مكانها [بين قوسين] عشان المستخدم يعبّيها.
+إذا المعلومات ناقصة (مثلاً السعر أو اسم البراند)، اكتب مكانها {{...}} عشان المستخدم يعبّيها.
 لا تخترع أرقام أو إحصائيات أو ادعاءات طبية/مالية.
 """
 
 
-def load_text(path: Path) -> str:
-    return path.read_text(encoding="utf-8")
+def _read(path: Path) -> str:
+    return path.read_text(encoding="utf-8") if path.exists() else ""
+
+
+def _transcripts() -> str:
+    folder = KB / "examples" / "transcripts"
+    if not folder.exists():
+        return ""
+    parts = []
+    for f in sorted(folder.glob("*")):
+        if f.name == "README.md" or f.suffix not in {".md", ".txt"}:
+            continue
+        parts.append(f"--- {f.name} ---\n{_read(f).strip()}")
+    return "\n\n".join(parts)[:TRANSCRIPT_LIMIT]
 
 
 def build_system_prompt(fmt: str) -> str:
-    """System prompt for one format. Each format gets its own cache entry."""
     if fmt not in FORMATS:
         raise ValueError(f"unknown format: {fmt}")
-    _, path = FORMATS[fmt]
-    return "\n\n".join(
-        [
-            BASE_INSTRUCTIONS,
-            "# دليل اللهجة العراقية\n\n" + load_text(STYLE_GUIDE),
-            "# قواعد هذه الفورمة\n\n" + load_text(path),
-        ]
-    )
+    _, guide_path, spec_name = FORMATS[fmt]
+
+    sections = [
+        BASE_INSTRUCTIONS,
+        "# صوتي وأسلوبي (voice.md)\n\n" + _read(KB / "voice" / "voice.md"),
+        "# دليل اللهجة العراقية\n\n" + _read(ROOT / "guidelines" / "iraqi_dialect_style_guide.md"),
+        "# قاموس العراقي (المصدر الأساسي)\n\n" + _read(KB / "dialect" / "iraqi_words.csv"),
+        "# لهجات ممنوعة\n\n" + _read(KB / "dialect" / "other_dialects.yaml"),
+        "# عبارات ممنوعة (أسلوب AI)\n\n" + _read(KB / "copywriting" / "ai_phrases_ar.yaml"),
+        "# صيغ الهوك\n\n" + _read(KB / "hooks" / "hooks_ar.yaml"),
+        "# مستويات العمق\n\n" + _read(KB / "formats" / "levels.yaml"),
+        "# مواصفات الفورمة (ملف الكود)\n\n" + _read(KB / "formats" / spec_name),
+        "# قواعد الفورمة\n\n" + _read(guide_path),
+    ]
+    examples = _transcripts()
+    if examples:
+        sections.append("# أمثلة من كلامي الحقيقي (transcripts)\n\n" + examples)
+    return "\n\n".join(s for s in sections if s.strip())

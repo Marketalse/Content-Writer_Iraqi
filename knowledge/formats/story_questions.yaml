@@ -1,0 +1,30 @@
+# Story sequence with question / poll / quiz stickers (Instagram Stories; TikTok Stories similar).
+# Adapted from skills/ig-story/SKILL.md in Jakeschincariol/instagram-agent-skill (MIT).
+
+name: story_questions
+platforms: [instagram_stories, tiktok_stories]
+frames: {min: 3, max: 7}
+
+shape:
+  - {beat: open,   frame: "1",   job: "Something happening today, with a face or a hand in it."}
+  - {beat: middle, frame: "2-3", job: "The actual content: the process, the result, the mistake."}
+  - {beat: ask,    frame: "4",   job: "ONE sticker: question box, poll, quiz or slider."}
+  - {beat: close,  frame: "5",   job: "The answer, the outcome, or tomorrow's setup."}
+
+stickers:
+  question_box: "Collects the audience's exact words. Every answer can become a hook (verbatim_question)."
+  poll: "Cheapest tap. Use for volume of response, not information."
+  quiz: "Teaches by letting them be wrong. Use when there's a common misconception."
+  slider: "Vibe check. Low value."
+
+rules:
+  - Put the ask at frame 4, not frame 7. Completion drops with every tap.
+  - One idea per frame. Nobody reads a paragraph on a story.
+  - Talk to one person ("انت"), not "يا جماعة".
+  - Sticker questions are short, in Baghdadi, and easy to answer in one tap or a few words.
+  - After posting, reply to everyone who answered. They spoke first; that's the funnel.
+
+checks:
+  sticker_question_max_chars: 60
+  max_frames: 7
+  ask_frame_max: 4

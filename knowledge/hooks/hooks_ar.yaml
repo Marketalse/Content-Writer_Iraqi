@@ -1,0 +1,144 @@
+# Hook formulas for Baghdadi short videos, stories and posts.
+# Adapted from hooks.json in Jakeschincariol/instagram-agent-skill (MIT). 16 of the original 26
+# formulas were kept and rewritten for Iraqi audiences; the rest depended on English wordplay.
+#
+# STATUS: draft. The Baghdadi examples were written by Claude. Review them, fix the wording,
+# and add your own best-performing hooks as new entries. Spelling rule: ك not گ, ج not چ.
+#
+# Every hook has two lines: `spoken` (first 2 seconds) and `on_screen` (6 words or fewer).
+
+rules:
+  - Write the spoken line and the on-screen line separately. On screen is shorter, 6 words max.
+  - No greeting, no "in this video". Start at the sentence you would normally reach at second six.
+  - Say the number. "هواية" is not a number.
+  - If the hook would work for any other creator, it is not your hook. Put in the thing only you can say.
+  - A hook is a promise. Deliver it before the halfway mark.
+
+hooks:
+  - id: cost_confession
+    name: Cost Confession
+    template: "{مبلغ محدد} خسرته بسبب {غلطة وحدة}."
+    example: "مليونين دينار خسرتهم بسبب سطر واحد بالعقد."
+    on_screen: "خسارة مليونين"
+    best_for: Trust, fast. People finish videos where the creator is the one who looks bad.
+    trap: A fake cost. "خسرت راحتي" is not a number.
+
+  - id: negative_command
+    name: Negative Command
+    template: "بطّل {شي يسويه الجمهور}. سوّي {البديل}."
+    example: "بطّل تنشر كل يوم. انشر مرتين بالاسبوع ورد على كل تعليق."
+    on_screen: "بطّل تنشر كل يوم"
+    best_for: Saves and debate.
+    trap: Telling people to stop something nobody actually does.
+
+  - id: nobody_tells_you
+    name: Nobody Tells You
+    template: "محد يكلك ان {حقيقة مزعجة عن الشي اللي يريده}."
+    example: "محد يكلك ان اول عشر فيديوات راح تفشل، وهذا طبيعي."
+    on_screen: "محد يكلك هاي"
+    best_for: Beginners. Works well at the Simple level.
+    trap: A "secret" everyone already knows.
+
+  - id: time_collapse
+    name: Time Collapse
+    template: "{شغلة} جانت تاخذ مني {وقت طويل}. هسه تاخذ {وقت قصير}."
+    example: "كتابة البوست جانت تاخذ مني ساعتين. هسه عشر دقايق."
+    on_screen: "ساعتين ← ١٠ دقايق"
+    best_for: Tools, processes, productivity.
+    trap: A ratio nobody believes.
+
+  - id: the_receipt
+    name: The Receipt
+    template: "جربت {شي} {مدة}. هاي الارقام الحقيقية."
+    example: "نشرت ريلز كل يوم لمدة شهر. هاي الارقام الحقيقية."
+    on_screen: "شهر كامل: الارقام"
+    best_for: Proof-based content. Strong at the Medium and Complex levels.
+    trap: No real numbers. Never invent them; leave {{رقمك}} if unknown.
+
+  - id: wrong_way
+    name: Wrong Way, Right Way
+    template: "دا تسوي {شي} غلط، ومو ذنبك. {الحل}."
+    example: "دا تكتب الكابشن غلط، ومو ذنبك. اول سطر ه؈ كلشي."
+    on_screen: "دا تسويها غلط"
+    best_for: Teaching without lecturing.
+    trap: Making the viewer feel stupid instead of relieved.
+
+  - id: insider
+    name: Insider Leak
+    template: "اشتغلت {مدة} ب{مجال}. هاي الشغلات محد يحجيها."
+    example: "اشتغلت خمس سنين بالتسويق. هاي الشغلات محد يحجيها."
+    on_screen: "محد يحجيها"
+    best_for: Authority. Strong at the Complex level.
+    trap: Claiming insider status you don't have.
+
+  - id: numbered_favourite
+    name: Numbered With A Favourite
+    template: "{رقم} شغلات {نتيجة}. رقم {k} محد يستخدمه."
+    example: "ثلث شغلات تخلي الناس تكمل الفيديو. الثالثة محد يستخدمها."
+    on_screen: "٣ شغلات"
+    best_for: Saves. Lists work at every level.
+    trap: Padding the list to reach a round number.
+
+  - id: objection
+    name: The Objection
+    template: "«{اعتراض يكوله الجمهور فعلاً}». زين، هاي الطريقة اللي تشتغل بكل الاحوال."
+    example: "«ما عندي وقت اصور». زين، هاي طريقة تصور بيها اسبوع كامل بساعة."
+    on_screen: "ما عندك وقت؟"
+    best_for: Turning the audience's excuse into the hook.
+    trap: An objection nobody says.
+
+  - id: callout
+    name: The Callout
+    template: "«{مجماعة محددة}، هذا الفيديو الكم."
+    example: "اصحاب المحلات الصغيرة ببغداد، هذا الفيديو الكم."
+    on_screen: "لاصحاب المحلات"
+    best_for: Reaching a specific audience.
+    trap: A group so broad it calls out nobody.
+
+  - id: flop_record
+    name: The Flop Record
+    template: "اول {رقم} محاولات ما صار بيها شي. شنو تغير بالمحاولة {رقم+1}."
+    example: "اول عشرين فيديو ما شافها احد. شنو تغير بالفيديو ٢١."
+    on_screen: "٢٠ فيديو فاشل"
+    best_for: Relatable story. Good for long video stories.
+    trap: A flop that was never really a flop.
+
+  - id: verbatim_question
+    name: The Verbatim Question
+    template: "«{السؤال مثل ما انسأل}» هذا السؤال يجيني كل اسبوع."
+    example: "«شلون ابلش ابيع اونلاين؟» هذا السؤال يجيني كل اسبوع."
+    on_screen: "شلون ابلش؟"
+    best_for: Feeding answers from story question stickers straight into videos.
+    trap: Rewriting the question into formal Arabic. Keep their exact words.
+
+  - id: head_to_head
+    name: Head To Head
+    template: "{أ} لو {ب}؟ جربت الثنين {مدة} وواحد بيهم ما ينقارن."
+    example: "تيك توك لو انستغرام؟ جربت الثنين ثلث شهور وواحد بيهم ما ينقارن."
+    on_screen: "تيك توك لو انستا؟"
+    best_for: Comparisons. Strong at the Medium level.
+    trap: Not actually having tested both.
+
+  - id: permission
+    name: Permission
+    template: "ما تحتاج {الشي اللي الكل يكول لازم}."
+    example: "ما تحتاج كاميرا غالية حتى تبلش."
+    on_screen: "ما تحتاج كاميرا"
+    best_for: Beginners. Removes a barrier.
+    trap: Permission that's bad advice.
+
+  - id: contrarian_proverb
+    name: Contrarian Proverb
+    template: "{مثل عراقي معروف}... بس بالسوشيال ميديا العكس صحيح."
+    example: "يكولون الصبر مفتاح الفرج... بس بالريلز اول ثانيتين هي كلشي."
+    on_screen: "العكس صحيح"
+    best_for: Cultural hook only an Iraqi creator can do.
+    trap: Twisting a proverb people hold sacred.
+
+  - id: statistic
+    name: The Statistic
+    template: "{رقم}٪ من {جماعة} {حقيقة مفاجئة}."
+    example: "اكثر من نص الناس يشوفون الريلز بدون صوت."
+    on_screen: "بدون صوت!"
+    best_for: Complex level, with a source.
+    trap: A made-up statistic. Every number needs a source in claims_to_verify.

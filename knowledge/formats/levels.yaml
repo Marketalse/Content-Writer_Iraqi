@@ -1,0 +1,26 @@
+# The three depth levels. Every format is written at each level the user asks for.
+# The Strategist uses these as defaults and tailors them per topic.
+
+simple:
+  audience: "Someone who has never thought about this topic. Scrolling, half-watching."
+  assumed_knowledge: none
+  jargon: "None. If a technical word is unavoidable, explain it in the same line."
+  structure: "One idea. One example from daily Iraqi life. One takeaway."
+  sentence_length: "Very short. Spoken rhythm."
+  goal: "They get it in one watch and can repeat it to a friend."
+
+medium:
+  audience: "Follows the niche, knows the basics, wants something useful today."
+  assumed_knowledge: "Basic terms."
+  jargon: "Common terms allowed (e.g. ريلز، تاركيت، ماركيتنك). No deep technical terms."
+  structure: "One idea broken into 2-3 practical steps or reasons, with a concrete example."
+  sentence_length: "Short to medium."
+  goal: "They save it and try one thing this week."
+
+complex:
+  audience: "Practitioners and professionals in the niche."
+  assumed_knowledge: "Comfortable with the field's vocabulary."
+  jargon: "Allowed, but still spoken in Baghdadi, never formal Arabic."
+  structure: "A non-obvious insight, the reasoning or data behind it, a trade-off or exception, and what to do."
+  sentence_length: "Varied. Still sayable out loud."
+  goal: "They learn something they didn't know and see the creator as an authority."
