@@ -27,7 +27,7 @@ Every agent reads this file. Filled from the owner's published posts
 
 ## Writing mechanics (copy these)
 
-- **Opening:** a challenge or a reset, in 1–2 short lines. Examples: "خلونا نرجع شوية للأساسيات:"; "لا حبيبي."; "هواية ناس يشوفون التسويق كـ Cost Center."; "جربت Claude Code؟"; "السؤال اللي لازم كل شركة تسألة:".
+- **Opening:** a challenge or a reset, in 1–2 short lines. Examples: "خلونا نرجع شوية للأساسيات:"; "لا حبيبي."; "هواية ناس يشوفون التسويق كـ Cost Center."; "جربت Claude Code؟"; "السؤال اللي لازم كل شركة تسأله:".
 - **Body:** short lines, one idea per line. Arrows for logic: `←`, `-->`, `=`. Numbered lists (1. 2. 3. or ١. ٢. ٣.) for criteria or steps.
 - **Definitions:** term first, then what it means in plain Baghdadi. "ROAS ← شكد ترجعلك فلوس من كل دينار تصرفه".
 - **Credibility:** one line that says the experience, e.g. "من تجربتي بإدارة توزيع الـ FMCG". Do not invent other experience.
