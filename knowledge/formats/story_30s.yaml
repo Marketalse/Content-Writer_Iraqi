@@ -1,0 +1,38 @@
+# Instagram Story video: a 30-second vertical video, posted 5 times a day.
+# Output is a SCRIPT, not a storyboard: spoken lines, on-screen text, one sticker.
+# No shot or camera descriptions. The owner records and posts.
+
+name: story_30s
+platform: instagram_story_video
+length_seconds: {target: 30, max: 35}
+posts_per_day: 5
+
+shape:
+  - {beat: hook,       seconds: "0-3",   job: "Stop the scroll. One claim or question the viewer already feels. Spoken max 7 words."}
+  - {beat: problem,    seconds: "3-9",   job: "Name the pain in the viewer's own daily Iraqi life. One or two sentences."}
+  - {beat: insight,    seconds: "9-22",  job: "The one thing they didn't know, with a concrete example. Max two points."}
+  - {beat: payoff,     seconds: "22-27", job: "Deliver what the hook promised. Short and clear."}
+  - {beat: sticker_cta, seconds: "27-30", job: "One interactive sticker (question box or poll) and one ask. No greeting, no sign-off."}
+
+script_format: |
+  [0-3s]   SPOKEN: ...        | ON SCREEN: ...
+  [3-9s]   SPOKEN: ...        | ON SCREEN: ...
+  [9-22s]  SPOKEN: ...        | ON SCREEN: ...
+  [22-27s] SPOKEN: ...        | ON SCREEN: ...
+  [27-30s] SPOKEN: ...        | ON SCREEN: ...        | STICKER: ...
+  NOTE FOR OWNER: (one line, optional)
+
+daily_rotation:
+  - {day_slot: 1, angle: myth_busting,   note: "A common belief about the topic, then the truth."}
+  - {day_slot: 2, angle: quick_tip,      note: "One practical action they can do today."}
+  - {day_slot: 3, angle: behind_scenes,  note: "What happened behind the work. Honest, no polish."}
+  - {day_slot: 4, angle: customer_pain,  note: "A problem a customer had, told without names."}
+  - {day_slot: 5, angle: offer_or_ask,   note: "A reason to act now, with a link or reply prompt."}
+
+checks:
+  total_spoken_words_max: 75
+  hook_max_seconds: 3
+  on_screen_max_words: 6
+  sticker_required: true
+  invented_numbers_forbidden: true   # use {{placeholder}} for any figure
+  no_greeting: true
