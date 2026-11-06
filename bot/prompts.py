@@ -62,6 +62,7 @@ def build_system_prompt(fmt: str) -> str:
         "# مستويات العمق\n\n" + _read(KB / "formats" / "levels.yaml"),
         "# مواصفات الفورمة (ملف الكود)\n\n" + _read(KB / "formats" / spec_name),
         "# قواعد الفورمة\n\n" + _read(guide_path),
+        "# شكل الرد النهائي (إلزامي، يلغي أي سكربت بالثواني أو شكل آخر أعلاه)\n\n" + _read(KB / "formats" / "caption.yaml"),
     ]
     examples = _examples()
     if examples:

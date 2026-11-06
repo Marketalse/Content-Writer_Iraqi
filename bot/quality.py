@@ -1,9 +1,9 @@
 """Quality gate for generated content.
 
-check(fmt, text) returns a list of failures (empty list = passes).
-generate_checked() calls the model, checks the draft, and retries once with
-the failures listed, so the model can fix them. If it still fails, the caller
-receives the draft plus the failures and must show them to the owner.
+Every format replies with a labelled caption: Hook, Content (intro + 3 numbered
+points), CTA. check(fmt, text) returns a list of failures (empty = passes).
+generate_checked() retries once with the failures listed, then returns the draft
+with the failures for the owner to review.
 """
 
 import re
@@ -20,6 +20,10 @@ GREETINGS = ["هلا بيكم", "هلا والله", "مرحبا", "السلام
 DIACRITICS = re.compile(r"[ً-ْـ]")
 KEYCAP = re.compile(r"([0-9])️?⃣")
 ARABIC_DIGITS = str.maketrans("٠١٢٣٤٥٦٧٨٩", "0123456789")
+SECTION = re.compile(r"^\s*(Hook|Content|CTA)\s*:", re.MULTILINE | re.IGNORECASE)
+NUMBERED = re.compile(r"^\s*[1-3١-٣][.)]\s+\S", re.MULTILINE)
+OWNER_NOTE = re.compile(r"\*{0,2}NOTE FOR OWNER:?\*{0,2}", re.IGNORECASE)
+HASHTAG_LIMITS = {"story": 0, "linkedin": 0, "reel": 5, "carousel": 5}
 
 
 def _norm(s: str) -> str:
@@ -38,11 +42,14 @@ def _words(s: str) -> int:
     return len(s.split())
 
 
+def _hashtags(text: str) -> list[str]:
+    return re.findall(r"#\S+", text)
+
+
 def _invented_numbers(text: str) -> list[str]:
     t = text.translate(ARABIC_DIGITS)
     t = re.sub(r"\{\{.*?\}\}", " ", t)          # placeholders are allowed
-    t = re.sub(r"\[\d+-\d+s\]", " ", t)         # timing labels
-    t = KEYCAP.sub(" ", t)                      # 1️⃣ list markers
+    t = KEYCAP.sub(" ", t)                      # 1️⃣ markers
     t = re.sub(r"(?m)^\s*\d+[.)]\s", " ", t)    # 1. list markers
     bad = []
     for m in re.finditer(r"(\d+)\s*(%|٪|ألف|مليون|دينار|د\.ع|\$)?", t):
@@ -50,10 +57,6 @@ def _invented_numbers(text: str) -> list[str]:
         if m.group(2) or n > 10:
             bad.append(m.group(0).strip())
     return bad
-
-
-def _hashtags(text: str) -> list[str]:
-    return re.findall(r"#\S+", text)
 
 
 def _common(text: str) -> list[str]:
@@ -71,111 +74,51 @@ def _common(text: str) -> list[str]:
     return fails
 
 
-def _fields(text: str, label: str) -> list[str]:
-    """Values of 'LABEL: value' fields. A line may hold several fields split by ' | '."""
-    out = []
-    for line in text.splitlines():
-        for part in line.split("|"):
-            part = re.sub(r"\[[^\]]*\]", " ", part).replace("*", " ").strip()
-            if part.upper().startswith(label + ":"):
-                out.append(part[len(label) + 1:].strip().strip("*").strip())
+def _label(raw: str) -> str:
+    return "CTA" if raw.upper() == "CTA" else raw.capitalize()
+
+
+def _sections(text: str) -> dict[str, list[str]]:
+    """Map each label (Hook, Content, CTA) to the text after it, up to the next label."""
+    found = list(SECTION.finditer(text))
+    out: dict[str, list[str]] = {}
+    for i, m in enumerate(found):
+        end = found[i + 1].start() if i + 1 < len(found) else len(text)
+        out.setdefault(_label(m.group(1)), []).append(text[m.end():end].strip())
     return out
 
 
-SCRIPT_POINT = re.compile(r"^[1-3١-٣][.)]\s")
-
-
-def _three_blocks(text: str) -> list[str]:
-    """Hook, 3 numbered points, CTA as the last spoken line. Used by story and reel."""
+def _caption(text: str) -> list[str]:
     fails = []
-    spoken = [s for s in _fields(text, "SPOKEN") if s]
-    points = [s for s in spoken if SCRIPT_POINT.match(s)]
+    order = [_label(m.group(1)) for m in SECTION.finditer(text)]
+    if order != ["Hook", "Content", "CTA"]:
+        return [f"the reply must have the labels Hook:, Content:, CTA: in that order (found {order or 'none'})"]
+    secs = _sections(text)
+    hook, content, cta = secs["Hook"][0], secs["Content"][0], secs["CTA"][0]
+    if _words(hook) > 15:
+        fails.append(f"Hook has {_words(hook)} words, must be 15 or fewer")
+    points = NUMBERED.findall(content)
     if len(points) != 3:
-        fails.append(f"found {len(points)} numbered SPOKEN points, must be exactly 3 (١. ٢. ٣.)")
-    if spoken and SCRIPT_POINT.match(spoken[-1]):
-        fails.append("the last SPOKEN line must be the CTA, not a numbered point")
-    if spoken and _words(spoken[0]) > 7:
-        fails.append(f"hook has {_words(spoken[0])} spoken words, must be 7 or fewer")
-    total = sum(_words(s) for s in spoken)
-    if total > 75:
-        fails.append(f"spoken words total {total}, must be 75 or fewer")
-    for on in _fields(text, "ON SCREEN"):
-        if _words(on) > 6:
-            fails.append(f"on-screen text '{on[:40]}' has {_words(on)} words, max 6")
-    return fails
-
-
-def _reel(text: str) -> list[str]:
-    fails = _three_blocks(text)
-    if len(_hashtags(text)) > 5:
-        fails.append(f"{len(_hashtags(text))} hashtags, max 5")
-    return fails
-
-
-def _story(text: str) -> list[str]:
-    fails = _three_blocks(text)
-    spoken = [s for s in _fields(text, "SPOKEN") if s]
-    if len(spoken) < 4:
-        fails.append("story needs SPOKEN lines for each beat (found fewer than 4)")
-    if not _fields(text, "STICKER"):
-        fails.append("missing the STICKER field (every story needs one interactive sticker)")
-    return fails
-
-
-def _instagram(text: str) -> list[str]:
-    fails = []
-    tags = _hashtags(text)
-    if len(tags) > 5:
-        fails.append(f"{len(tags)} hashtags, max 5")
-    first = next((l for l in text.splitlines() if l.strip()), "")
-    if len(first) > 125:
-        fails.append(f"first line is {len(first)} characters; Instagram cuts it after about 125")
-    return fails
-
-
-NUMBERED = re.compile(r"^\s*[1-3١-٣][.)]\s+\S", re.MULTILINE)
-
-
-def _linkedin(text: str) -> list[str]:
-    fails = []
-    lines = [l.strip() for l in text.splitlines() if l.strip()]
-    if not lines:
-        return ["empty caption"]
-    n = _words(text)
-    if not 50 <= n <= 150:
-        fails.append(f"caption has {n} words, must be 50 to 150")
-    if _words(lines[0]) > 15:
-        fails.append(f"hook has {_words(lines[0])} words, must be 15 or fewer")
-    points = NUMBERED.findall(text)
-    if len(points) != 3:
-        fails.append(f"found {len(points)} numbered points, must be exactly 3 (١. ٢. ٣.)")
-    if NUMBERED.search(lines[-1]):
-        fails.append("the CTA must be the last line, not a numbered point")
-    elif _words(lines[-1]) > 25:
-        fails.append(f"CTA has {_words(lines[-1])} words, must be 25 or fewer")
-    if _hashtags(text):
-        fails.append("LinkedIn captions have no hashtags")
+        fails.append(f"Content has {len(points)} numbered points, must be exactly 3 (1. 2. 3.)")
+    if _words(cta) > 25:
+        fails.append(f"CTA has {_words(cta)} words, must be 25 or fewer")
+    total = _words(text.split("NOTE FOR OWNER")[0])
+    if not 40 <= total <= 160:
+        fails.append(f"caption has {total} words, must be 40 to 160")
     return fails
 
 
 def check(fmt: str, text: str) -> list[str]:
-    fails = _common(text)
-    if fmt == "story":
-        fails += _story(text)
-    elif fmt == "linkedin":
-        fails += _linkedin(text)
-    elif fmt == "reel":
-        fails += _reel(text)
-    else:  # carousel
-        fails += _instagram(text)
+    fails = _common(text) + _caption(text)
+    limit = HASHTAG_LIMITS.get(fmt, 5)
+    tags = _hashtags(text)
+    if len(tags) > limit:
+        fails.append(f"{len(tags)} hashtags, max {limit} for {fmt}")
     return fails
 
 
-OWNER_NOTE = re.compile(r"\*{0,2}NOTE FOR OWNER:?\*{0,2}", re.IGNORECASE)
-
-
 def split_owner_note(text: str) -> tuple[str, str]:
-    """Separate the publishable script from the NOTE FOR OWNER block (never published)."""
+    """Separate the publishable caption from the NOTE FOR OWNER block (never published)."""
     m = OWNER_NOTE.search(text)
     if not m:
         return text.strip(), ""
@@ -184,7 +127,7 @@ def split_owner_note(text: str) -> tuple[str, str]:
 
 @dataclass
 class Checked:
-    text: str            # publishable content only
+    text: str            # publishable caption only
     provider: str
     refused: bool = False
     failures: list[str] = field(default_factory=list)
@@ -207,7 +150,7 @@ async def generate_checked(fmt: str, system: str, topic: str) -> Checked:
             return Checked(content, result.provider, False, [], attempt, note)
         prompt = (
             base
-            + "\n\nالنسخة السابقة فيها هذي المشاكل، صححها وأعد كتابة النص كامل بنفس الفورمة:\n- "
+            + "\n\nالنسخة السابقة فيها هذي المشاكل، صححها وأعد كتابة الرد كامل بنفس الشكل (Hook / Content / CTA):\n- "
             + "\n- ".join(failures)
         )
     content, note = split_owner_note(result.text)

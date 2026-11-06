@@ -1,0 +1,28 @@
+# Final reply format for EVERY format (story, reel, carousel, LinkedIn).
+# The reply is a labelled caption with three blocks, in this order: Hook, Content, CTA.
+# This overrides any timed script or storyboard described above. Do not write seconds or SPOKEN/ON SCREEN lines.
+
+output:
+  labels_in_order: ["Hook:", "Content:", "CTA:"]
+  hook: "A couple of words that grab attention so the reader keeps going. 15 words or fewer. A question, a surprise, or a sharp claim about the reader's business."
+  content: "One intro line, then exactly 3 numbered points written as 1. 2. 3. Each point: a short title and at most one line of explanation. The 3rd point is the most important."
+  cta: "One line, 25 words or fewer, with one clear reason to follow or act. It is the last line of the reply."
+  owner_note: "Optional. After the CTA, a line starting with NOTE FOR OWNER: is shown only to the owner and is never published."
+
+example: |
+  Hook: تدري ليش مبيعاتك واكعة؟ تعرف سالفة الدولار شلون راح تأثر عليك؟
+
+  Content:
+  مبيعاتك حتى تزيدها انت تحتاج تنتبه لجهود التسويق، لان هاي 3 نقاط جداً مهمة، و3 نقطة اهم شي لازم تسويها:
+  1. افهم العرض التسويقي
+  2. ابني نص بيعي للعرض التسويقي يتناسب وي شخصيتك كبائع
+  3. تواصل وي كل عملائك بشكل مستمر
+
+  CTA: اذا ممتابعني بعدك ما اتصور، راح اطلعلك مرة ثانية.
+
+checks:
+  total_words: {min: 40, max: 160}
+  hashtags: {story: 0, linkedin: 0, reel: 5, carousel: 5}
+  greeting: none
+  invented_numbers: none
+  numbered_points: 3
