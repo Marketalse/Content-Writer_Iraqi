@@ -6,12 +6,12 @@ length_words: {min: 50, max: 150}
 
 shape:
   - {beat: hook,    job: "One short line, 15 words or fewer. It must make the reader keep reading: a question, a surprise, or a sharp claim about their business."}
-  - {beat: content, job: "One intro sentence, then exactly 3 numbered points (١. ٢. ٣.). Each point: a short title, then at most one line of explanation. The 3rd point is the most important."}
+  - {beat: content, job: "One intro sentence, then exactly 3 numbered points (1. 2. 3.). Each point: a short title, then at most one line of explanation. The 3rd point is the most important."}
   - {beat: cta,     job: "One line, 25 words or fewer, starting with a clear reason to follow or act. No second ask."}
 
 format_rules:
   - "Blank line between the three blocks."
-  - "Numbered points use ١. ٢. ٣. (or 1. 2. 3.) at the start of the line."
+  - "Numbered points use 1. 2. 3. (or 1. 2. 3.) at the start of the line."
   - "Baghdadi with گ and چ used naturally."
   - "No greeting, no sign-off, no hashtags."
   - "Figures are {{رقمك}} placeholders. Never invent numbers."
