@@ -1,0 +1,39 @@
+# Words from OTHER Arabic dialects that should not appear in Baghdadi scripts.
+# Your Iraqi sheet (iraqi_words.csv) handles formal Arabic -> Iraqi. This file only catches
+# Egyptian / Gulf / Levantine words, which the sheet's rule ("not in the sheet = fine") would miss.
+#
+# Switch the whole check off with `enabled: false`. Spelling follows the project rule: ك not گ, ج not چ.
+# STATUS: draft written by Claude. Review it like the sheet: delete anything you disagree with.
+
+enabled: true
+
+egyptian:
+  - {word: ازاي, use: شلون}
+  - {word: دلوقتي, use: هسه}
+  - {word: عايز, use: اريد}
+  - {word: عايزة, use: اريد}
+  - {word: كده, use: هيج}
+  - {word: اوي, use: كلش}
+  - {word: بتاع, use: مال}
+  - {word: ليه, use: ليش}
+  - {word: فين, use: وين}
+  - {word: امتى, use: شوكت}
+  - {word: مش, use: مو}
+  - {word: خالص, use: ابد}
+  - {word: برضه, use: هم}
+
+gulf:
+  - {word: وايد, use: هواية}
+  - {word: ابغى, use: اريد}
+  - {word: الحين, use: هسه}
+  - {word: عشان, use: حتى / علمود}
+  - {word: شفيك, use: شبيك}
+
+levantine:
+  - {word: هلق, use: هسه}
+  - {word: شو, use: شنو}
+  - {word: كتير, use: هواية}
+  - {word: بدي, use: اريد}
+  - {word: منيح, use: زيٙ}
+  - {word: هيك, use: هيج}
+  - {word: لسا, use: بعد}

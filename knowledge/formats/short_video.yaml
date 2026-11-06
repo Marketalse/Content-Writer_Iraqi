@@ -1,0 +1,33 @@
+# Short video: Instagram Reels and TikTok.
+# Structure and rules adapted from skills/ig-reel/SKILL.md in Jakeschincariol/instagram-agent-skill (MIT).
+
+name: short_video
+platforms: [instagram_reels, tiktok]
+length_seconds: {min: 15, max: 45, target: 30}
+
+shape:
+  - {beat: hook,   seconds: "0-2",  job: "The claim. Spoken line and on-screen line written separately. Motion in the first frame."}
+  - {beat: stake,  seconds: "2-7",  job: "Why this matters to the person watching. One line."}
+  - {beat: body,   seconds: "7-end", job: "One idea per beat. The frame changes every beat."}
+  - {beat: payoff, seconds: "last 3", job: "Deliver what the hook promised, then the single ask."}
+  - {beat: loop,   seconds: "last line", job: "Echo one word from the hook so the replay lands clean."}
+
+rules:
+  - One idea per video. Two ideas means two videos.
+  - Numbers over adjectives. Unknown numbers stay as {{رقمك}}; never invent one.
+  - No greeting, no intro, no name, no logo sting.
+  - One ask at the end. Comment a word, save, or follow. One.
+  - Burn in captions for the body; most people watch muted first.
+
+on_screen_text:
+  max_words_per_card: 6
+  hook_card_at_frame_1: true
+  safe_zone_1080x1920: "Nothing above y=230 or below y=1440; keep the right 230px clear (Instagram). TikTok's UI sits in similar places."
+
+checks:            # enforced by content_workshop.checks
+  hook_max_seconds: 3
+  beat_max_seconds: 4
+  require_loop: true
+  max_hashtags: 5
+  caption_max_chars: 2200
+  feed_visible_chars: 125

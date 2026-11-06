@@ -1,0 +1,22 @@
+# Feed post (single image or carousel) and its caption, for Instagram and TikTok photo posts.
+# Caption checks adapted from skills/ig-caption/caption.py in Jakeschincariol/instagram-agent-skill (MIT).
+
+name: post
+platforms: [instagram_feed, tiktok_photo]
+
+shape:
+  - {beat: hook,   job: "First line of the caption, inside the visible window before '... more'."}
+  - {beat: body,   job: "Short lines with white space. One idea, developed."}
+  - {beat: cta,    job: "One ask."}
+  - {beat: tags,   job: "3-5 specific hashtags. Arabic and English tags both fine."}
+
+rules:
+  - The first ~125 characters are all most people see. The hook has to land inside them.
+  - Hashtags: Instagram allows 5 per post (since Dec 2025). Specific beats generic.
+  - No hashtag walls, no emoji bullet lists.
+  - For carousels, each slide line goes in a beat with label "slide N".
+
+checks:
+  max_hashtags: 5
+  caption_max_chars: 2200
+  feed_visible_chars: 125

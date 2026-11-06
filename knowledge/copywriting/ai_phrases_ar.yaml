@@ -1,0 +1,37 @@
+# Arabic phrases that make a script sound written by AI or like a formal article.
+# Inspired by slop.json in Jakeschincariol/instagram-agent-skill (MIT), rebuilt for Arabic content.
+#
+# `phrase` is matched after light normalisation (no diacritics, أ/إ/آ -> ا).
+# `fix` is guidance for the rewrite, not an automatic replacement: these need judgement.
+# Add a line every time you delete a phrase like this from a draft.
+
+openers:
+  - {phrase: في عالمنا اليوم, fix: "Cut it. Start at the claim."}
+  - {phrase: في هذا الفيديو, fix: "Cut it. The video starts at the point."}
+  - {phrase: اهلا وسهلا بكم, fix: "No greeting. Start at the hook."}
+  - {phrase: مرحبا بكم, fix: "No greeting. Start at the hook."}
+  - {phrase: دعونا نتعرف, fix: "Just say the thing."}
+  - {phrase: هل تساءلت يوما, fix: "Use a concrete question or a number."}
+  - {phrase: في ظل, fix: "Formal. Say what happened, plainly."}
+
+fillers:
+  - {phrase: لا شك ان, fix: "Cut it."}
+  - {phrase: من الجديد بالذبير, fix: "Cut it."}
+  - {phrase: تجدر الاشارةت, fix: "Cut it."}
+  - {phrase: بشكل كبير, fix: "Give the number instead."}
+  - {phrase: بشكل عام, fix: "Be specific or cut it."}
+  - {phrase: على حد سواء, fix: "Formal. Rephrase in Baghdadi."}
+  - {phrase: علاوة على ذلك, fix: "Formal connector. Use 'وبعد' or a new line."}
+  - {phrase: بالاضافة الى ذلك, fix: "Formal connector. Use 'وبعد' or a new line."}
+  - {phrase: بالاضافة الى ذلك, fix: "Formal connector. Use 'وبعد' or 'فـ'."}
+  - {phrase: وبالتالي, fix: "Formal connector. Use 'لان'."}
+  - {phrase: حيث ان, fix: "Formal connector. Use 'لان'."}
+  - {phrase: ومن هنا, fix: "Cut it."}
+  - {phrase: يلعب دورا, fix: "Say what it actually does."}
+
+closers:
+  - {phrase: في الختام, fix: "Cut it. End on the payoff."}
+  - {phrase: وفي النهاية, fix: "Cut it. End on the payoff."}
+  - {phrase: لا تنسوا الاشتراك, fix: "One specific ask, said in Baghdadi."}
+  - {phrase: تابعونا للمزيد, fix: "One specific ask, said in Baghdadi."}
+  - {phrase: شاركونا ارائكم, fix: "Ask one concrete question instead."}

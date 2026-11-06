@@ -1,0 +1,28 @@
+# Long video story: a told story for TikTok (up to 10 min) or longer Reels (up to 3 min).
+# Built for this project; the hook and on-screen rules reuse the short_video ideas.
+
+name: long_video_story
+platforms: [tiktok, instagram_reels]
+length_seconds: {min: 60, max: 600, target: 150}
+
+shape:
+  - {beat: hook,        seconds: "0-3",   job: "Drop into the most tense moment of the story, then cut back."}
+  - {beat: setup,       seconds: "3-20",  job: "Who, where, what was at stake. Iraqi context the viewer recognises."}
+  - {beat: chapter,     seconds: "each 20-40", job: "2-4 chapters. Each ends with an open question that pulls into the next."}
+  - {beat: turn,        seconds: "",      job: "The moment things changed. The emotional peak."}
+  - {beat: lesson,      seconds: "",      job: "What it means for the viewer, at the chosen level."}
+  - {beat: cta,         seconds: "last 5", job: "One ask, tied to the story."}
+
+rules:
+  - A real story only. Never invent events, people or numbers.
+  - Every 20-40 seconds, a re-hook: a question, a reveal, or a change of scene.
+  - Spoken, not read. Baghdadi rhythm, not an article read aloud.
+  - Chapter titles on screen help people who skip.
+
+checks:
+  hook_max_seconds: 3
+  beat_max_seconds: 40
+  require_loop: false
+  max_hashtags: 5
+  caption_max_chars: 2200
+  feed_visible_chars: 125
