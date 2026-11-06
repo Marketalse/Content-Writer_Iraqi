@@ -32,6 +32,11 @@ ASK_VERBS = {"اكتب", "اكتبلي", "دز", "دزلي", "دزه", "تابع
              "ارسل", "اضغط", "سجل", "اطلب", "راسل", "شوف", "جرب", "صوت", "علّق", "علق"}
 HOOK_MAX_CHARS = {"carousel": 125, "linkedin": 210}
 HASHTAG_LIMITS = {"story": 0, "linkedin": 0, "reel": 5, "carousel": 5}
+# Total reply length in words per format. Speaking pace is about 2.5 Arabic words a second,
+# so a 30 second story is about 75 words and a 60+ second reel is about 150 words or more.
+LENGTH = {"story": (50, 110), "reel": (140, 260), "carousel": (50, 200), "linkedin": (50, 200)}
+# Max words for one numbered point. Reels get longer points because they run longer.
+POINT_MAX = {"story": 40, "reel": 60, "carousel": 40, "linkedin": 40}
 
 
 def _norm(s: str) -> str:
@@ -121,7 +126,7 @@ HEADERS = [("🪝", "Hook"), ("💬", "Content"), ("🫵", "CTA")]
 POINT_MARKERS = ["📊", "🔥", "💡"]
 
 
-def _layout(main: str) -> list[str]:
+def _layout(main: str, fmt: str = "") -> list[str]:
     """Three blocks: Hook, Content (intro + 3 points 📊 🔥 💡), CTA with one ask."""
     fails = []
     plain = [l.replace("**", "").strip() for l in main.splitlines() if l.strip()]
@@ -152,9 +157,10 @@ def _layout(main: str) -> list[str]:
     intro = [l for l in content_body if l not in points]
     if not intro:
         fails.append("Content needs a short intro line before the points")
+    point_max = POINT_MAX.get(fmt, 40)
     for l in points:
-        if _words(l) > 40:
-            fails.append(f"point '{l[:30]}' has {_words(l)} words, max 40")
+        if _words(l) > point_max:
+            fails.append(f"point '{l[:30]}' has {_words(l)} words, max {point_max}")
 
     if len(cta_body) != 1:
         fails.append(f"CTA must be exactly one line (found {len(cta_body)})")
@@ -168,8 +174,9 @@ def _layout(main: str) -> list[str]:
             fails.append("CTA has more than one ask; keep exactly one call to action")
 
     total = _words(main)
-    if not 50 <= total <= 200:
-        fails.append(f"reply has {total} words, must be 50 to 200")
+    low, high = LENGTH.get(fmt, (50, 200))
+    if not low <= total <= high:
+        fails.append(f"reply has {total} words, must be {low} to {high} for {fmt or 'this format'}")
     return fails
 
 
@@ -209,7 +216,7 @@ def _timed(text: str) -> list[str]:
 
 def check(fmt: str, text: str) -> list[str]:
     main, _ = split_keywords(text)
-    fails = _common(text) + _layout(main) + _readability(text)
+    fails = _common(text) + _layout(main, fmt) + _readability(text)
     limit = HASHTAG_LIMITS.get(fmt, 5)
     if len(_hashtags(text)) > limit:
         fails.append(f"{len(_hashtags(text))} hashtags, max {limit} for {fmt}")

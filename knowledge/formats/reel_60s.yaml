@@ -1,0 +1,22 @@
+# Instagram Reel / TikTok, 60 seconds or longer (target 60 to 75 seconds).
+# Same three blocks as the caption layout (knowledge/formats/caption.yaml): Hook, Content, CTA.
+# Longer than the 30 second story: each point gets room for a real example or a concrete step.
+
+name: reel_60s
+platform: [instagram_reels, tiktok]
+length_seconds: {target: 65, min: 60, max: 80}
+
+shape:
+  - {beat: hook,    seconds: "0-4",   job: "One sharp line that stops the scroll. A question or a claim about the viewer's business. Max 25 words."}
+  - {beat: content, seconds: "4-55",  job: "One intro sentence that says what the viewer will get, then exactly 3 points (📊 🔥 💡). Each point: a short title, then 2 to 3 sentences with a concrete example or step. The 💡 point is the most important."}
+  - {beat: cta,     seconds: "55-65", job: "One clear ask in one line. Only one ask. Max 25 words."}
+
+checks:
+  total_words_min: 140
+  total_words_max: 260
+  point_words_max: 60
+  hook_max_words: 25
+  cta_max_words: 25
+  hashtags_max: 5
+  invented_numbers_forbidden: true
+  no_greeting: true
