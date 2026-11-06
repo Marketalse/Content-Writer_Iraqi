@@ -15,7 +15,7 @@ FORMATS = {
     "story": ("📱 ستوري ٣٠ ثانية", ROOT / "formats" / "stories" / "guide.md", "story_30s.yaml"),
     "carousel": ("🖼️ كاروسيل", ROOT / "formats" / "carousels" / "guide.md", "post.yaml"),
     "reel": ("🎥 ريل", ROOT / "formats" / "reels" / "guide.md", "short_video.yaml"),
-    "linkedin": ("💼 لينكدإن", ROOT / "formats" / "linkedin" / "guide.md", "post.yaml"),
+    "linkedin": ("💼 لينكدإن", ROOT / "formats" / "linkedin" / "guide.md", "linkedin_post.yaml"),
 }
 
 BASE_INSTRUCTIONS = """أنت كاتب محتوى محترف متخصص باللهجة العراقية (البغدادية المفهومة بكل العراق).

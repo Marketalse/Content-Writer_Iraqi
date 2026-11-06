@@ -1,8 +1,9 @@
 """One local story generation, without Telegram.
 
 Usage (from the repo root, with .env filled in):
-    python3 bot/test_story.py
-    python3 bot/test_story.py "your own topic here"
+    python3 bot/test_story.py                       # story, default topic
+    python3 bot/test_story.py "your topic"          # story, your topic
+    python3 bot/test_story.py linkedin "your topic" # any format: story, carousel, reel, linkedin
 """
 
 import logging
@@ -29,12 +30,18 @@ DEFAULT_TOPIC = (
     "صاحب محل ملابس بالبتاوين، بداية الشهر كانت الحركة ميتة، "
     "وقرر يسوي شي مختلف: يرجع أول زبون صار يشتري منه ويسولف معاه"
 )
-topic = " ".join(sys.argv[1:]).strip() or DEFAULT_TOPIC
+from prompts import FORMATS  # noqa: E402
+
+args = sys.argv[1:]
+fmt = "story"
+if args and args[0] in FORMATS:
+    fmt = args.pop(0)
+topic = " ".join(args).strip() or DEFAULT_TOPIC
 
 
 async def main():
     try:
-        result = await generate(build_system_prompt("story"), f"الموضوع: {topic}")
+        result = await generate(build_system_prompt(fmt), f"الموضوع: {topic}")
     except LLMError as exc:
         sys.exit(f"Generation failed: {exc}")
     print(f"provider={result.provider} refused={result.refused}")

@@ -1,0 +1,31 @@
+# LinkedIn caption, in the owner's published-post structure.
+# Structure: problem line -> framework intro -> numbered levels -> big mistake -> reframe -> question.
+
+name: linkedin_post
+platform: linkedin
+length_words: {min: 120, max: 220}
+
+shape:
+  - {beat: problem_hook,   job: "One line that flips the common belief. Start with 💡. Pattern: 'المشكلة مو ... المشكلة ...'"}
+  - {beat: framework,      job: "One line that introduces the framework, e.g. 'التسويق له 3 مستويات:'"}
+  - {beat: levels,         job: "Numbered 1️⃣ 2️⃣ 3️⃣. Each level: English term line, then the 3-4 terms joined by ' | ', then one Baghdadi line about what it means. Max 3 levels."}
+  - {beat: big_mistake,    job: "Start with 🔥. Quote the wrong belief the reader says, then 'لا حبيبي.' and the correct idea in 1-2 short lines."}
+  - {beat: reframe,        job: "Start with 📌. 2-3 short lines that define the role or idea in business terms."}
+  - {beat: closing_question, job: "Start with 🤔. One question to the reader that asks for their own situation."}
+
+format_rules:
+  - "Blank line between blocks. Each line short; one idea per line."
+  - "English business terms exactly as in the owner's posts (Marketing Metrics, Consumer Behavior, Commercial Outcomes, Scorecard, Trade-offs, CFO)."
+  - "Pipe-separated term lists use ' | ' with spaces."
+  - "Emoji only as the block markers above and the 1️⃣ 2️⃣ 3️⃣ numbers. No emoji elsewhere."
+  - "No hashtags. No greeting. No sign-off."
+  - "Baghdadi with گ and چ used naturally, as in the published posts."
+
+checks:
+  hook_starts_with: "💡"
+  big_mistake_starts_with: "🔥"
+  closing_starts_with: "🤔"
+  levels_max: 3
+  hashtags_max: 0
+  invented_numbers_forbidden: true
+  use_placeholders_for_figures: "{{رقمك}}"
