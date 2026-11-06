@@ -1,39 +1,49 @@
-# Final reply format for EVERY format (story, reel, carousel, LinkedIn). It is a text message with 8 lines,
-# each starting with a fixed marker, in this exact order:
-#   🎬 hook  ·  🔥 follow-up question  ·  🤔 the problem  ·  🎯 point 1  ·  💰 point 2  ·  📩 point 3  ·  🚀 CTA  ·  📊 options
-# This overrides any timed script, storyboard, or labelled block format described above.
-# No seconds, no SPOKEN / ON SCREEN, no Hook: / Content: / CTA: labels, no Keywords line.
+# Final reply format for EVERY format (story, reel, carousel, LinkedIn): three blocks in this order.
+#   🪝 Hook header, then the hook text
+#   💬 Content header, then an intro, then exactly three points marked 📊, 🔥, 💡
+#   🫵 CTA header, then one call to action
+# Headers are written as **bold**. Do not write seconds, SPOKEN / ON SCREEN, or any other layout.
 
-layout:
-  - {marker: "🎬", job: "The hook. 15 words or fewer. Stops the scroll: a claim or question about the reader's business."}
-  - {marker: "🔥", job: "A follow-up question that makes the reader keep reading. 20 words or fewer."}
-  - {marker: "🤔", job: "The problem, or the belief that is holding the reader back. 25 words or fewer."}
-  - {marker: "🎯", job: "Point 1, starting with 'أول شي:'. 25 words or fewer."}
-  - {marker: "💰", job: "Point 2, starting with 'ثاني شي:'. 25 words or fewer."}
-  - {marker: "📩", job: "Point 3, starting with 'ثالث شي:'. The most important point. 25 words or fewer."}
-  - {marker: "🚀", job: "The one call to action, as a question or a single ask. 20 words or fewer. Exactly one ask."}
-  - {marker: "📊", job: "Options the reader can choose from, as a short either/or line. Story uses it as the interactive poll."}
+blocks:
+  hook:
+    header: "🪝 **بداية الفيديو | Hook**"
+    job: "One or two lines that make the reader keep reading. A surprise, a question about their own situation, or a sharp claim about their business. 25 words or fewer."
+  content:
+    header: "💬 **المحتوى | Content**"
+    intro: "One or two lines that name the problem and why it matters. Can end with one question."
+    points:
+      - {marker: "📊", label: "أول شي:", job: "Point 1. The first practical step. 40 words or fewer."}
+      - {marker: "🔥", label: "ثاني شي:", job: "Point 2. The second step, with the one thing that makes it work. 40 words or fewer."}
+      - {marker: "💡", label: "بس انتبه:", job: "Point 3. The warning or the most important check. 40 words or fewer."}
+  cta:
+    header: "🫵 **القفلة | CTA**"
+    job: "One line with exactly one call to action, as a question or a single ask. 25 words or fewer."
 
 rules:
-  - "Exactly 8 non-empty lines, in the order above. A blank line between lines is allowed."
-  - "Each line starts with its marker. No other lines before, between, or after them."
-  - "Baghdadi, with گ and چ used naturally. No greeting, no sign-off, no hashtags unless the format allows them (carousel and reel: up to 5)."
+  - "Blocks in this order: Hook, Content, CTA. The three headers appear exactly once each."
+  - "Content has exactly three point lines, marked 📊 then 🔥 then 💡."
+  - "Baghdadi, with گ and چ used naturally. No greeting, no sign-off."
   - "Figures are {{رقمك}} placeholders. Never invent numbers."
-  - "NOTE FOR OWNER: optional, after the 8 lines. Never published."
+  - "Hashtags only where the format allows them (carousel and reel: up to 5; story and LinkedIn: none)."
+  - "NOTE FOR OWNER: optional, after the CTA. Never published."
 
 example: |
-  🎬 تنشر كل يوم وماكو مبيعات؟ 🤯
+  🪝 **بداية الفيديو | Hook**
 
-  🔥 كل يوم تنشر، بس محد يشتري منك؟ تدري ليش؟
+  تعرف ليش زبونك بأول الشهر يشتري منك وهو مغمّض، وبنص الشهر يصير يفاصل وياك حتى على الربع؟ 😂💸
 
-  🤔 يمكن المشكلة مو بمنتجك ولا بسعرك… يمكن إنت دا تنشر بالمكان الغلط!
+  💬 **المحتوى | Content**
 
-  🎯 أول شي: اختار منصة وحدة، المكان اللي زباينك فعلاً موجودين بيه.
+  السبب اللي إنت تعرفه وآني أعرفه… هو الراتب! 💰
 
-  💰 ثاني شي: نزل منتج واحد، خلي سعره واضح، واطلب منهم يدزّولك رسالة.
+  زين، شلون نستغل هالمعلومة حتى مبيعاتنا ما توگع بنص الشهر؟ 🤔
 
-  📩 ثالث شي: لا تنخدع باللايكات! احسب الرسائل الجدية، مو المشاهدات.
+  📊 **أول شي:** افتح مبيعاتك لآخر 3 أشهر، وشوف بأي أسبوع تبدي المبيعات تنزل. بالأول؟ بالثاني؟ لو بالثالث؟
 
-  🚀 هسه گلّي، من تجربتك وين يجيك زباين أكثر؟
+  🔥 **ثاني شي:** لا تنتظر المبيعات توگع! سوّي عروض مؤقتة ومدروسة بالأسبوع اللي عادةً تنزل بيه مبيعاتك، حتى تحرّك البضاعة وما تخليها نايمة بالمخزن. 📦
 
-  📊 تيك توك ⚡ لو إنستغرام؟ 📸
+  💡 **بس انتبه:** مو كل عرض يعني ربح! احسب هامش ربحك قبل لا تنزل أي خصم.
+
+  🫵 **القفلة | CTA**
+
+  هسه سولفلي… إنت مبيعاتك بأي أسبوع تبدي توگع؟ الثاني لو الثالث؟ 👀👇
