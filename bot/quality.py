@@ -60,6 +60,7 @@ def _hashtags(text: str) -> list[str]:
 def _invented_numbers(text: str) -> list[str]:
     t = text.translate(ARABIC_DIGITS)
     t = re.sub(r"\{\{.*?\}\}", " ", t)          # placeholders are allowed
+    t = re.sub(r"\[[^\]]*\]", " ", t)            # timing labels like [8-14s]
     t = KEYCAP.sub(" ", t)                      # 1️⃣ markers
     t = re.sub(r"(?m)^\s*\d+[.)]\s", " ", t)    # 1. list markers
     bad = []
