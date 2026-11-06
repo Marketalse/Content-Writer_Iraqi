@@ -1,68 +1,34 @@
-# 📱 الستوري — Stories (Instagram / Facebook / Snapchat)
+# Instagram Story video (30 seconds, 5 posts a day)
 
-## الهدف
-تفاعل سريع ويومي، قرب من المتابع، تحريك للخاص (DM)، وعروض لحظية.
+## What it is
+A 30-second vertical video in Instagram Stories. The owner posts five per day, so each
+script must stand alone, be quick to hear, and end with one interactive sticker.
 
-## المواصفات والوقت ⏱️
+## Output
+A timed script, not a storyboard. Each line is either SPOKEN or ON SCREEN text.
+No shot or camera descriptions. Use the `script_format` in `knowledge/formats/story_30s.yaml`.
 
-| البند | القاعدة |
-|---|---|
-| عدد الفريمات | **٣ – ٧ فريمات** (المثالي ٥) |
-| مدة الفريم | **٥ – ٧ ثواني** للصورة، **لحد ١٥ ثانية** للفيديو |
-| المدة الكلية | **١٥ – ٤٥ ثانية** |
-| الكلام بكل فريم | **ماكو أكثر من ١٢ – ١٥ كلمة** |
-| المقاس | 1080×1920 (9:16) — خلي النص بالنص، بعيد عن أعلى وأسفل ٢٥٠ پكسل |
-| عمر الستوري | ٢٤ ساعة — فالمحتوى لحظي ومباشر |
+## Timing
+| Beat | Seconds | Job |
+|---|---|---|
+| Hook | 0–3 | One claim or question. Max 7 spoken words. |
+| Problem | 3–9 | The viewer's pain in their own life. |
+| Insight | 9–22 | One thing they didn't know, with an example. Max two points. |
+| Payoff | 22–27 | Deliver what the hook promised. |
+| Sticker + ask | 27–30 | One question box or poll, one ask. |
 
-## النبرة 🎙️
-- **كلش عفوية وقريبة** — مثل رسالة لصديق.
-- طاقة عالية، إيموجي مسموح (٢–٣ بكل فريم كحد أعلى).
-- جمل قصيرة جداً، أسئلة مباشرة.
+Target 65–75 spoken words for the full 30 seconds (about 140 words per minute).
 
-## الهيكل
-1. **فريم ١ — Hook:** سؤال أو جملة تخلي المتابع ما يسحب. ("عدكم موعد عرس قريب؟ 👀")
-2. **فريم ٢–٤ — المحتوى:** فكرة وحدة بكل فريم (المشكلة ← الحل ← الدليل/المنتج).
-3. **فريم تفاعلي:** ستيكر (تصويت / سؤال / كويز / سلايدر) — **لازم واحد على الأقل**.
-4. **الفريم الأخير — CTA:** "اسحب للأعلى"، "راسلنا"، "اضغط عاللينك"، "دز رد".
+## Five daily angles (rotate, never repeat the same angle twice in a row)
+1. Myth-busting: a belief, then the truth.
+2. Quick tip: one thing to do today.
+3. Behind the scenes: honest, unpolished.
+4. Customer pain: told without names.
+5. Offer or ask: a reason to act now.
 
-## الستيكرات المقترحة
-- **Poll (تصويت):** "تحبونه أسود لو أبيض؟"
-- **Question:** "اسألونا أي شي عن…"
-- **Quiz:** "تعرف شگد سعره؟"
-- **Emoji slider:** "شگد تحب القهوة؟ ☕"
-- **Countdown:** لعروض محددة بوقت.
-- **Link:** للمتجر أو الواتساب.
-
-## أوقات النشر المقترحة (توقيت بغداد) 🕒
-> نقطة بداية — عدّلها حسب إحصائيات حسابك.
-- الصبح: **٩ – ١١**
-- العصر: **٤ – ٦**
-- الليل (ذروة العراق): **٩ – ١٢ بالليل**
-- التكرار: **٣ – ٨ ستوريات يومياً** مقسمة على اليوم.
-
-## شكل الإخراج المطلوب
-```
-🎬 فريم ١ (٥ ثواني)
-النص على الشاشة: ...
-الصورة/الفيديو: ...
-ستيكر: (إن وجد)
-
-🎬 فريم ٢ ...
-...
-💡 ملاحظة للمصمم: ...
-🕒 أفضل وقت للنشر: ...
-```
-
-## مثال ✍️
-**الموضوع:** مطعم برگر يعلن عن وجبة جديدة.
-
-🎬 **فريم ١ (٥ث):** "جوعانين؟ 🤤 لتسحب!"
-🎬 **فريم ٢ (٥ث):** "نزلنا برگر جديد… دبل سماش بصوص سري 🔥"
-🎬 **فريم ٣ (٧ث - فيديو):** لقطة الجبن يسيح — نص: "باوعوا هالمنظر 😍"
-🎬 **فريم ٤ (٥ث):** تصويت: "تجربونه اليوم؟ ✅ أكيد / 😋 هسة أطلب"
-🎬 **فريم ٥ (٥ث):** "ديليفري لكل بغداد 🛵 اضغط عاللينك واطلب"
-
-## ممنوعات
-- فقرات طويلة.
-- أكثر من فكرة بنفس الفريم.
-- ستوري بدون أي ستيكر تفاعلي أو CTA.
+## Rules
+- Dialect: Baghdadi, گ and چ used naturally. Use the word sheet.
+- No greeting ("هلا بيكم") and no sign-off.
+- No invented numbers. Use `{{رقمك}}` placeholders.
+- Hook spoken line max 3 seconds; on-screen text max 6 words per card.
+- Every script ends with a sticker and one ask.
