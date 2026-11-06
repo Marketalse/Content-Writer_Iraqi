@@ -1,6 +1,6 @@
-# Instagram Story video: a 30-second vertical video, posted 5 times a day.
-# Output is a SCRIPT, not a storyboard: spoken lines, on-screen text, one sticker.
-# No shot or camera descriptions. The owner records and posts.
+# Instagram Story video, 30 seconds, posted 5 times a day.
+# Three blocks: Hook, Content (intro + 3 numbered points), CTA.
+# Output is a SCRIPT: SPOKEN lines, ON SCREEN text, one sticker. No shot descriptions.
 
 name: story_30s
 platform: instagram_story_video
@@ -8,31 +8,24 @@ length_seconds: {target: 30, max: 35}
 posts_per_day: 5
 
 shape:
-  - {beat: hook,       seconds: "0-3",   job: "Stop the scroll. One claim or question the viewer already feels. Spoken max 7 words."}
-  - {beat: problem,    seconds: "3-9",   job: "Name the pain in the viewer's own daily Iraqi life. One or two sentences."}
-  - {beat: insight,    seconds: "9-22",  job: "The one thing they didn't know, with a concrete example. Max two points."}
-  - {beat: payoff,     seconds: "22-27", job: "Deliver what the hook promised. Short and clear."}
-  - {beat: sticker_cta, seconds: "27-30", job: "One interactive sticker (question box or poll) and one ask. No greeting, no sign-off."}
+  - {beat: hook,    seconds: "0-3",   job: "Couple of words that stop the scroll. A question or a sharp claim about the viewer's business. Spoken max 7 words."}
+  - {beat: content, seconds: "3-25",  job: "One intro sentence, then exactly 3 numbered SPOKEN lines (١. ٢. ٣.). Each: a short title and at most one line of explanation. The 3rd point is the most important."}
+  - {beat: cta,     seconds: "25-30", job: "One reason to follow or come back, with one interactive sticker. Spoken max 15 words."}
 
 script_format: |
-  [0-3s]   SPOKEN: ...        | ON SCREEN: ...
-  [3-9s]   SPOKEN: ...        | ON SCREEN: ...
-  [9-22s]  SPOKEN: ...        | ON SCREEN: ...
-  [22-27s] SPOKEN: ...        | ON SCREEN: ...
-  [27-30s] SPOKEN: ...        | ON SCREEN: ...        | STICKER: ...
+  [0-3s]   SPOKEN: ...                  | ON SCREEN: ...
+  [3-8s]   SPOKEN: intro sentence       | ON SCREEN: ...
+  [8-14s]  SPOKEN: ١. point one         | ON SCREEN: ...
+  [14-20s] SPOKEN: ٢. point two         | ON SCREEN: ...
+  [20-25s] SPOKEN: ٣. point three       | ON SCREEN: ...
+  [25-30s] SPOKEN: CTA                  | ON SCREEN: ...  | STICKER: ...
   NOTE FOR OWNER: (one line, optional)
-
-daily_rotation:
-  - {day_slot: 1, angle: myth_busting,   note: "A common belief about the topic, then the truth."}
-  - {day_slot: 2, angle: quick_tip,      note: "One practical action they can do today."}
-  - {day_slot: 3, angle: behind_scenes,  note: "What happened behind the work. Honest, no polish."}
-  - {day_slot: 4, angle: customer_pain,  note: "A problem a customer had, told without names."}
-  - {day_slot: 5, angle: offer_or_ask,   note: "A reason to act now, with a link or reply prompt."}
 
 checks:
   total_spoken_words_max: 75
-  hook_max_seconds: 3
+  hook_max_spoken_words: 7
+  content_numbered_points: 3
   on_screen_max_words: 6
   sticker_required: true
-  invented_numbers_forbidden: true   # use {{placeholder}} for any figure
+  invented_numbers_forbidden: true
   no_greeting: true

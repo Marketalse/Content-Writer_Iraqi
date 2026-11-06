@@ -82,19 +82,41 @@ def _fields(text: str, label: str) -> list[str]:
     return out
 
 
-def _story(text: str) -> list[str]:
+SCRIPT_POINT = re.compile(r"^[1-3١-٣][.)]\s")
+
+
+def _three_blocks(text: str) -> list[str]:
+    """Hook, 3 numbered points, CTA as the last spoken line. Used by story and reel."""
     fails = []
     spoken = [s for s in _fields(text, "SPOKEN") if s]
-    if len(spoken) < 4:
-        fails.append("story needs SPOKEN lines for each beat (found fewer than 4)")
+    points = [s for s in spoken if SCRIPT_POINT.match(s)]
+    if len(points) != 3:
+        fails.append(f"found {len(points)} numbered SPOKEN points, must be exactly 3 (١. ٢. ٣.)")
+    if spoken and SCRIPT_POINT.match(spoken[-1]):
+        fails.append("the last SPOKEN line must be the CTA, not a numbered point")
+    if spoken and _words(spoken[0]) > 7:
+        fails.append(f"hook has {_words(spoken[0])} spoken words, must be 7 or fewer")
     total = sum(_words(s) for s in spoken)
     if total > 75:
         fails.append(f"spoken words total {total}, must be 75 or fewer")
-    if spoken and _words(spoken[0]) > 7:
-        fails.append(f"hook has {_words(spoken[0])} spoken words, must be 7 or fewer")
     for on in _fields(text, "ON SCREEN"):
         if _words(on) > 6:
             fails.append(f"on-screen text '{on[:40]}' has {_words(on)} words, max 6")
+    return fails
+
+
+def _reel(text: str) -> list[str]:
+    fails = _three_blocks(text)
+    if len(_hashtags(text)) > 5:
+        fails.append(f"{len(_hashtags(text))} hashtags, max 5")
+    return fails
+
+
+def _story(text: str) -> list[str]:
+    fails = _three_blocks(text)
+    spoken = [s for s in _fields(text, "SPOKEN") if s]
+    if len(spoken) < 4:
+        fails.append("story needs SPOKEN lines for each beat (found fewer than 4)")
     if not _fields(text, "STICKER"):
         fails.append("missing the STICKER field (every story needs one interactive sticker)")
     return fails
@@ -142,7 +164,9 @@ def check(fmt: str, text: str) -> list[str]:
         fails += _story(text)
     elif fmt == "linkedin":
         fails += _linkedin(text)
-    else:  # carousel, reel
+    elif fmt == "reel":
+        fails += _reel(text)
+    else:  # carousel
         fails += _instagram(text)
     return fails
 
