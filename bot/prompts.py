@@ -9,7 +9,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 KB = ROOT / "knowledge"
-TRANSCRIPT_LIMIT = 12000  # chars of creator examples sent per request
+EXAMPLE_LIMIT = 30000  # chars of creator examples (transcripts + posts) per request
 
 FORMATS = {
     "story": ("📱 ستوري", ROOT / "formats" / "stories" / "guide.md", "story_questions.yaml"),
@@ -33,16 +33,17 @@ def _read(path: Path) -> str:
     return path.read_text(encoding="utf-8") if path.exists() else ""
 
 
-def _transcripts() -> str:
-    folder = KB / "examples" / "transcripts"
-    if not folder.exists():
-        return ""
+def _examples() -> str:
+    """Creator's own transcripts and published posts, used as style examples."""
     parts = []
-    for f in sorted(folder.glob("*")):
-        if f.name == "README.md" or f.suffix not in {".md", ".txt"}:
+    for folder in (KB / "examples" / "transcripts", KB / "examples" / "posts"):
+        if not folder.exists():
             continue
-        parts.append(f"--- {f.name} ---\n{_read(f).strip()}")
-    return "\n\n".join(parts)[:TRANSCRIPT_LIMIT]
+        for f in sorted(folder.glob("*")):
+            if f.name == "README.md" or f.suffix not in {".md", ".txt"}:
+                continue
+            parts.append(f"--- {f.name} ---\n{_read(f).strip()}")
+    return "\n\n".join(parts)[:EXAMPLE_LIMIT]
 
 
 def build_system_prompt(fmt: str) -> str:
@@ -62,7 +63,7 @@ def build_system_prompt(fmt: str) -> str:
         "# مواصفات الفورمة (ملف الكود)\n\n" + _read(KB / "formats" / spec_name),
         "# قواعد الفورمة\n\n" + _read(guide_path),
     ]
-    examples = _transcripts()
+    examples = _examples()
     if examples:
-        sections.append("# أمثلة من كلامي الحقيقي (transcripts)\n\n" + examples)
+        sections.append("# أمثلة من كلامي الحقيقي (فيديوهات ومنشورات)\n\n" + examples)
     return "\n\n".join(s for s in sections if s.strip())
