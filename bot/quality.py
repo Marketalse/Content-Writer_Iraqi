@@ -76,7 +76,7 @@ def _fields(text: str, label: str) -> list[str]:
     out = []
     for line in text.splitlines():
         for part in line.split("|"):
-            part = part.strip().lstrip("*").strip()
+            part = re.sub(r"\[[^\]]*\]", " ", part).replace("*", " ").strip()
             if part.upper().startswith(label + ":"):
                 out.append(part[len(label) + 1:].strip().strip("*").strip())
     return out
