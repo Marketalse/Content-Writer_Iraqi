@@ -108,8 +108,42 @@ def _caption(text: str) -> list[str]:
     return fails
 
 
+TIMED_LABEL = re.compile(r"\[\s*\d+\s*-\s*\d+\s*s\s*\]\s*\**\s*(HOOK|CONTENT|CTA)\b", re.IGNORECASE)
+SCRIPT_POINT = re.compile(r"^[1-3١-٣][.)]\s")
+
+
+def _timed(text: str) -> list[str]:
+    """Story and reel: HOOK, CONTENT lines with 3 numbered points, CTA last, timed."""
+    fails = []
+    labels = [m.group(1).upper() for m in TIMED_LABEL.finditer(text)]
+    if not labels:
+        return ["script lines must start with [0-3s] HOOK, CONTENT lines, then CTA"]
+    if labels[0] != "HOOK" or labels[-1] != "CTA" or labels.count("HOOK") != 1 or labels.count("CTA") != 1:
+        fails.append(f"block order must be HOOK, CONTENT, CTA (found {labels})")
+    spoken = [s for s in _fields(text, "SPOKEN") if s]
+    points = [s for s in spoken if SCRIPT_POINT.match(s)]
+    if len(points) != 3:
+        fails.append(f"CONTENT has {len(points)} numbered points, must be exactly 3 (1. 2. 3.)")
+    if spoken and SCRIPT_POINT.match(spoken[-1]):
+        fails.append("the last SPOKEN line must be the CTA, not a numbered point")
+    if spoken and _words(spoken[0]) > 7:
+        fails.append(f"HOOK has {_words(spoken[0])} spoken words, must be 7 or fewer")
+    total = sum(_words(s) for s in spoken)
+    if total > 75:
+        fails.append(f"spoken words total {total}, must be 75 or fewer")
+    for on in _fields(text, "ON SCREEN"):
+        if _words(on) > 6:
+            fails.append(f"on-screen card '{on[:40]}' has {_words(on)} words, max 6")
+    return fails
+
+
 def check(fmt: str, text: str) -> list[str]:
-    fails = _common(text) + _caption(text)
+    if fmt in ("story", "reel"):
+        fails = _common(text) + _timed(text)
+        if fmt == "story" and not _fields(text, "STICKER"):
+            fails.append("story needs one STICKER in the CTA line")
+    else:
+        fails = _common(text) + _caption(text)
     limit = HASHTAG_LIMITS.get(fmt, 5)
     tags = _hashtags(text)
     if len(tags) > limit:

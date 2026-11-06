@@ -18,6 +18,14 @@ FORMATS = {
     "linkedin": ("💼 لينكدإن", ROOT / "formats" / "linkedin" / "guide.md", "linkedin_post.yaml"),
 }
 
+# Story and reel: LinkedIn blocks inside a timed script. Carousel and LinkedIn: labelled caption.
+OUTPUT_SPEC = {
+    "story": "timed_caption.yaml",
+    "reel": "timed_caption.yaml",
+    "linkedin": "caption.yaml",
+    "carousel": "caption.yaml",
+}
+
 BASE_INSTRUCTIONS = """أنت كاتب محتوى محترف متخصص باللهجة العراقية (البغدادية المفهومة بكل العراق).
 تكتب حصراً باللهجة العراقية. استخدم گ و چ بشكل طبيعي (مثل: گدر، أگلكم، چيبس، أحچي) كما في أسلوب صاحب الحساب.
 تلتزم بقواعد الفورمة المطلوبة من حيث الطول والهيكل والنبرة والإخراج.
@@ -62,7 +70,7 @@ def build_system_prompt(fmt: str) -> str:
         "# مستويات العمق\n\n" + _read(KB / "formats" / "levels.yaml"),
         "# مواصفات الفورمة (ملف الكود)\n\n" + _read(KB / "formats" / spec_name),
         "# قواعد الفورمة\n\n" + _read(guide_path),
-        "# شكل الرد النهائي (إلزامي، يلغي أي سكربت بالثواني أو شكل آخر أعلاه)\n\n" + _read(KB / "formats" / "caption.yaml"),
+        "# شكل الرد النهائي (إلزامي، يلغي أي شكل آخر أعلاه)\n\n" + _read(KB / "formats" / OUTPUT_SPEC[fmt]),
     ]
     examples = _examples()
     if examples:
