@@ -5,27 +5,25 @@ Usage (from the repo root, with .env filled in):
     python3 bot/test_story.py "your own topic here"
 """
 
-import os
+import logging
 import sys
 from pathlib import Path
 
 from dotenv import load_dotenv
-from anthropic import Anthropic
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from prompts import build_system_prompt  # noqa: E402
-
-ENV_FILE = Path(__file__).resolve().parent.parent / ".env"
+ROOT = Path(__file__).resolve().parent.parent
+ENV_FILE = ROOT / ".env"
 if not ENV_FILE.exists():
     sys.exit(f"No .env file at {ENV_FILE}. Run: cp .env.example .env, then fill it in.")
 load_dotenv(ENV_FILE)
 
-api_key = os.environ.get("ANTHROPIC_API_KEY", "").strip()
-if not api_key:
-    sys.exit(
-        "ANTHROPIC_API_KEY is empty. In .env, the line must read ANTHROPIC_API_KEY=<key>\n"
-        "(no spaces around =, no quotes, and the word ANTHROPIC_API_KEY must be on that line)."
-    )
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import asyncio  # noqa: E402
+
+from llm import LLMError, generate  # noqa: E402
+from prompts import build_system_prompt  # noqa: E402
+
+logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
 
 DEFAULT_TOPIC = (
     "صاحب محل ملابس بالبتاوين، بداية الشهر كانت الحركة ميتة، "
@@ -33,22 +31,15 @@ DEFAULT_TOPIC = (
 )
 topic = " ".join(sys.argv[1:]).strip() or DEFAULT_TOPIC
 
-client = Anthropic(api_key=api_key)
-response = client.messages.create(
-    model="claude-opus-5-5",
-    max_tokens=4000,
-    system=[
-        {
-            "type": "text",
-            "text": build_system_prompt("story"),
-            "cache_control": {"type": "ephemeral"},
-        }
-    ],
-    messages=[{"role": "user", "content": f"الموضوع: {topic}"}],
-)
 
-u = response.usage
-print(f"stop_reason={response.stop_reason} in={u.input_tokens} out={u.output_tokens} "
-      f"cache_read={u.cache_read_input_tokens} cache_write={u.cache_creation_input_tokens}")
-print("-" * 60)
-print("".join(b.text for b in response.content if b.type == "text"))
+async def main():
+    try:
+        result = await generate(build_system_prompt("story"), f"الموضوع: {topic}")
+    except LLMError as exc:
+        sys.exit(f"Generation failed: {exc}")
+    print(f"provider={result.provider} refused={result.refused}")
+    print("-" * 60)
+    print(result.text or "(empty answer)")
+
+
+asyncio.run(main())

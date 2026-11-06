@@ -28,3 +28,7 @@ them the rows to paste into the Google Sheet (the Drive connector can read the s
 - Model calls go through one module only (default `claude-opus-5-5`).
 - Hooks must pass `knowledge/hooks/hooks_ar.yaml` rules: spoken line ≤ 2 seconds, on-screen ≤ 6 words.
 - Run the AI-phrase check (`knowledge/copywriting/ai_phrases_ar.yaml`) on every draft before delivery.
+
+- Model calls go through `bot/llm.py` only. Main model: `claude-sonnet-5-5` (Anthropic SDK).
+  Fallback: Nous Portal (OpenAI-compatible), approved by the owner for fallback use only.
+  The fallback is used only on connection errors, 429 and 5xx from Anthropic.

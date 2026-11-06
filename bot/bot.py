@@ -1,4 +1,4 @@
-"""Telegram bot that writes Iraqi-dialect content with Claude.
+"""Telegram bot that writes Iraqi-dialect content.
 
 Flow:
   /start  -> pick a format (story / carousel / reel / LinkedIn)
@@ -7,17 +7,18 @@ Flow:
 
 Environment variables (see .env.example):
   TELEGRAM_BOT_TOKEN  required, from @BotFather
-  ANTHROPIC_API_KEY   required (or any credential the SDK resolves)
+  ANTHROPIC_API_KEY   required (main model)
+  NOUS_API_KEY        optional (fallback model)
   ALLOWED_CHAT_IDS    optional, comma-separated chat IDs allowed to use the bot
 """
 
 import logging
 import os
+import sys
+from pathlib import Path
 
-from anthropic import AsyncAnthropic, APIStatusError, APIConnectionError
 from dotenv import load_dotenv
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
-from telegram.constants import ParseMode
 from telegram.ext import (
     Application,
     CallbackQueryHandler,
@@ -27,26 +28,24 @@ from telegram.ext import (
     filters,
 )
 
-from prompts import FORMATS, build_system_prompt
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
-load_dotenv()
+from llm import LLMError, generate  # noqa: E402
+from prompts import FORMATS, build_system_prompt  # noqa: E402
 
 logging.basicConfig(
     format="%(asctime)s %(levelname)s %(name)s: %(message)s", level=logging.INFO
 )
 log = logging.getLogger("iraqi-content-bot")
 
-MODEL = "claude-opus-5-5"
-MAX_TOKENS = 4000
 TELEGRAM_LIMIT = 4000  # Telegram hard limit is 4096; keep a margin
-
-claude = AsyncAnthropic()  # resolves ANTHROPIC_API_KEY from the environment
 
 _allowed = {
     int(x) for x in os.getenv("ALLOWED_CHAT_IDS", "").split(",") if x.strip()
 }
 
-# Cache the system prompts once: they are constant for the life of the process.
+# Built once: the system prompt for each format is constant for the process.
 SYSTEM_PROMPTS = {fmt: build_system_prompt(fmt) for fmt in FORMATS}
 
 
@@ -59,7 +58,7 @@ def _allowed_chat(update: Update) -> bool:
 def _format_keyboard() -> InlineKeyboardMarkup:
     buttons = [
         [InlineKeyboardButton(label, callback_data=f"fmt:{key}")]
-        for key, (label, _) in FORMATS.items()
+        for key, (label, _, _) in FORMATS.items()
     ]
     return InlineKeyboardMarkup(buttons)
 
@@ -127,49 +126,23 @@ async def on_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     status = await update.message.reply_text("عاد أكتبلك… ⏳")
 
     try:
-        response = await claude.messages.create(
-            model=MODEL,
-            max_tokens=MAX_TOKENS,
-            # Stable system prompt is cached; the per-request topic goes in messages.
-            system=[
-                {
-                    "type": "text",
-                    "text": SYSTEM_PROMPTS[fmt],
-                    "cache_control": {"type": "ephemeral"},
-                }
-            ],
-            messages=[{"role": "user", "content": f"الموضوع: {topic}"}],
-        )
-    except APIConnectionError:
-        log.exception("Anthropic connection error")
-        await status.edit_text("ماكدرت أوصل للسيرفر، جرب مرة ثانية بعد شوية.")
-        return
-    except APIStatusError as e:
-        log.exception("Anthropic API error %s", e.status_code)
-        await status.edit_text("صار خطأ بالـ API. جرب مرة ثانية.")
+        result = await generate(SYSTEM_PROMPTS[fmt], f"الموضوع: {topic}")
+    except LLMError:
+        log.exception("all providers failed")
+        await status.edit_text("صار خطأ بالاتصال بالموديل. جرب مرة ثانية بعد شوية.")
         return
 
-    usage = response.usage
-    log.info(
-        "fmt=%s in=%s out=%s cache_read=%s cache_write=%s",
-        fmt,
-        usage.input_tokens,
-        usage.output_tokens,
-        usage.cache_read_input_tokens,
-        usage.cache_creation_input_tokens,
-    )
+    log.info("fmt=%s provider=%s refused=%s", fmt, result.provider, result.refused)
 
-    if response.stop_reason == "refusal":
+    if result.refused:
         await status.edit_text("ما گدرت أكمل هذا الطلب. جرب موضوع ثاني.")
         return
-
-    text = "".join(b.text for b in response.content if b.type == "text").strip()
-    if not text:
+    if not result.text:
         await status.edit_text("ما طلع شي، جرب تعيد صياغة الموضوع.")
         return
 
     await status.delete()
-    for part in _chunks(text):
+    for part in _chunks(result.text):
         await update.message.reply_text(part)
     await update.message.reply_text(
         "تريد نعيده بشكل ثاني؟ دزلي ملاحظتك، أو /format حتى تغير النوع."
