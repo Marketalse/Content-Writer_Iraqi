@@ -71,9 +71,20 @@ def _common(text: str) -> list[str]:
     return fails
 
 
+def _fields(text: str, label: str) -> list[str]:
+    """Values of 'LABEL: value' fields. A line may hold several fields split by ' | '."""
+    out = []
+    for line in text.splitlines():
+        for part in line.split("|"):
+            part = part.strip().lstrip("*").strip()
+            if part.upper().startswith(label + ":"):
+                out.append(part[len(label) + 1:].strip().strip("*").strip())
+    return out
+
+
 def _story(text: str) -> list[str]:
     fails = []
-    spoken = re.findall(r"SPOKEN:\s*(.+)", text)
+    spoken = [s for s in _fields(text, "SPOKEN") if s]
     if len(spoken) < 4:
         fails.append("story needs SPOKEN lines for each beat (found fewer than 4)")
     total = sum(_words(s) for s in spoken)
@@ -81,11 +92,11 @@ def _story(text: str) -> list[str]:
         fails.append(f"spoken words total {total}, must be 75 or fewer")
     if spoken and _words(spoken[0]) > 7:
         fails.append(f"hook has {_words(spoken[0])} spoken words, must be 7 or fewer")
-    for on in re.findall(r"ON SCREEN:\s*(.+)", text):
+    for on in _fields(text, "ON SCREEN"):
         if _words(on) > 6:
-            fails.append(f"on-screen text '{on.strip()[:40]}' has {_words(on)} words, max 6")
-    if "STICKER:" not in text:
-        fails.append("missing the STICKER line (every story needs one interactive sticker)")
+            fails.append(f"on-screen text '{on[:40]}' has {_words(on)} words, max 6")
+    if not _fields(text, "STICKER"):
+        fails.append("missing the STICKER field (every story needs one interactive sticker)")
     return fails
 
 
