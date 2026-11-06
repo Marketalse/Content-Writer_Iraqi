@@ -31,7 +31,8 @@ from telegram.ext import (
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
-from llm import LLMError, generate  # noqa: E402
+from llm import LLMError  # noqa: E402
+from quality import generate_checked  # noqa: E402
 from prompts import FORMATS, build_system_prompt  # noqa: E402
 
 logging.basicConfig(
@@ -126,7 +127,7 @@ async def on_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     status = await update.message.reply_text("عاد أكتبلك… ⏳")
 
     try:
-        result = await generate(SYSTEM_PROMPTS[fmt], f"الموضوع: {topic}")
+        result = await generate_checked(fmt, SYSTEM_PROMPTS[fmt], topic)
     except LLMError:
         log.exception("all providers failed")
         await status.edit_text("صار خطأ بالاتصال بالموديل. جرب مرة ثانية بعد شوية.")
@@ -144,6 +145,10 @@ async def on_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await status.delete()
     for part in _chunks(result.text):
         await update.message.reply_text(part)
+    if result.failures:
+        await update.message.reply_text(
+            "⚠️ تحقق يدوي قبل النشر:\n- " + "\n- ".join(result.failures)
+        )
     await update.message.reply_text(
         "تريد نعيده بشكل ثاني؟ دزلي ملاحظتك، أو /format حتى تغير النوع."
     )
