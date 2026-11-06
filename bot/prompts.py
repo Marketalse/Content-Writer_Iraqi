@@ -18,6 +18,25 @@ FORMATS = {
     "linkedin": ("💼 لينكدإن", ROOT / "formats" / "linkedin" / "guide.md", "linkedin_post.yaml"),
 }
 
+FORMULAS = ROOT / "knowledge" / "formulas" / "formulas.md"
+
+ANGLES = {
+    "myth": "Myth-busting: a belief, then the truth",
+    "tip": "Quick tip: one thing to do today",
+    "behind": "Behind the scenes: honest, unpolished",
+    "pain": "Customer pain: told without names",
+    "offer": "Offer or ask: a reason to act now",
+    "flip": "Problem flip: the reader's wrong belief, then the right one",
+}
+
+# Story and reel: LinkedIn blocks inside a timed script. Carousel and LinkedIn: labelled caption.
+OUTPUT_SPEC = {
+    "story": "timed_caption.yaml",
+    "reel": "timed_caption.yaml",
+    "linkedin": "caption.yaml",
+    "carousel": "caption.yaml",
+}
+
 BASE_INSTRUCTIONS = """أنت كاتب محتوى محترف متخصص باللهجة العراقية (البغدادية المفهومة بكل العراق).
 تكتب حصراً باللهجة العراقية. استخدم گ و چ بشكل طبيعي (مثل: گدر، أگلكم، چيبس، أحچي) كما في أسلوب صاحب الحساب.
 تلتزم بقواعد الفورمة المطلوبة من حيث الطول والهيكل والنبرة والإخراج.
@@ -55,6 +74,7 @@ def build_system_prompt(fmt: str) -> str:
         BASE_INSTRUCTIONS,
         "# صوتي وأسلوبي (voice.md)\n\n" + _read(KB / "voice" / "voice.md"),
         "# دليل اللهجة العراقية\n\n" + _read(ROOT / "guidelines" / "iraqi_dialect_style_guide.md"),
+        "# الصيغ (formulas)\n\n" + _read(FORMULAS),
         "# قاموس العراقي (المصدر الأساسي)\n\n" + _read(KB / "dialect" / "iraqi_words.csv"),
         "# لهجات ممنوعة\n\n" + _read(KB / "dialect" / "other_dialects.yaml"),
         "# عبارات ممنوعة (أسلوب AI)\n\n" + _read(KB / "copywriting" / "ai_phrases_ar.yaml"),
@@ -62,7 +82,7 @@ def build_system_prompt(fmt: str) -> str:
         "# مستويات العمق\n\n" + _read(KB / "formats" / "levels.yaml"),
         "# مواصفات الفورمة (ملف الكود)\n\n" + _read(KB / "formats" / spec_name),
         "# قواعد الفورمة\n\n" + _read(guide_path),
-        "# شكل الرد النهائي (إلزامي، يلغي أي سكربت بالثواني أو شكل آخر أعلاه)\n\n" + _read(KB / "formats" / "caption.yaml"),
+        "# شكل الرد النهائي (إلزامي، يلغي أي شكل آخر أعلاه)\n\n" + _read(KB / "formats" / OUTPUT_SPEC[fmt]),
     ]
     examples = _examples()
     if examples:
