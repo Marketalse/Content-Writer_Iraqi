@@ -71,21 +71,54 @@ def _common(text: str) -> list[str]:
     return fails
 
 
-def _story(text: str) -> list[str]:
+def _fields(text: str, label: str) -> list[str]:
+    """Values of 'LABEL: value' fields. A line may hold several fields split by ' | '."""
+    out = []
+    for line in text.splitlines():
+        for part in line.split("|"):
+            part = re.sub(r"\[[^\]]*\]", " ", part).replace("*", " ").strip()
+            if part.upper().startswith(label + ":"):
+                out.append(part[len(label) + 1:].strip().strip("*").strip())
+    return out
+
+
+SCRIPT_POINT = re.compile(r"^[1-3١-٣][.)]\s")
+
+
+def _three_blocks(text: str) -> list[str]:
+    """Hook, 3 numbered points, CTA as the last spoken line. Used by story and reel."""
     fails = []
-    spoken = re.findall(r"SPOKEN:\s*(.+)", text)
-    if len(spoken) < 4:
-        fails.append("story needs SPOKEN lines for each beat (found fewer than 4)")
+    spoken = [s for s in _fields(text, "SPOKEN") if s]
+    points = [s for s in spoken if SCRIPT_POINT.match(s)]
+    if len(points) != 3:
+        fails.append(f"found {len(points)} numbered SPOKEN points, must be exactly 3 (١. ٢. ٣.)")
+    if spoken and SCRIPT_POINT.match(spoken[-1]):
+        fails.append("the last SPOKEN line must be the CTA, not a numbered point")
+    if spoken and _words(spoken[0]) > 7:
+        fails.append(f"hook has {_words(spoken[0])} spoken words, must be 7 or fewer")
     total = sum(_words(s) for s in spoken)
     if total > 75:
         fails.append(f"spoken words total {total}, must be 75 or fewer")
-    if spoken and _words(spoken[0]) > 7:
-        fails.append(f"hook has {_words(spoken[0])} spoken words, must be 7 or fewer")
-    for on in re.findall(r"ON SCREEN:\s*(.+)", text):
+    for on in _fields(text, "ON SCREEN"):
         if _words(on) > 6:
-            fails.append(f"on-screen text '{on.strip()[:40]}' has {_words(on)} words, max 6")
-    if "STICKER:" not in text:
-        fails.append("missing the STICKER line (every story needs one interactive sticker)")
+            fails.append(f"on-screen text '{on[:40]}' has {_words(on)} words, max 6")
+    return fails
+
+
+def _reel(text: str) -> list[str]:
+    fails = _three_blocks(text)
+    if len(_hashtags(text)) > 5:
+        fails.append(f"{len(_hashtags(text))} hashtags, max 5")
+    return fails
+
+
+def _story(text: str) -> list[str]:
+    fails = _three_blocks(text)
+    spoken = [s for s in _fields(text, "SPOKEN") if s]
+    if len(spoken) < 4:
+        fails.append("story needs SPOKEN lines for each beat (found fewer than 4)")
+    if not _fields(text, "STICKER"):
+        fails.append("missing the STICKER field (every story needs one interactive sticker)")
     return fails
 
 
@@ -100,21 +133,26 @@ def _instagram(text: str) -> list[str]:
     return fails
 
 
+NUMBERED = re.compile(r"^\s*[1-3١-٣][.)]\s+\S", re.MULTILINE)
+
+
 def _linkedin(text: str) -> list[str]:
     fails = []
+    lines = [l.strip() for l in text.splitlines() if l.strip()]
+    if not lines:
+        return ["empty caption"]
     n = _words(text)
-    if not 120 <= n <= 220:
-        fails.append(f"caption has {n} words, must be 120 to 220")
-    first = next((l for l in text.splitlines() if l.strip()), "")
-    if not first.startswith("💡"):
-        fails.append("first line must start with 💡 (problem line)")
-    positions = [text.find(e) for e in ("🔥", "📌", "🤔")]
-    if min(positions) < 0:
-        fails.append("missing one of the block markers 🔥 📌 🤔")
-    elif positions != sorted(positions):
-        fails.append("block markers must come in the order 🔥, 📌, 🤔")
-    if any(int(d) >= 4 for d, _ in [(m.group(1), m) for m in KEYCAP.finditer(text)]):
-        fails.append("more than 3 levels (only 1️⃣ 2️⃣ 3️⃣ allowed)")
+    if not 50 <= n <= 150:
+        fails.append(f"caption has {n} words, must be 50 to 150")
+    if _words(lines[0]) > 15:
+        fails.append(f"hook has {_words(lines[0])} words, must be 15 or fewer")
+    points = NUMBERED.findall(text)
+    if len(points) != 3:
+        fails.append(f"found {len(points)} numbered points, must be exactly 3 (١. ٢. ٣.)")
+    if NUMBERED.search(lines[-1]):
+        fails.append("the CTA must be the last line, not a numbered point")
+    elif _words(lines[-1]) > 25:
+        fails.append(f"CTA has {_words(lines[-1])} words, must be 25 or fewer")
     if _hashtags(text):
         fails.append("LinkedIn captions have no hashtags")
     return fails
@@ -126,18 +164,32 @@ def check(fmt: str, text: str) -> list[str]:
         fails += _story(text)
     elif fmt == "linkedin":
         fails += _linkedin(text)
-    else:  # carousel, reel
+    elif fmt == "reel":
+        fails += _reel(text)
+    else:  # carousel
         fails += _instagram(text)
     return fails
 
 
+OWNER_NOTE = re.compile(r"\*{0,2}NOTE FOR OWNER:?\*{0,2}", re.IGNORECASE)
+
+
+def split_owner_note(text: str) -> tuple[str, str]:
+    """Separate the publishable script from the NOTE FOR OWNER block (never published)."""
+    m = OWNER_NOTE.search(text)
+    if not m:
+        return text.strip(), ""
+    return text[: m.start()].strip(), text[m.end():].strip()
+
+
 @dataclass
 class Checked:
-    text: str
+    text: str            # publishable content only
     provider: str
     refused: bool = False
     failures: list[str] = field(default_factory=list)
     attempts: int = 1
+    owner_note: str = ""  # for the owner only; never publish
 
 
 async def generate_checked(fmt: str, system: str, topic: str) -> Checked:
@@ -149,12 +201,14 @@ async def generate_checked(fmt: str, system: str, topic: str) -> Checked:
         result = await generate(system, prompt)
         if result.refused or not result.text:
             return Checked(result.text, result.provider, result.refused, [], attempt)
-        failures = check(fmt, result.text)
+        content, note = split_owner_note(result.text)
+        failures = check(fmt, content)
         if not failures:
-            return Checked(result.text, result.provider, False, [], attempt)
+            return Checked(content, result.provider, False, [], attempt, note)
         prompt = (
             base
             + "\n\nالنسخة السابقة فيها هذي المشاكل، صححها وأعد كتابة النص كامل بنفس الفورمة:\n- "
             + "\n- ".join(failures)
         )
-    return Checked(result.text, result.provider, False, failures, MAX_ATTEMPTS)
+    content, note = split_owner_note(result.text)
+    return Checked(content, result.provider, False, failures, MAX_ATTEMPTS, note)

@@ -149,6 +149,10 @@ async def on_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(
             "⚠️ تحقق يدوي قبل النشر:\n- " + "\n- ".join(result.failures)
         )
+    if result.owner_note:
+        await update.message.reply_text(
+            "📝 ملاحظة لك (لا تنشرها):\n" + result.owner_note
+        )
     await update.message.reply_text(
         "تريد نعيده بشكل ثاني؟ دزلي ملاحظتك، أو /format حتى تغير النوع."
     )

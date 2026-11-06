@@ -1,0 +1,30 @@
+# Instagram Reel / TikTok, about 30 seconds.
+# Same three blocks as the story: Hook, Content (intro + 3 numbered points), CTA.
+# Output is a SCRIPT: SPOKEN lines and ON SCREEN text. No shot descriptions. No sticker.
+
+name: reel_30s
+platform: [instagram_reels, tiktok]
+length_seconds: {target: 30, max: 40}
+
+shape:
+  - {beat: hook,    seconds: "0-3",   job: "Couple of words that stop the scroll. Spoken max 7 words."}
+  - {beat: content, seconds: "3-25",  job: "One intro sentence, then exactly 3 numbered SPOKEN lines (1. 2. 3.). Each: a short title and one line of explanation. The 3rd point is the most important."}
+  - {beat: cta,     seconds: "25-30", job: "One clear ask in one line. Spoken max 15 words. Only one ask."}
+
+script_format: |
+  [0-3s]   SPOKEN: ...                  | ON SCREEN: ...
+  [3-8s]   SPOKEN: intro sentence       | ON SCREEN: ...
+  [8-14s]  SPOKEN: 1. point one         | ON SCREEN: ...
+  [14-20s] SPOKEN: 2. point two         | ON SCREEN: ...
+  [20-25s] SPOKEN: 3. point three       | ON SCREEN: ...
+  [25-30s] SPOKEN: CTA                  | ON SCREEN: ...
+  NOTE FOR OWNER: (one line, optional)
+
+checks:
+  total_spoken_words_max: 75
+  hook_max_spoken_words: 7
+  content_numbered_points: 3
+  on_screen_max_words: 6
+  hashtags_max: 5
+  invented_numbers_forbidden: true
+  no_greeting: true

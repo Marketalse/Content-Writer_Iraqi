@@ -14,7 +14,7 @@ EXAMPLE_LIMIT = 30000  # chars of creator examples (transcripts + posts) per req
 FORMATS = {
     "story": ("📱 ستوري ٣٠ ثانية", ROOT / "formats" / "stories" / "guide.md", "story_30s.yaml"),
     "carousel": ("🖼️ كاروسيل", ROOT / "formats" / "carousels" / "guide.md", "post.yaml"),
-    "reel": ("🎥 ريل", ROOT / "formats" / "reels" / "guide.md", "short_video.yaml"),
+    "reel": ("🎥 ريل", ROOT / "formats" / "reels" / "guide.md", "reel_30s.yaml"),
     "linkedin": ("💼 لينكدإن", ROOT / "formats" / "linkedin" / "guide.md", "linkedin_post.yaml"),
 }
 

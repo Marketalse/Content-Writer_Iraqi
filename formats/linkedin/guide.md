@@ -1,47 +1,33 @@
 # LinkedIn caption (business and marketing)
 
-## Use
-A caption for the owner's LinkedIn account. The owner writes about marketing as a business function
-and about FMCG operations in Iraq.
+## Structure: three blocks, in this order
 
-## Structure (follow exactly, in this order)
-1. **💡 Problem line.** One line that flips the belief. Pattern: "المشكلة مو ... المشكلة ..."
-2. **Framework line.** "... له 3 مستويات:" or a similar lead-in.
-3. **Levels (max 3).** Each level has:
-   - a number (1️⃣ 2️⃣ 3️⃣) and an English term,
-   - a line of 3–4 terms joined by " | ",
-   - one Baghdadi line that says what it means.
-4. **🔥 Big mistake.** The wrong belief the reader says, then "لا حبيبي." and the correct idea.
-5. **📌 Reframe.** 2–3 short lines on the role or idea in business terms.
-6. **🤔 Question.** One question that asks for the reader's own situation.
+**1. Hook (15 words or fewer).** One line that makes the reader keep reading.
+It can be a question, a surprise, or a sharp claim about their business.
+
+**2. Content.**
+- One intro sentence that names the topic and says there are 3 points.
+- Three numbered points, using 1. 2. 3. Each point has a short title and at most one line of explanation.
+- The 3rd point is the most important one, so it comes last.
+
+**3. CTA (25 words or fewer).** One line with one reason to follow or act. No second ask.
 
 ## Length
-120–220 words. One idea per line. A blank line between blocks.
+50–150 words. A blank line between the three blocks.
 
 ## Language
 - Baghdadi, with گ and چ used naturally.
 - English business terms exactly as the owner writes them.
 - No greeting, no sign-off, no hashtags.
-- Emoji only as the block markers and level numbers.
 - Figures are `{{رقمك}}` placeholders. Never invent numbers.
 
-## Example (owner's published post, the target shape)
-💡 المشكلة مو إنك تسوي Campaigns حلوة.
-المشكلة إنك ما تعرف شنو تأثيرها على البزنس.
+## Example (owner's target structure)
+تدري ليش مبيعاتك واكعة؟ تعرف سالفة الدولار شلون راح تأثر عليك؟
 
-التسويق له 3 مستويات:
+مبيعاتك حتى تزيدها انت تحتاج تنتبه لجهود التسويق، لان هاي ال٣ نقاط جداً مهم، و٣ نقطة اهم شي لازم تسويها:
 
-1️⃣ Marketing Metrics
-Reach | Awareness | Engagement | Leads
-هاي السهلة. كلهم يوصلون لهنا.
+1. افهم العرض التسويقي
+2. ابني نص بيعي للعرض التسويقي يتناسب وي شخصيتك كبائع
+3. تواصل وي كل عملائك بشكل مستمر
 
-🔥 الغلطة الكبيرة؟
-إنك توقف عند المستوى الأول وتكول: "شفت؟ الحملة نجحت."
-
-لا حبيبي.
-النجاح مو بعدد الـ Impressions.
-
-📌 التسويق مو بس Brand Building.
-التسويق وظيفة تجارية.
-
-🤔 شكد من Marketing Heads يكدرون يجلسون ويا الـ CFO ويفهمون Trade-offs الحقيقية؟
+اذا ممتابعني بعدك ما اتصور، راح اطلعلك مرة ثانية.
