@@ -7,11 +7,13 @@ Nothing is changed in the content from these numbers until you compare them agai
 
 import csv
 import json
+import os
 from datetime import datetime
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-LOG = ROOT / "logs" / "posts.jsonl"
+STATE_DIR = Path(os.getenv("STATE_DIR") or ROOT)  # persistent disk on Render, see pilot.py
+LOG = STATE_DIR / "logs" / "posts.jsonl"
 SHEET = ROOT / "knowledge" / "feedback" / "reach_log.csv"
 SHEET_COLUMNS = ["id", "date", "format", "angle", "topic", "provider", "attempts",
                  "cost_usd", "published_date", "reach", "replies", "notes"]

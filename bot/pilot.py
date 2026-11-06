@@ -5,7 +5,8 @@ Owner (OWNER_CHAT_ID) is unlimited. Every other user is a pilot with two caps:
   max_usd    estimated model cost in dollars
 A pilot is refused before any model call when either cap would be reached.
 Config: data/pilots.json (gitignored). Usage is read from logs/posts.jsonl.
-"""
+Both live under STATE_DIR. Set STATE_DIR to a persistent disk path on Render (for example /var/data),
+so pilot limits survive redeploys. Without it, they are stored inside the project folder."""
 
 import json
 import os
@@ -15,7 +16,8 @@ from pathlib import Path
 from postlog import read_all
 
 ROOT = Path(__file__).resolve().parent.parent
-CONFIG = ROOT / "data" / "pilots.json"
+STATE_DIR = Path(os.getenv("STATE_DIR") or ROOT)
+CONFIG = STATE_DIR / "data" / "pilots.json"
 DEFAULT_POSTS = 10
 DEFAULT_USD = 1.00
 PER_POST_CAP_USD = 0.25   # worst-case cost of one post; checked before each call
