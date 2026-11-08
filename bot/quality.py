@@ -12,11 +12,11 @@ from platform_intelligence import get_profile, LEGACY_FORMATS
 
 ROOT = Path(__file__).resolve().parent.parent
 MAX_ATTEMPTS = 2
-OWNER_NOTE = re.compile(r"\\*{0,2}NOTE FOR OWNER:?\\*{0,2}", re.I)
+OWNER_NOTE = re.compile(r"\*{0,2}NOTE FOR OWNER:?\*{0,2}", re.I)
 AI_PHRASES = ROOT / "knowledge" / "copywriting" / "ai_phrases_ar.yaml"
-SLIDE = re.compile(r"(?im)^SLIDE\\s+(\\d+)\\s*:\\s*(.*)$")
-HEADING = re.compile(r"(?im)^#{2,3}\\s+\\S")
-HASHTAG = re.compile(r"(?<!\\w)#[\\w\\u0600-\\u06ff]+")
+SLIDE = re.compile(r"(?im)^SLIDE\s+(\d+)\s*:\s*(.*)$")
+HEADING = re.compile(r"(?im)^#{2,3}\s+\S")
+HASHTAG = re.compile(r"(?<!\w)#[\w\u0600-\u06ff]+")
 FIELDS = {
     "instagram_story": ("STORY", "INTERACTION"),
     "instagram_reel": ("HOOK", "SCRIPT", "VISUALS", "CTA"),
@@ -48,11 +48,11 @@ WORD_RANGES = {
 }
 
 def _field(text: str, name: str) -> str:
-    pattern = re.compile(r"(?im)^" + re.escape(name) + r"\\s*:\\s*(.*)$")
+    pattern = re.compile(r"(?im)^" + re.escape(name) + r"\s*:\s*(.*)$")
     m = pattern.search(text)
     if not m:
         return ""
-    following = re.search(r"(?m)^[A-Z][A-Z ]+\\s*:", text[m.end():])
+    following = re.search(r"(?m)^[A-Z][A-Z ]+\s*:", text[m.end():])
     end = m.end() + following.start() if following else len(text)
     return (m.group(1) + "\n" + text[m.end():end]).strip()
 
@@ -69,7 +69,7 @@ def _common(text: str, key: str) -> list[str]:
         issues.append(f"{key}: too many hashtags ({len(tags)} > {MAX_HASHTAGS[key]})")
     if AI_PHRASES.exists():
         source = AI_PHRASES.read_text(encoding="utf-8")
-        banned = re.findall(r"\\{phrase:\\s*(.+?),\\s*fix:", source)
+        banned = re.findall(r"\{phrase:\s*(.+?),\s*fix:", source)
         for phrase in banned:
             if phrase.strip() and phrase.strip() in text:
                 issues.append("AI cliche detected: " + phrase.strip())
