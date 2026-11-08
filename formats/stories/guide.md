@@ -1,15 +1,10 @@
-# Instagram Story text post (5 posts a day)
+# instagram_story
 
-Reply in the three-block layout from `knowledge/formats/caption.yaml`:
-🪝 Hook · 💬 Content (intro, then 📊 🔥 💡 points) · 🫵 CTA.
+A single immediate moment or observation and a relevant sticker/reply question.
 
-- End the CTA with a question so viewers can answer with a poll or question sticker.
-- No hashtags. No greeting. No sign-off. Baghdadi, with گ and چ used naturally.
-- Figures are `{{رقمك}}` placeholders.
+Use the matching contract in `bot/format_contracts.py`. This guide describes only
+this profile; TikTok and other formats have independent contracts there.
 
-## Five daily angles (rotate; never repeat the same angle twice in a row)
-1. Myth-busting: a belief, then the truth.
-2. Quick tip: one thing to do today.
-3. Behind the scenes: honest, unpolished.
-4. Customer pain: told without names.
-5. Offer or ask: a reason to act now.
+Choose the progression and number of ideas from the topic. No shared numbered
+lesson template applies. Use supplied evidence and natural Iraqi voice. Recommendations
+are editorial choices, not official ranking factors or growth guarantees.

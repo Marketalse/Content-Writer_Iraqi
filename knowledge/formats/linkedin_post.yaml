@@ -1,23 +1,8 @@
-# LinkedIn caption, three blocks: Hook, Content, CTA.
-
+# Legacy filename retained as a format-specific reference.
 name: linkedin_post
-platform: linkedin
-length_words: {min: 50, max: 150}
-
-shape:
-  - {beat: hook,    job: "One short line, 15 words or fewer. It must make the reader keep reading: a question, a surprise, or a sharp claim about their business."}
-  - {beat: content, job: "One intro sentence, then exactly 3 numbered points (1. 2. 3.). Each point: a short title, then at most one line of explanation. The 3rd point is the most important."}
-  - {beat: cta,     job: "One line, 25 words or fewer, starting with a clear reason to follow or act. No second ask."}
-
-format_rules:
-  - "Blank line between the three blocks."
-  - "Numbered points use 1. 2. 3. (or 1. 2. 3.) at the start of the line."
-  - "Baghdadi with گ and چ used naturally."
-  - "No greeting, no sign-off, no hashtags."
-  - "Figures are {{رقمك}} placeholders. Never invent numbers."
-
-checks:
-  hook_max_words: 15
-  exactly_numbered_points: 3
-  cta_max_words: 25
-  hashtags_max: 0
+profile: linkedin_post
+authoritative_contract: bot/format_contracts.py
+rules:
+  - "Use the selected profile's character, native sections and storytelling treatment."
+  - "Let the topic determine narrative and length; no fixed numbered-point requirement."
+  - "Use supplied facts and natural Iraqi voice. Never invent experience or results."

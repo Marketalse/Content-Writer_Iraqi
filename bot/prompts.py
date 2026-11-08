@@ -8,6 +8,7 @@ per-user data in it. Files are read once at import time.
 from pathlib import Path
 
 from platform_intelligence import strategy_prompt, LEGACY_FORMATS
+from format_contracts import NATIVE_OUTPUTS, format_contract
 
 ROOT = Path(__file__).resolve().parent.parent
 KB = ROOT / "knowledge"
@@ -30,8 +31,6 @@ FORMATS = {
     "tiktok_photo_carousel": ("🖼 TikTok Photo Carousel", None, None),
 }
 
-FORMULAS = ROOT / "knowledge" / "formulas" / "formulas.md"
-
 # Short labels for the Telegram buttons (the model reads the full descriptions in ANGLES).
 ANGLE_BUTTONS = {
     "myth": "🙅 خرافة ✅ حقيقة",
@@ -51,22 +50,6 @@ ANGLES = {
     "flip": "Problem flip: the reader's wrong belief, then the right one",
 }
 
-# A format has its own explicit output layout; no universal caption.yaml.
-NATIVE_OUTPUTS = {
-    "instagram_story": "STORY: short, human first-person moment or explanation\\nINTERACTION: one question usable with a Story sticker",
-    "instagram_reel": "HOOK: spoken opening\\nSCRIPT: complete natural spoken video\\nVISUALS: editing, on-screen highlights or demonstration cues\\nCTA: one natural ask",
-    "instagram_post": "HEADLINE: one visual claim\\nCAPTION: complete feed caption with substance\\nCTA: one appropriate ask",
-    "instagram_carousel": "SLIDE 1: compelling cover\\nSLIDE 2: context\\nSLIDE 3: first insight\\nSLIDE 4: explanation\\nSLIDE 5: example\\nSLIDE 6: conclusion\\nCAPTION: accompanying post caption\\nCTA: one ask",
-    "instagram_instants": "CAPTION: a single short spontaneous caption; do not invent visual assets or claim API publishing",
-    "instagram_live": "OPENING: host opening\\nTALKING POINTS: practical outline with several points\\nAUDIENCE QUESTIONS: at least three prompts\\nCLOSING: summary and one next action",
-    "instagram_broadcast_channel": "UPDATE: direct personal message with useful substance\\nPROMPT: one question, poll or reaction request",
-    "linkedin_post": "INSIGHT: one professional observation\\nBODY: relevant experience, reasoning and practical lesson in clear paragraphs\\nDISCUSSION: one meaningful professional question",
-    "linkedin_article": "TITLE: specific title\\nSUMMARY: executive summary\\n## Problem\\n## Analysis\\n## Practical framework\\nCONCLUSION: actionable synthesis",
-    "tiktok_story": "STORY: one casual moment or quick point\\nINTERACTION: a reply question",
-    "tiktok_video": "HOOK: fast spoken or visual opening\\nSCRIPT: natural and entertaining complete explanation\\nVISUALS: shot directions, demonstration and text cues\\nCTA: natural participation prompt",
-    "tiktok_photo_carousel": "SLIDE 1: curiosity cover\\nSLIDE 2: relatable problem\\nSLIDE 3: insight\\nSLIDE 4: example\\nSLIDE 5: payoff\\nCAPTION: short contextual description\\nCTA: one action",
-}
-
 BASE_INSTRUCTIONS = """أنت كاتب محتوى محترف متخصص باللهجة العراقية (البغدادية المفهومة بكل العراق).
 تكتب حصراً باللهجة العراقية. استخدم گ و چ بشكل طبيعي (مثل: گدر، أگلكم، چيبس، أحچي) كما في أسلوب صاحب الحساب.
 تلتزم بقواعد الفورمة المطلوبة من حيث الطول والهيكل والنبرة والإخراج.
@@ -82,10 +65,18 @@ def _read(path: Path) -> str:
     return path.read_text(encoding="utf-8") if path.exists() else ""
 
 
-def _examples() -> str:
+def _examples(fmt: str) -> str:
     """Creator's own transcripts and published posts, used as style examples."""
     parts = []
-    for folder in (KB / "examples" / "transcripts", KB / "examples" / "posts"):
+    key = LEGACY_FORMATS.get(fmt, fmt)
+    # Published posts are LinkedIn examples; transcripts belong only to spoken videos.
+    # Do not condition Stories, Instants or community messages on long-form layouts.
+    folders = {
+        "linkedin_post": (KB / "examples" / "posts",),
+        "instagram_reel": (KB / "examples" / "transcripts",),
+        "tiktok_video": (KB / "examples" / "transcripts",),
+    }.get(key, ())
+    for folder in folders:
         if not folder.exists():
             continue
         for f in sorted(folder.glob("*")):
@@ -104,17 +95,14 @@ def build_system_prompt(fmt: str) -> str:
         BASE_INSTRUCTIONS,
         "# صوتي وأسلوبي (voice.md)\n\n" + _read(KB / "voice" / "voice.md"),
         "# دليل اللهجة العراقية\n\n" + _read(ROOT / "guidelines" / "iraqi_dialect_style_guide.md"),
-        "# الصيغ (formulas)\n\n" + _read(FORMULAS),
         "# قاموس العراقي (المصدر الأساسي)\n\n" + _read(KB / "dialect" / "iraqi_words.csv"),
         "# لهجات ممنوعة\n\n" + _read(KB / "dialect" / "other_dialects.yaml"),
         "# عبارات ممنوعة (أسلوب AI)\n\n" + _read(KB / "copywriting" / "ai_phrases_ar.yaml"),
-        "# صيغ الهوك\n\n" + _read(KB / "hooks" / "hooks_ar.yaml"),
         "# مستويات العمق\n\n" + _read(KB / "formats" / "levels.yaml"),
         strategy_prompt(profile_key),
-        "# Required platform-specific output structure (editorial template, not official ranking rule)\n\n" + NATIVE_OUTPUTS[profile_key].replace("\\n", "\n"),
-        "Follow ONLY the native output structure above; ignore older example layouts that demand three generic blocks.",
     ]
-    examples = _examples()
+    examples = _examples(fmt)
     if examples:
         sections.append("# أمثلة من كلامي الحقيقي (فيديوهات ومنشورات)\n\n" + examples)
+    sections.append(format_contract(profile_key))
     return "\n\n".join(s for s in sections if s.strip())

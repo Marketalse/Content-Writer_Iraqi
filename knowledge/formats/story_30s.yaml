@@ -1,31 +1,8 @@
-# Instagram Story video, 30 seconds, posted 5 times a day.
-# Three blocks: Hook, Content (intro + 3 numbered points), CTA.
-# Output is a SCRIPT: SPOKEN lines, ON SCREEN text, one sticker. No shot descriptions.
-
+# Legacy filename retained as a format-specific reference.
 name: story_30s
-platform: instagram_story_video
-length_seconds: {target: 30, max: 35}
-posts_per_day: 5
-
-shape:
-  - {beat: hook,    seconds: "0-3",   job: "Couple of words that stop the scroll. A question or a sharp claim about the viewer's business. Spoken max 7 words."}
-  - {beat: content, seconds: "3-25",  job: "One intro sentence, then exactly 3 numbered SPOKEN lines (1. 2. 3.). Each: a short title and at most one line of explanation. The 3rd point is the most important."}
-  - {beat: cta,     seconds: "25-30", job: "One reason to follow or come back, with one interactive sticker. Spoken max 15 words."}
-
-script_format: |
-  [0-3s]   SPOKEN: ...                  | ON SCREEN: ...
-  [3-8s]   SPOKEN: intro sentence       | ON SCREEN: ...
-  [8-14s]  SPOKEN: 1. point one         | ON SCREEN: ...
-  [14-20s] SPOKEN: 2. point two         | ON SCREEN: ...
-  [20-25s] SPOKEN: 3. point three       | ON SCREEN: ...
-  [25-30s] SPOKEN: CTA                  | ON SCREEN: ...  | STICKER: ...
-  NOTE FOR OWNER: (one line, optional)
-
-checks:
-  total_spoken_words_max: 75
-  hook_max_spoken_words: 7
-  content_numbered_points: 3
-  on_screen_max_words: 6
-  sticker_required: true
-  invented_numbers_forbidden: true
-  no_greeting: true
+profile: instagram_story
+authoritative_contract: bot/format_contracts.py
+rules:
+  - "Use the selected profile's character, native sections and storytelling treatment."
+  - "Let the topic determine narrative and length; no fixed numbered-point requirement."
+  - "Use supplied facts and natural Iraqi voice. Never invent experience or results."

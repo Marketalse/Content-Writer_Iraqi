@@ -35,6 +35,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
 from pipeline import run_pipeline  # noqa: E402
+from format_contracts import FORMAT_CONTRACT_VERSION  # noqa: E402
 from pilot import add as pilot_add, check as pilot_check, list_text, quota_text, set_active, is_owner  # noqa: E402
 from postlog import log_post, mark_published  # noqa: E402
 from prompts import ANGLE_BUTTONS, ANGLES, FORMATS, build_system_prompt  # noqa: E402
@@ -280,7 +281,7 @@ def main():
     app.add_handler(CallbackQueryHandler(on_format_chosen, pattern=r"^fmt:"))
     app.add_handler(CallbackQueryHandler(on_angle_chosen, pattern=r"^ang:"))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, on_text))
-    log.info("bot started")
+    log.info("bot started format_contract=%s", FORMAT_CONTRACT_VERSION)
     app.run_polling(allowed_updates=Update.ALL_TYPES)
 
 
