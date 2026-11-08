@@ -1,12 +1,12 @@
 name: Platform intelligence checks
 on:
   push:
-    branches: [feature/platform-intelligence-growth-engine]
+    branches: [feature/platform-intelligence-growth-engine, feature/ai-quality-review-and-revision]
   pull_request:
     paths:
-      - "bot/platform_intelligence.py"
-      - "bot/prompts.py"
-      - "bot/quality.py"
+      - "bot/**"
+      - "knowledge/**"
+      - "guidelines/**"
       - "tests/**"
       - ".github/workflows/platform-intelligence.yml"
 jobs:
@@ -17,7 +17,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      - run: pip install -r bot/requirements.txt
       - name: Compile edited modules
-        run: python -m py_compile bot/platform_intelligence.py bot/prompts.py bot/quality.py
+        run: python -m compileall -q bot tests
       - name: Run no-network unit tests
         run: python -m unittest discover -s tests -v

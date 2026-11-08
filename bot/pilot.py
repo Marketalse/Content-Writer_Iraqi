@@ -49,12 +49,13 @@ def get_pilot(chat_id: int) -> dict | None:
 def usage(chat_id: int) -> tuple[int, float]:
     rows = [r for r in read_all()
             if r.get("event") == "generated" and str(r.get("chat_id")) == str(chat_id)]
-    return len(rows), sum(float(r.get("cost_usd", 0)) for r in rows)
+    return len(rows), sum(float(r.get("quota_cost_usd", r.get("cost_usd", 0))) for r in rows)
 
 
 def check(chat_id: int) -> tuple[bool, str]:
     """(allowed, message). Called before every generation."""
-    if is_owner(chat_id):
+    allowed = {int(x) for x in os.getenv("ALLOWED_CHAT_IDS", "").split(",") if x.strip()}
+    if is_owner(chat_id) or chat_id in allowed:
         return True, ""
     p = get_pilot(chat_id)
     if not p or not p.get("active"):
@@ -71,6 +72,8 @@ def quota_text(chat_id: int) -> str:
     p = get_pilot(chat_id)
     if is_owner(chat_id):
         return "أنت صاحب البوت: بدون حدود."
+    if chat_id in {int(x) for x in os.getenv("ALLOWED_CHAT_IDS", "").split(",") if x.strip()}:
+        return "حسابك مفعّل بدون حدود."
     if not p:
         return "الحساب مو مفعّل للتجربة."
     posts, cost = usage(chat_id)
