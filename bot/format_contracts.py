@@ -4,6 +4,7 @@ These describe this product's creative choices, not platform ranking requirement
 Transport section labels do not prescribe a fixed narrative or number of points.
 """
 from platform_intelligence import LEGACY_FORMATS, PROFILES
+from story_styles import short_story_policy, is_story
 
 FORMAT_CONTRACT_VERSION = "native-v2"
 
@@ -93,11 +94,16 @@ STORY_TREATMENTS = {
 }
 
 
-def format_contract(fmt: str, story_mode: str = 'moment') -> str:
+def format_contract(fmt: str, story_mode: str = 'moment', story_intent: str = 'auto') -> str:
     key = LEGACY_FORMATS.get(fmt, fmt)
     if key not in GUIDANCE:
         raise ValueError(f'Unknown platform format: {fmt}')
     guidance, output = GUIDANCE[key], NATIVE_OUTPUTS[key]
+    if story_intent != 'auto':
+        if not is_story(key) or story_mode != 'moment':
+            raise ValueError('short Story intent requires a single Story')
+        guidance = short_story_policy(story_intent)
+        output = 'STORY: the complete short spoken script only; no extra section or mandatory closing'
     if story_mode != 'moment':
         if key not in ('instagram_story', 'tiktok_story') or story_mode not in STORY_TREATMENTS:
             raise ValueError('invalid Story mode')
@@ -118,11 +124,11 @@ def format_contract(fmt: str, story_mode: str = 'moment') -> str:
             'Shared voice examples provide diction and rhythm only, never another format layout.')
 
 
-def adapt_contract(system: str, fmt: str, story_mode: str) -> str:
-    if story_mode == 'moment':
+def adapt_contract(system: str, fmt: str, story_mode: str, story_intent: str = 'auto') -> str:
+    if story_mode == 'moment' and story_intent == 'auto':
         return system
-    if system.endswith(format_contract(fmt, story_mode)):
+    if system.endswith(format_contract(fmt, story_mode, story_intent)):
         return system
     original = format_contract(fmt)
     prefix = system[:-len(original)] if system.endswith(original) else system + '\n'
-    return prefix + format_contract(fmt, story_mode)
+    return prefix + format_contract(fmt, story_mode, story_intent)

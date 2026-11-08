@@ -12,6 +12,7 @@ from format_contracts import NATIVE_OUTPUTS, format_contract
 from source_knowledge import lesson_prompt
 from briefs import Brief
 from editorial import approved_examples
+from story_styles import STORY_STYLES, STORY_ANGLE_KEYS, is_story
 
 ROOT = Path(__file__).resolve().parent.parent
 KB = ROOT / "knowledge"
@@ -20,7 +21,7 @@ EXAMPLE_LIMIT = 30000  # chars of creator examples (transcripts + posts) per req
 # Each Telegram choice maps to a distinct native content profile.
 # Keep old IDs for saved conversations; new choices use explicit platform IDs.
 FORMATS = {
-    "story": ("📸 Instagram Story", None, None),
+    "story": ("📸 Instagram Story · ٣٠ ثانية", None, None),
     "reel": ("🎬 Instagram Reel", None, None),
     "carousel": ("🗂 Instagram Carousel", None, None),
     "linkedin": ("💼 LinkedIn Post", None, None),
@@ -29,7 +30,7 @@ FORMATS = {
     "instagram_live": ("🔴 Instagram Live", None, None),
     "instagram_broadcast_channel": ("📣 Instagram Broadcast", None, None),
     "linkedin_article": ("📄 LinkedIn Article", None, None),
-    "tiktok_story": ("📱 TikTok Story", None, None),
+    "tiktok_story": ("📱 TikTok Story · ٣٠ ثانية", None, None),
     "tiktok_video": ("🎥 TikTok Video", None, None),
     "tiktok_photo_carousel": ("🖼 TikTok Photo Carousel", None, None),
 }
@@ -53,6 +54,18 @@ ANGLES = {
     "flip": "Problem flip: the reader's wrong belief, then the right one",
 }
 
+def angle_options(fmt: str | None = None) -> dict[str, str]:
+    if is_story(fmt):
+        return {key: STORY_STYLES[intent]['label'] for key, intent in STORY_ANGLE_KEYS.items()}
+    return ANGLE_BUTTONS
+
+
+def angle_description(fmt: str, key: str) -> str:
+    if is_story(fmt) and key in STORY_ANGLE_KEYS:
+        return STORY_STYLES[STORY_ANGLE_KEYS[key]]['instruction']
+    return ANGLES[key]  # Keep legacy callbacks/conversations working.
+
+
 BASE_INSTRUCTIONS = """أنت كاتب محتوى محترف متخصص باللهجة العراقية (البغدادية المفهومة بكل العراق).
 تكتب حصراً باللهجة العراقية. استخدم گ و چ بشكل طبيعي (مثل: گدر، أگلكم، چيبس، أحچي) كما في أسلوب صاحب الحساب.
 تلتزم بقواعد الفورمة المطلوبة من حيث الطول والهيكل والنبرة والإخراج.
@@ -68,11 +81,11 @@ def _read(path: Path) -> str:
     return path.read_text(encoding="utf-8") if path.exists() else ""
 
 
-def _examples(fmt: str, story_mode: str = 'moment') -> str:
+def _examples(fmt: str, story_mode: str = 'moment', story_intent: str = 'auto') -> str:
     """Creator's own transcripts and published posts, used as style examples."""
     parts = ["Human-approved STYLE example (facts are not evidence for a new brief):\n"
              + row['text'] + "\nHuman review reason: " + row['reason']
-             for row in approved_examples(fmt, story_mode)]
+             for row in approved_examples(fmt, story_mode, story_intent)]
     key = LEGACY_FORMATS.get(fmt, fmt)
     # Published posts are LinkedIn examples; transcripts belong only to spoken videos.
     # Do not condition Stories, Instants or community messages on long-form layouts.
@@ -106,11 +119,11 @@ def build_system_prompt(fmt: str, *, brief: Brief | None = None) -> str:
         "# لهجات ممنوعة\n\n" + _read(KB / "dialect" / "other_dialects.yaml"),
         "# عبارات ممنوعة (أسلوب AI)\n\n" + _read(KB / "copywriting" / "ai_phrases_ar.yaml"),
         "# مستويات العمق\n\n" + _read(KB / "formats" / "levels.yaml"),
-        strategy_prompt(profile_key),
+        strategy_prompt(profile_key, story_intent=brief.story_intent),
         lesson_prompt(profile_key, brief.distribution),
     ]
-    examples = _examples(fmt, brief.story_mode)
+    examples = _examples(fmt, brief.story_mode, brief.story_intent)
     if examples:
         sections.append("# أمثلة من كلامي الحقيقي (فيديوهات ومنشورات)\n\n" + examples)
-    sections.append(format_contract(profile_key, brief.story_mode))
+    sections.append(format_contract(profile_key, brief.story_mode, brief.story_intent))
     return "\n\n".join(s for s in sections if s.strip())

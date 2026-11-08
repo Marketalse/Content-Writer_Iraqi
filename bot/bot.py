@@ -20,6 +20,7 @@ import os
 import re
 import sys
 from pathlib import Path
+from dataclasses import replace
 
 from dotenv import load_dotenv
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
@@ -37,13 +38,14 @@ load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
 from pipeline import run_pipeline  # noqa: E402
 from build_info import build_info  # noqa: E402
-from quality import check  # noqa: E402
+from quality import check, render_story_copy  # noqa: E402
 from briefs import Brief, parse_brief_input, render_brief  # noqa: E402
 from production import validate_plan, render_plan  # noqa: E402
 from editorial import feedback, record_result, report, approve_example, remove_example, register_experiment  # noqa: E402
 from pilot import add as pilot_add, check as pilot_check, list_text, quota_text, set_active, is_owner  # noqa: E402
 from postlog import log_post, mark_published  # noqa: E402
-from prompts import ANGLE_BUTTONS, ANGLES, FORMATS, build_system_prompt  # noqa: E402
+from prompts import ANGLE_BUTTONS, ANGLES, FORMATS, build_system_prompt, angle_options, angle_description  # noqa: E402
+from story_styles import STORY_STYLES, STORY_ANGLE_KEYS, is_story  # noqa: E402
 
 logging.basicConfig(format="%(asctime)s %(levelname)s %(name)s: %(message)s", level=logging.INFO)
 # httpx logs every request URL, and the Telegram token is part of that URL. Keep it out of logs.
@@ -77,10 +79,10 @@ def _format_keyboard() -> InlineKeyboardMarkup:
     ])
 
 
-def _angle_keyboard() -> InlineKeyboardMarkup:
+def _angle_keyboard(fmt: str | None = None) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
         [InlineKeyboardButton(text, callback_data=f"ang:{key}")]
-        for key, text in ANGLE_BUTTONS.items()
+        for key, text in angle_options(fmt).items()
     ])
 
 
@@ -158,6 +160,8 @@ async def cmd_brief(update: Update, context: ContextTypes.DEFAULT_TYPE):
             if context.chat_data.get("format"):
                 brief.validate_format(context.chat_data["format"])
             context.chat_data["content_brief"] = brief
+            if is_story(context.chat_data.get("format")) and brief.story_intent != 'auto':
+                context.chat_data["angle"] = 'story_' + brief.story_intent
         context.chat_data.pop("pending_clarification", None)
         await update.message.reply_text("تم تحديث البريف. هسه دز الموضوع، أو /brief حتى تشوف الإعدادات.")
     except (ValueError, TypeError):
@@ -221,7 +225,8 @@ async def cmd_example(update: Update, context: ContextTypes.DEFAULT_TYPE):
             selection, reason = header.split('|', 1)
             fields = selection.split()
             identifier = approve_example(fields[0], fields[1] if len(fields) > 1 else 'moment',
-                                         text, reason.strip(), _chat_id(update))
+                                         text, reason.strip(), _chat_id(update),
+                                         story_intent=fields[2] if len(fields) > 2 else 'auto')
             await update.message.reply_text("تم اعتماد المثال: " + identifier)
         for fmt in FORMATS:
             SYSTEM_PROMPTS[fmt] = build_system_prompt(fmt)
@@ -238,6 +243,7 @@ async def cmd_version(update: Update, context: ContextTypes.DEFAULT_TYPE):
     system = build_system_prompt(fmt, brief=brief) if fmt in FORMATS else ""
     info = build_info(system)
     info["story_mode"] = brief.story_mode
+    info["story_intent"] = brief.story_intent
     info["production_mode"] = str(brief.production).lower()
     await update.message.reply_text(
         "نسخة البوت اللي تجاوبك:\n" + "\n".join(f"{k}={v}" for k, v in info.items())
@@ -301,8 +307,9 @@ async def on_format_chosen(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.chat_data.pop("angle", None)
     context.chat_data.pop("pending_clarification", None)
     await query.edit_message_text(
-        f"تمام، اخترت {FORMATS[key][0]}. هسة اختار الزاوية:",
-        reply_markup=_angle_keyboard(),
+        ("ستوري قصيرة، تقريباً ٣٠ ثانية: شنو الستايل اللي تريده؟"
+         if is_story(key) else f"تمام، اخترت {FORMATS[key][0]}. هسة اختار الزاوية:"),
+        reply_markup=_angle_keyboard(key),
     )
 
 
@@ -312,11 +319,22 @@ async def on_angle_chosen(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not _allowed_chat(update):
         return
     key = query.data.removeprefix("ang:")
-    if key not in ANGLES:
+    fmt = context.chat_data.get("format")
+    if key not in ANGLES and not (is_story(fmt) and key in STORY_ANGLE_KEYS):
         return
     context.chat_data.pop("pending_clarification", None)
     context.chat_data["angle"] = key
-    await query.edit_message_text(f"الزاوية: {ANGLE_BUTTONS[key]}. هسة دزلي الموضوع كتابةً.")
+    if is_story(fmt) and key in STORY_ANGLE_KEYS:
+        intent = STORY_ANGLE_KEYS[key]
+        style = STORY_STYLES[intent]
+        current = context.chat_data.get("content_brief", Brief())
+        context.chat_data["content_brief"] = replace(current, story_mode="moment", story_intent=intent,
+            purpose=style['purpose'], duration_seconds=30, production=False)
+        await query.edit_message_text(f"{style['label']} — فكرة وحدة، حچي بسيط ومباشر.\n" + style['topic_prompt'])
+    else:
+        if is_story(fmt) and 'content_brief' in context.chat_data:
+            context.chat_data['content_brief'] = replace(context.chat_data['content_brief'], story_intent='auto')
+        await query.edit_message_text(f"الزاوية: {ANGLE_BUTTONS[key]}. هسة دزلي الموضوع كتابةً.")
 
 
 async def on_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -328,9 +346,16 @@ async def on_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("گبل شي اختار نوع المحتوى 👇", reply_markup=_format_keyboard())
         return
     if not angle:
-        await update.message.reply_text("اختار الزاوية 👇", reply_markup=_angle_keyboard())
+        await update.message.reply_text("شنو الستايل اللي تريده؟" if is_story(fmt) else "اختار الزاوية 👇",
+                                        reply_markup=_angle_keyboard(fmt))
         return
 
+    try:
+        selected_angle = angle_description(fmt, angle)
+    except KeyError:
+        context.chat_data.pop("angle", None)
+        await update.message.reply_text("اختار الستايل من جديد.", reply_markup=_angle_keyboard(fmt))
+        return
     cid = _chat_id(update)
     ok, msg = pilot_check(cid)
     if not ok:
@@ -344,15 +369,20 @@ async def on_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         topic = (pending["topic"] + "\nسؤال التوضيح: " + pending["question"]
                  + "\nإجابة المستخدم: " + topic)
     brief = context.chat_data.get("content_brief", Brief())
+    if is_story(fmt) and angle in STORY_ANGLE_KEYS and brief.story_mode == 'moment':
+        intent = STORY_ANGLE_KEYS[angle]
+        brief = replace(brief, story_intent=intent, duration_seconds=30)
+        if 'content_brief' not in context.chat_data:
+            brief = replace(brief, purpose=STORY_STYLES[intent]['purpose'])
     try:
         brief.validate_format(fmt)
     except ValueError:
         await update.message.reply_text("إعدادات البريف ما تناسب الفورمات. عدل /brief أو استخدم /brief reset.")
         return
-    system = build_system_prompt(fmt, brief=brief) if "content_brief" in context.chat_data else SYSTEM_PROMPTS[fmt]
+    system = build_system_prompt(fmt, brief=brief) if "content_brief" in context.chat_data or brief.story_intent != "auto" else SYSTEM_PROMPTS[fmt]
     status = await update.message.reply_text("عاد أكتبلك… ⏳")
     try:
-        run = await run_pipeline(fmt, system, topic, ANGLES[angle],
+        run = await run_pipeline(fmt, system, topic, selected_angle,
                                  clarification_allowed=not resuming, brief=brief)
     except Exception:
         log.error("pipeline failed (%s)", type(sys.exc_info()[1]).__name__)
@@ -363,8 +393,8 @@ async def on_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Enforce structure at the final delivery boundary, independently of pipeline status.
     # This guards against a future regression returning a wrongly accepted legacy layout.
     if checked.status == "accepted":
-        delivery_failures = check(fmt, checked.text, story_mode=brief.story_mode)
-        if checked.story_mode != brief.story_mode:
+        delivery_failures = check(fmt, checked.text, story_mode=brief.story_mode, story_intent=brief.story_intent)
+        if checked.story_mode != brief.story_mode or checked.story_intent != brief.story_intent:
             delivery_failures.append("Story mode mismatch")
         if brief.production:
             try:
@@ -387,7 +417,7 @@ async def on_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "attempts": checked.attempts, "failures": checked.failures,
         "quality_status": checked.status, "review_history": checked.review_history,
         "build": runtime, "planning": checked.planning,
-        "objective": brief.purpose, "story_mode": brief.story_mode,
+        "objective": brief.purpose, "story_mode": brief.story_mode, "story_intent": brief.story_intent,
         "journey_stage": brief.journey_stage, "distribution": brief.distribution,
         "production_mode": brief.production,
         "elapsed_ms": run.elapsed_ms, "stage_timings": run.timings,
@@ -409,7 +439,8 @@ async def on_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     await status.delete()
-    for part in _chunks(checked.text):
+    delivered = render_story_copy(checked.text) if is_story(fmt) and brief.story_mode == "moment" else checked.text
+    for part in _chunks(delivered):
         await update.message.reply_text(part)
     if checked.failures:
         await update.message.reply_text("⚠️ تحقق يدوي قبل النشر:\n- " + "\n- ".join(checked.failures))

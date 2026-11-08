@@ -53,7 +53,8 @@ class TelegramTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(log.call_args.args[0]['cost_usd'], .01)
             sent = '\n'.join(c.args[0] for c in upd.message.reply_text.call_args_list)
             if state == 'accepted':
-                self.assertIn('STORY:', sent)
+                self.assertIn('محتوى', sent)
+                self.assertNotIn('STORY:', sent)
                 status.delete.assert_awaited_once()
             else:
                 self.assertNotIn('STORY:', sent)
@@ -101,13 +102,16 @@ class TelegramTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(ctx.chat_data, {})
 
     async def test_long_content_delivered_in_safe_plain_chunks(self):
-        text = 'STORY: ' + '<&>😀' * 2300 + '\nINTERACTION: شنو رأيك؟'
+        text = ('TITLE: تحليل التسويق\nSUMMARY: نراجع القرارات.\n## المشكلة\n'
+                + 'نراجع أرقامنا ونفهم احتياجات الزبون قبل اتخاذ القرار. ' * 100
+                + '\n## التحليل\n' + 'نحدد فرضية ونراجعها بوضوح قبل تعميم النتائج. ' * 100
+                + '\nCONCLUSION: نبدأ بخطوة صغيرة.')
         upd, _ = update()
         with patch.object(telegram_bot, '_allowed_chat', return_value=True), \
              patch.object(telegram_bot, 'pilot_check', return_value=(True, '')), \
              patch.object(telegram_bot, 'run_pipeline', AsyncMock(return_value=run_with(text=text))), \
              patch.object(telegram_bot, 'log_post', return_value='id'):
-            await telegram_bot.on_text(upd, self.context())
+            await telegram_bot.on_text(upd, self.context(format="linkedin_article"))
         chunks = [c.args[0] for c in upd.message.reply_text.call_args_list][1:-1]
         self.assertEqual(''.join(chunks), text)
         self.assertTrue(all(len(c.encode('utf-16-le')) // 2 <= 4000 for c in chunks))

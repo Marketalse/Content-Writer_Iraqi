@@ -78,7 +78,7 @@ def record_result(pid: str, actor: int, data: dict):
     _append({'event': 'result', 'post_id': pid, 'actor': actor, 'platform': profile.platform,
              'format': LEGACY_FORMATS.get(post['format'], post['format']),
              'objective': post.get('objective', profile.objective),
-             'story_mode': post.get('story_mode', 'moment'),
+             'story_mode': post.get('story_mode', 'moment'), 'story_intent': post.get('story_intent', 'auto'),
              'journey_stage': post.get('journey_stage', 'unspecified'),
              'distribution': post.get('distribution', 'organic'), **data})
 
@@ -91,7 +91,7 @@ def register_experiment(actor: int, data: dict):
     variant = authorized_post(data['variant_post_id'], actor)
     if baseline['id'] == variant['id'] or data['variable'] not in ('opening', 'cta', 'visuals', 'narrative'):
         raise ValueError('experiment needs distinct drafts and one supported variable')
-    for name in ('format', 'objective', 'story_mode', 'journey_stage', 'distribution'):
+    for name in ('format', 'objective', 'story_mode', 'story_intent', 'journey_stage', 'distribution'):
         left, right = baseline.get(name), variant.get(name)
         if name == 'format':
             left, right = LEGACY_FORMATS.get(left, left), LEGACY_FORMATS.get(right, right)
@@ -106,26 +106,27 @@ def register_experiment(actor: int, data: dict):
              'interpretation': 'No winner or causal conclusion is inferred automatically.'})
 
 
-def approved_examples(fmt: str, mode: str = 'moment') -> list[dict]:
+def approved_examples(fmt: str, mode: str = 'moment', story_intent: str = 'auto') -> list[dict]:
     if not EXAMPLES.exists():
         return []
     key = LEGACY_FORMATS.get(fmt, fmt)
     rows = json.loads(EXAMPLES.read_text(encoding='utf-8'))
-    return [row for row in rows if row['format'] == key and row.get('story_mode', 'moment') == mode][-2:]
+    return [row for row in rows if row['format'] == key and row.get('story_mode', 'moment') == mode
+            and row.get('story_intent', 'auto') == story_intent][-2:]
 
 
-def approve_example(fmt: str, mode: str, text: str, reason: str, actor: int) -> str:
+def approve_example(fmt: str, mode: str, text: str, reason: str, actor: int, *, story_intent: str = 'auto') -> str:
     if not is_owner(actor):
         raise PermissionError('only owner can approve examples')
     get_profile(fmt)
     if not isinstance(text, str) or not text.strip() or len(text) > 18000 or not isinstance(reason, str) or not reason.strip() or len(reason) > 1000:
         raise ValueError('example needs text and review reason')
-    failures = check(fmt, text, story_mode=mode)
+    failures = check(fmt, text, story_mode=mode, story_intent=story_intent)
     if failures:
         raise ValueError('example fails native structure')
     rows = json.loads(EXAMPLES.read_text(encoding='utf-8')) if EXAMPLES.exists() else []
     identifier = uuid4().hex[:12]
-    rows.append({'id': identifier, 'format': LEGACY_FORMATS.get(fmt, fmt), 'story_mode': mode,
+    rows.append({'id': identifier, 'format': LEGACY_FORMATS.get(fmt, fmt), 'story_mode': mode, 'story_intent': story_intent,
                  'text': text, 'reason': reason, 'approved_by': actor, 'approved_at': _now()})
     EXAMPLES.parent.mkdir(parents=True, exist_ok=True)
     temporary = EXAMPLES.with_suffix('.tmp')
@@ -157,7 +158,7 @@ def report(actor: int) -> dict:
     cohorts = {}
     for row in drafts:
         key = LEGACY_FORMATS.get(row['format'], row['format'])
-        cohort = '|'.join((key, row.get('story_mode', 'moment'), row.get('objective', 'unspecified'),
+        cohort = '|'.join((key, row.get('story_mode', 'moment'), row.get('story_intent', 'auto'), row.get('objective', 'unspecified'),
                            row.get('journey_stage', 'unspecified'), row.get('distribution', 'organic')))
         group = cohorts.setdefault(cohort, {'drafts': 0, 'accepted_by_engine': 0})
         group['drafts'] += 1

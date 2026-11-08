@@ -31,11 +31,11 @@ before model spending. JSON remains supported for integrations and advanced user
 
 ### Story treatment
 
-After choosing Story, add a line such as `الستوري: شرح` to the brief. Choices:
+The main Story flow now offers five short intent buttons before the topic; see [short Story flow](STORY_FLOW.md). The following sequence modes are advanced explicit options. After choosing Story, add a line such as `الستوري: شرح` to the brief. Choices:
 
 | Value | Treatment | Output |
 | --- | --- | --- |
-| لحظة | Immediate observation / moment | STORY and INTERACTION (legacy-compatible default) |
+| لحظة | Immediate observation / moment | STORY and INTERACTION for legacy auto-mode; new intent buttons use clean spoken copy |
 | شرح | Teaching one useful concept | Connected FRAME N sections and one INTERACTION |
 | تصويت | Genuine poll / question-led progression | Same sequence contract, with poll-specific treatment |
 | كشف | Supported contrast / reveal | Same sequence contract, with reveal-specific treatment |
