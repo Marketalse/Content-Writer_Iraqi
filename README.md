@@ -53,3 +53,5 @@ The bot independently reviews native drafts and can revise weak sections once by
 Failed or incomplete reviews are withheld from Telegram delivery. Publication remains manual.
 
 Offline checks: `python -m unittest discover -s tests -v` after installing `bot/requirements.txt`.
+
+Optional [copywriting frameworks and brief clarification](docs/FRAMEWORKS.md) use the existing analyst call while preserving native format contracts.

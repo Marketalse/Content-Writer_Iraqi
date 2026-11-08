@@ -121,6 +121,7 @@ async def cmd_format(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     context.chat_data.pop("format", None)
     context.chat_data.pop("angle", None)
+    context.chat_data.pop("pending_clarification", None)
     await update.message.reply_text("شنو نوع المحتوى؟", reply_markup=_format_keyboard())
 
 
@@ -200,6 +201,7 @@ async def on_format_chosen(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     context.chat_data["format"] = key
     context.chat_data.pop("angle", None)
+    context.chat_data.pop("pending_clarification", None)
     await query.edit_message_text(
         f"تمام، اخترت {FORMATS[key][0]}. هسة اختار الزاوية:",
         reply_markup=_angle_keyboard(),
@@ -214,6 +216,7 @@ async def on_angle_chosen(update: Update, context: ContextTypes.DEFAULT_TYPE):
     key = query.data.removeprefix("ang:")
     if key not in ANGLES:
         return
+    context.chat_data.pop("pending_clarification", None)
     context.chat_data["angle"] = key
     await query.edit_message_text(f"الزاوية: {ANGLE_BUTTONS[key]}. هسة دزلي الموضوع كتابةً.")
 
@@ -237,9 +240,15 @@ async def on_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     topic = update.message.text.strip()
+    pending = context.chat_data.pop("pending_clarification", None)
+    resuming = bool(pending and pending["format"] == fmt and pending["angle"] == angle)
+    if resuming:
+        topic = (pending["topic"] + "\nسؤال التوضيح: " + pending["question"]
+                 + "\nإجابة المستخدم: " + topic)
     status = await update.message.reply_text("عاد أكتبلك… ⏳")
     try:
-        run = await run_pipeline(fmt, SYSTEM_PROMPTS[fmt], topic, ANGLES[angle])
+        run = await run_pipeline(fmt, SYSTEM_PROMPTS[fmt], topic, ANGLES[angle],
+                                 clarification_allowed=not resuming)
     except Exception:
         log.error("pipeline failed (%s)", type(sys.exc_info()[1]).__name__)
         await status.edit_text("صار خطأ بالاتصال بالموديل. جرب مرة ثانية بعد شوية.")
@@ -265,13 +274,19 @@ async def on_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "chat_id": cid, "format": fmt, "angle": angle, "topic": topic, "provider": checked.provider,
         "attempts": checked.attempts, "failures": checked.failures,
         "quality_status": checked.status, "review_history": checked.review_history,
-        "build": runtime,
+        "build": runtime, "planning": checked.planning,
         "elapsed_ms": run.elapsed_ms, "stage_timings": run.timings,
         "usage_known": usage_known,
         "quota_cost_usd": round(run.cost_usd if usage_known else max(run.cost_usd, 0.25), 6),
         "calls": len(run.calls), "input_tokens": run.input_tokens,
         "output_tokens": run.output_tokens, "cost_usd": round(run.cost_usd, 6),
-    })
+    }, event="clarification" if checked.clarification else "generated")
+
+    if checked.clarification:
+        context.chat_data["pending_clarification"] = {
+            "topic": topic, "format": fmt, "angle": angle, "question": checked.clarification}
+        await status.edit_text(checked.clarification)
+        return
 
     if checked.status != "accepted":
         await status.edit_text("⚠️ المسودة تحتاج مراجعة؛ ما اجتازت فحوص الجودة.\n"

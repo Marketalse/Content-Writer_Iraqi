@@ -150,6 +150,8 @@ class Checked:
     calls: list[Result] = field(default_factory=list)
     status: str = "needs_review"
     review_history: list[dict] = field(default_factory=list)
+    planning: dict = field(default_factory=dict)
+    clarification: str = ""
 
 async def generate_checked(fmt: str, system: str, topic: str,
                            angle: str = "", notes: str = "") -> Checked:

@@ -30,7 +30,9 @@ class Run:
 
 async def run_pipeline(fmt: str, system: str, topic: str, angle: str,
                        *, settings: Settings | None = None,
-                       verified_facts: tuple[tuple[str, str], ...] = ()) -> Run:
+                       verified_facts: tuple[tuple[str, str], ...] = (),
+                       clarification_allowed: bool = True) -> Run:
     start = monotonic()
-    checked, session, notes = await execute(fmt, system, topic, angle, settings, verified_facts)
+    checked, session, notes = await execute(fmt, system, topic, angle, settings, verified_facts,
+                                        clarification_allowed=clarification_allowed)
     return Run(checked, session.calls, notes, round((monotonic() - start) * 1000, 2), session.timings)

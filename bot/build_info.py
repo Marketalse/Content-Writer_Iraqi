@@ -8,7 +8,8 @@ from format_contracts import FORMAT_CONTRACT_VERSION
 
 ROOT = Path(__file__).resolve().parent
 SOURCE_FILES = ('bot.py', 'build_info.py', 'prompts.py', 'format_contracts.py',
-                'platform_intelligence.py', 'pipeline.py', 'revision.py', 'quality.py', 'reviewer.py')
+                'platform_intelligence.py', 'pipeline.py', 'revision.py', 'quality.py', 'reviewer.py',
+                'frameworks.py', '../knowledge/frameworks.toml')
 
 
 def _source_digest() -> str:

@@ -19,7 +19,11 @@ from revision import Settings
 async def scenario(delay, count=40, analyst=True):
     async def fake(system, user, **kwargs):
         await asyncio.sleep(delay)
-        if system.startswith('You are an independent'):
+        if system.startswith('Analyze the brief'):
+            text = json.dumps({'audience_need': 'useful observation', 'objection': '',
+                'purpose': 'conversation', 'framework': 'none', 'logic_chain': ['moment', 'reply'],
+                'missing_information': '', 'clarification_question': ''})
+        elif system.startswith('You are an independent'):
             text = json.dumps({'scores': dict.fromkeys(DIMENSIONS, 8),
                                'gates': dict.fromkeys(GATES, 'pass'), 'issues': []})
         else:
@@ -32,7 +36,9 @@ async def scenario(delay, count=40, analyst=True):
     assert all(r.checked.status == 'accepted' and len(r.calls) == (3 if analyst else 2) for r in runs)
     return {'samples': count, 'fake_call_delay_ms': delay * 1000,
             'p50_ms': round(statistics.median(times), 3),
-            'p95_ms': times[int(count * .95) - 1], 'logical_calls_per_run': 3 if analyst else 2}
+            'p95_ms': times[int(count * .95) - 1], 'logical_calls_per_run': 3 if analyst else 2,
+            'mean_input_chars_per_run': round(statistics.mean(
+                sum(t['input_chars'] for t in r.timings) for r in runs), 1)}
 
 
 async def main():

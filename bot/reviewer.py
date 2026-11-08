@@ -109,6 +109,11 @@ and payoff appropriate to format, not mandatory fiction), platform_fit (native s
 and tone), audience_relevance (Iraqi audience intent), iraqi_dialect (natural Baghdadi,
 not forced letters), cta (one relevant ask; Instants without CTA may score 10), originality
 (specific non-cliche angle; do not claim plagiarism detection).
+Apply the 4Cs across the existing dimensions: clarity (understandable reasoning),
+concision (appropriate economy for this format), compelling value (audience relevance),
+and credibility (supported claims). They are review criteria, never a narrative template.
+Optional planning frameworks must not appear as audience-facing headings or override the
+format's native character. Do not reward a framework name or demand a named framework.
 0-3 poor, 4-6 needs work, 7-8 usable, 9-10 exceptional. Do not inflate scores.
 Mandatory gates independent of scores:
 factual_integrity: claims supported by supplied brief/provenance, no invented statistics,

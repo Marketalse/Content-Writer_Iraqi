@@ -222,3 +222,11 @@ Validation: 68 tests passed, including a screenshot-layout fixture, pipeline ear
 rejection, forced-accepted-result delivery rejection, build identity redaction,
 version command permissions and Blueprint branch/start-command checks. Compilation
 and diff validation passed. Live Render/Telegram behavior remains unverified.
+
+
+## Optional framework planning
+
+See [framework configuration, clarification flow and validation](FRAMEWORKS.md).
+Frameworks are optional internal planning tools, never shared output templates.
+The analyst cap is now 600 tokens. A `needs_clarification` result asks one essential-fact
+question before drafting; its usage affects dollar quota but not post quota.
