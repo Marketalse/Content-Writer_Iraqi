@@ -5,6 +5,7 @@ from time import monotonic
 from llm import Result
 from quality import Checked
 from revision import Settings, execute
+from briefs import Brief
 
 
 @dataclass
@@ -30,7 +31,9 @@ class Run:
 
 async def run_pipeline(fmt: str, system: str, topic: str, angle: str,
                        *, settings: Settings | None = None,
-                       verified_facts: tuple[tuple[str, str], ...] = ()) -> Run:
+                       verified_facts: tuple[tuple[str, str], ...] = (),
+                       clarification_allowed: bool = True, brief: Brief | None = None) -> Run:
     start = monotonic()
-    checked, session, notes = await execute(fmt, system, topic, angle, settings, verified_facts)
+    checked, session, notes = await execute(fmt, system, topic, angle, settings, verified_facts,
+                                        clarification_allowed=clarification_allowed, brief=brief)
     return Run(checked, session.calls, notes, round((monotonic() - start) * 1000, 2), session.timings)

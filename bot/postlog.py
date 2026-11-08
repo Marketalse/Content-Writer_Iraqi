@@ -34,10 +34,12 @@ def read_all() -> list[dict]:
     return _read()
 
 
-def log_post(record: dict) -> str:
+def log_post(record: dict, *, event: str = 'generated') -> str:
+    if event not in ('generated', 'clarification'):
+        raise ValueError('unsupported generation event')
     LOG.parent.mkdir(parents=True, exist_ok=True)
     pid = datetime.now().strftime("%Y%m%d%H%M%S") + "-" + uuid4().hex[:8]
-    row = {"event": "generated", "id": pid, "date": _now(), **record}
+    row = {**record, "event": event, "id": pid, "date": _now()}
     with LOG.open("a", encoding="utf-8") as f:
         f.write(json.dumps(row, ensure_ascii=False) + "\n")
     return pid

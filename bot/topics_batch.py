@@ -193,7 +193,9 @@ async def write_all(rows: list[dict], budget: float, concurrency: int) -> None:
             checked = run.checked
             state["cost"] += run.cost_usd
             state["done"] += 1
-            if checked.refused:
+            if checked.clarification:
+                status = "needs_clarification"
+            elif checked.refused:
                 status = "refused"
             elif not checked.text:
                 status = "empty"
@@ -212,7 +214,7 @@ async def write_all(rows: list[dict], budget: float, concurrency: int) -> None:
                 file_rel = str(path.relative_to(ROOT))
 
             append_index({**base, "status": status, "attempts": checked.attempts,
-                          "failures": " | ".join(checked.failures)[:500],
+                          "failures": " | ".join(checked.failures + ([checked.clarification] if checked.clarification else []))[:500],
                           "provider": checked.provider, "cost_usd": round(run.cost_usd, 5),
                           "file": file_rel})
             if state["done"] % 25 == 0:

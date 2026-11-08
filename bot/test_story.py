@@ -49,6 +49,8 @@ async def main():
     print(f"format={fmt} angle={angle} provider={c.provider} attempts={c.attempts} refused={c.refused}")
     print(f"calls={len(run.calls)} input_tokens={run.input_tokens} output_tokens={run.output_tokens} "
           f"cost≈${run.cost_usd:.5f}")
+    if c.clarification:
+        print("CLARIFICATION REQUIRED: " + c.clarification)
     if c.failures:
         print("QUALITY CHECK FAILED:\n- " + "\n- ".join(c.failures))
     print("-" * 60)

@@ -1,0 +1,50 @@
+# Optional argument-planning tools. Native format contracts always take precedence.
+# Local definitions, not an exact reproduction of the unprovided source TOML.
+version = 1
+
+[frameworks.PAS]
+meaning = "Problem, Agitation, Solution"
+steps = ["Name a real audience problem", "Explain its relevant consequence without exaggeration", "Offer a useful response"]
+
+[frameworks.BAB]
+meaning = "Before, After, Bridge"
+steps = ["Describe the supplied starting situation", "Describe a supported outcome or explicitly hypothetical desired state", "Explain the bridge without inventing results"]
+
+[frameworks.FAB]
+meaning = "Features, Advantages, Benefits"
+steps = ["Identify a supplied feature", "Explain its practical advantage", "Connect it to a specific audience benefit"]
+
+[frameworks.AIDA]
+meaning = "Attention, Interest, Desire, Action"
+steps = ["Open with a relevant observation", "Develop useful context", "Explain the value without unsupported promises", "Invite one appropriate action"]
+
+[frameworks.QUEST]
+meaning = "Qualify, Understand, Educate, Stimulate, Transition"
+steps = ["Identify the relevant audience", "Recognize its situation", "Explain the idea", "Show why it matters", "Move to a useful next step"]
+
+[frameworks.ACCA]
+meaning = "Awareness, Comprehension, Conviction, Action"
+steps = ["Introduce the issue", "Explain how it works", "Develop reasoning supported by supplied evidence", "Offer an appropriate next step"]
+
+[purposes]
+problem = ["PAS"]
+product = ["FAB", "AIDA"]
+case_study = ["BAB"]
+education = ["QUEST", "ACCA"]
+conversation = []
+unspecified = []
+
+# An empty list deliberately selects no named framework.
+[formats]
+instagram_story = []
+tiktok_story = []
+instagram_instants = []
+instagram_live = []
+instagram_broadcast_channel = []
+instagram_reel = ["PAS", "BAB", "FAB", "AIDA"]
+tiktok_video = ["PAS", "BAB", "FAB"]
+instagram_post = ["PAS", "FAB", "AIDA", "BAB"]
+instagram_carousel = ["QUEST", "ACCA", "BAB", "FAB"]
+tiktok_photo_carousel = ["BAB", "FAB"]
+linkedin_post = ["PAS", "BAB", "QUEST", "ACCA"]
+linkedin_article = ["QUEST", "ACCA"]

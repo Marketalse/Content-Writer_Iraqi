@@ -48,8 +48,9 @@ def get_pilot(chat_id: int) -> dict | None:
 
 def usage(chat_id: int) -> tuple[int, float]:
     rows = [r for r in read_all()
-            if r.get("event") == "generated" and str(r.get("chat_id")) == str(chat_id)]
-    return len(rows), sum(float(r.get("quota_cost_usd", r.get("cost_usd", 0))) for r in rows)
+            if r.get("event") in ("generated", "clarification") and str(r.get("chat_id")) == str(chat_id)]
+    return sum(r["event"] == "generated" for r in rows), sum(
+        float(r.get("quota_cost_usd", r.get("cost_usd", 0))) for r in rows)
 
 
 def check(chat_id: int) -> tuple[bool, str]:

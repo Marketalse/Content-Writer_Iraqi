@@ -1,0 +1,67 @@
+version = 1
+snapshot_reviewed_at = "2026-11-08"
+
+[sources.translation]
+title = "Uploaded Instagram Story Script Translation Guide compilation"
+url = ""
+kind = "user_supplied_examples"
+status = "unverified"
+checked_at = ""
+
+[sources.tiktok_ads]
+title = "TikTok Ads Copywriting: Write Hooks and Captions That Convert"
+url = "https://tiktokadsaccount.com/blog/tiktok-ads-copywriting-guide"
+kind = "third_party_commercial"
+status = "creative_hypothesis"
+checked_at = ""
+
+[sources.stories]
+title = "BrandGhost Instagram Stories Strategy Guide"
+url = "https://www.brandghost.ai/blog/posts/instagram-stories-strategy-guide"
+kind = "third_party_editorial"
+status = "creative_hypothesis"
+checked_at = ""
+
+[sources.funnel]
+title = "Orbit Media: Formats and the Funnel"
+url = "https://www.orbitmedia.com/blog/content-marketing-formats-funnels/"
+kind = "practitioner_experience"
+status = "creative_hypothesis"
+checked_at = ""
+
+[[lessons]]
+id = "intent"
+source = "funnel"
+formats = ["all"]
+text = "Match the next step to audience intent. Journey stages are non-linear; any format can serve different purposes. An email subscription is not a qualified sales inquiry."
+
+[[lessons]]
+id = "story_connection"
+source = "stories"
+formats = ["instagram_story", "tiktok_story"]
+text = "A Story can be one moment or a connected teaching, poll, reveal, demonstration or referral sequence. Let the idea determine frame count; no mandatory three tips or sales ending."
+
+[[lessons]]
+id = "story_continuity"
+source = "stories"
+formats = ["instagram_story"]
+text = "Ask meaningful questions. Give links useful context. Consider curating evergreen FAQs or work samples into Highlights and choose a sustainable cadence; these are strategy options, not ranking rules."
+
+[[lessons]]
+id = "video_components"
+source = "translation"
+formats = ["instagram_reel", "tiktok_video"]
+text = "Distinguish spoken copy, visuals, overlays and caption context. Pay off the opening promise and respect supplied filming constraints. Repurpose the idea, not another format's layout."
+
+[[lessons]]
+id = "paid_copy"
+source = "tiktok_ads"
+formats = ["tiktok_video"]
+distribution = "paid"
+text = "For paid promotion, coordinate spoken action, overlay and actual destination. Use result, authority, testimonial, scarcity or urgency claims only when supported by supplied evidence. Do not invent a resource or delivery automation."
+
+[[lessons]]
+id = "repurposing"
+source = "funnel"
+formats = ["all"]
+text = "Adapt supplied source material to each audience and format without treating repurposing as new research. Preserve factual meaning and creator voice. Match measurement to objective, not vanity counts."
