@@ -85,15 +85,24 @@ def _to_html(text: str) -> str:
 
 
 def _chunks(text: str, size: int = TELEGRAM_LIMIT):
+    """Bound UTF-16 units (emoji count twice), preserving plain text exactly."""
+    if size < 2:
+        raise ValueError("chunk size must be at least two UTF-16 units")
     while text:
-        if len(text) <= size:
-            yield text
-            return
-        cut = text.rfind("\n", 0, size)
-        if cut <= 0:
-            cut = size
+        units = 0
+        cut = 0
+        for char in text:
+            width = 2 if ord(char) > 0xFFFF else 1
+            if units + width > size:
+                break
+            units += width
+            cut += 1
+        if cut < len(text):
+            newline = text.rfind("\n", 0, cut)
+            if newline >= 0:
+                cut = newline + 1
         yield text[:cut]
-        text = text[cut:].lstrip("\n")
+        text = text[cut:]
 
 
 async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -219,7 +228,7 @@ async def on_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         run = await run_pipeline(fmt, SYSTEM_PROMPTS[fmt], topic, ANGLES[angle])
     except Exception:
-        log.exception("pipeline failed")
+        log.error("pipeline failed (%s)", type(sys.exc_info()[1]).__name__)
         await status.edit_text("صار خطأ بالاتصال بالموديل. جرب مرة ثانية بعد شوية.")
         return
 
@@ -227,23 +236,27 @@ async def on_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     log.info("fmt=%s angle=%s provider=%s attempts=%s calls=%d cost=$%.5f",
              fmt, angle, checked.provider, checked.attempts, len(run.calls), run.cost_usd)
 
-    if checked.refused:
-        await status.edit_text("ما گدرت أكمل هذا الطلب. جرب موضوع ثاني.")
-        return
-    if not checked.text:
-        await status.edit_text("ما طلع شي، جرب تعيد صياغة الموضوع.")
-        return
-
+    usage_known = (all(c.usage_known for c in run.calls)
+                   and all(t["status"] == "ok" for t in run.timings))
     pid = log_post({
         "chat_id": cid, "format": fmt, "angle": angle, "topic": topic, "provider": checked.provider,
         "attempts": checked.attempts, "failures": checked.failures,
+        "quality_status": checked.status, "review_history": checked.review_history,
+        "elapsed_ms": run.elapsed_ms, "stage_timings": run.timings,
+        "usage_known": usage_known,
+        "quota_cost_usd": round(run.cost_usd if usage_known else max(run.cost_usd, 0.25), 6),
         "calls": len(run.calls), "input_tokens": run.input_tokens,
         "output_tokens": run.output_tokens, "cost_usd": round(run.cost_usd, 6),
     })
 
+    if checked.status != "accepted":
+        await status.edit_text("⚠️ المسودة تحتاج مراجعة؛ ما اجتازت فحوص الجودة.\n"
+                               + "\n".join(checked.failures)[:2500])
+        return
+
     await status.delete()
     for part in _chunks(checked.text):
-        await update.message.reply_text(_to_html(part), parse_mode="HTML")
+        await update.message.reply_text(part)
     if checked.failures:
         await update.message.reply_text("⚠️ تحقق يدوي قبل النشر:\n- " + "\n- ".join(checked.failures))
     if checked.owner_note:

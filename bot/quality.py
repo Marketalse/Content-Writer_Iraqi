@@ -7,14 +7,13 @@ import re
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from llm import Result, generate
+from llm import Result
 from platform_intelligence import get_profile, LEGACY_FORMATS
 
 ROOT = Path(__file__).resolve().parent.parent
-MAX_ATTEMPTS = 2
 OWNER_NOTE = re.compile(r"\*{0,2}NOTE FOR OWNER:?\*{0,2}", re.I)
 AI_PHRASES = ROOT / "knowledge" / "copywriting" / "ai_phrases_ar.yaml"
-SLIDE = re.compile(r"(?im)^SLIDE\s+(\d+)\s*:\s*(.*)$")
+SLIDE = re.compile(r"(?im)^SLIDE[ \t]+(\d+)[ \t]*:[ \t]*(.*)$")
 HEADING = re.compile(r"(?im)^#{2,3}\s+\S")
 HASHTAG = re.compile(r"(?<!\w)#[\w\u0600-\u06ff]+")
 FIELDS = {
@@ -48,7 +47,7 @@ WORD_RANGES = {
 }
 
 def _field(text: str, name: str) -> str:
-    pattern = re.compile(r"(?im)^" + re.escape(name) + r"\s*:\s*(.*)$")
+    pattern = re.compile(r"(?im)^" + re.escape(name) + r"[ \t]*:[ \t]*(.*)$")
     m = pattern.search(text)
     if not m:
         return ""
@@ -84,9 +83,15 @@ def _carousel(text: str, key: str) -> list[str]:
     indices = [int(m.group(1)) for m in slides]
     if indices != list(range(1, len(indices) + 1)):
         issues.append("carousel: slide numbering must be consecutive from 1")
+    labels = re.findall(r"(?m)^([A-Z][A-Z ]*(?: \d+)?)\s*:", text)
+    expected = [f"SLIDE {i}" for i in range(1, len(slides) + 1)] + ["CAPTION", "CTA"]
+    if labels != expected:
+        issues.append("carousel: native section order invalid")
     for i, match in enumerate(slides):
         stop = slides[i+1].start() if i+1 < len(slides) else len(text)
         section = text[match.start():stop].split("CAPTION:", 1)[0].split("CTA:", 1)[0]
+        if not match.group(2).strip() and not text[match.end():stop].strip():
+            issues.append(f"slide {i+1}: empty content")
         if len(section.split()) > 70:
             issues.append(f"slide {i+1}: too dense, shorten copy")
     if not _field(text, "CAPTION"):
@@ -100,6 +105,12 @@ def check(fmt: str, text: str) -> list[str]:
     key = LEGACY_FORMATS.get(fmt, fmt)
     get_profile(key)  # reject unknown keys, never silently use a generic format
     issues = _common(text, key)
+    labels = re.findall(r"(?m)^([A-Z][A-Z ]*(?: \d+)?)\s*:", text)
+    if len(labels) != len(set(labels)):
+        issues.append("duplicate native section")
+    if key not in ("instagram_carousel", "tiktok_photo_carousel"):
+        if labels != list(FIELDS[key]):
+            issues.append("native sections must appear once in the required order")
     if key in ("instagram_carousel", "tiktok_photo_carousel"):
         return issues + _carousel(text, key)
     for name in FIELDS[key]:
@@ -107,8 +118,15 @@ def check(fmt: str, text: str) -> list[str]:
             issues.append(f"{key}: missing or empty {name}:")
     if key in ("instagram_story", "tiktok_story") and not re.search(r"[؟?]", _field(text, "INTERACTION")):
         issues.append(f"{key}: INTERACTION should include a question")
-    if key == "linkedin_article" and len(HEADING.findall(text)) < 2:
-        issues.append("linkedin_article: include at least two ## section headings")
+    if key == "linkedin_article":
+        headings = list(HEADING.finditer(text))
+        if len(headings) < 2:
+            issues.append("linkedin_article: include at least two ## section headings")
+        summary = re.search(r"(?m)^SUMMARY\s*:", text)
+        conclusion = re.search(r"(?m)^CONCLUSION\s*:", text)
+        if headings and summary and conclusion and not (
+                summary.start() < headings[0].start() < headings[-1].start() < conclusion.start()):
+            issues.append("linkedin_article: analysis sections must follow SUMMARY and precede CONCLUSION")
     if key in ("instagram_reel", "tiktok_video") and len(_field(text, "HOOK").split()) > 30:
         issues.append(f"{key}: hook too long (editorial target <=30 words)")
     return issues
@@ -126,24 +144,14 @@ class Checked:
     attempts: int = 1
     owner_note: str = ""
     calls: list[Result] = field(default_factory=list)
+    status: str = "needs_review"
+    review_history: list[dict] = field(default_factory=list)
 
 async def generate_checked(fmt: str, system: str, topic: str,
                            angle: str = "", notes: str = "") -> Checked:
-    base = f"الموضوع: {topic}"
-    if angle:
-        base += f"\nالزاوية: {angle}"
-    if notes:
-        base += f"\nتحليل الجمهور:\n{notes}"
-    prompt = base
-    calls: list[Result] = []
-    for attempt in range(1, MAX_ATTEMPTS + 1):
-        result = await generate(system, prompt)
-        calls.append(result)
-        if result.refused or not result.text:
-            return Checked(result.text, result.provider, result.refused, [], attempt, calls=calls)
-        content, note = split_owner_note(result.text)
-        failures = check(fmt, content)
-        if not failures:
-            return Checked(content, result.provider, False, [], attempt, note, calls)
-        prompt = base + "\n\nFix these format-specific quality issues without changing the selected platform format:\n- " + "\n- ".join(failures)
-    return Checked(content, result.provider, False, failures, MAX_ATTEMPTS, note, calls)
+    # Compatibility entry point; the same bounded engine is used by CLI and Telegram.
+    from dataclasses import replace
+    from revision import Settings, execute
+    settings = replace(Settings.from_env(), analyst=False)
+    checked, _, _ = await execute(fmt, system, topic, angle, settings, analyst_notes=notes)
+    return checked

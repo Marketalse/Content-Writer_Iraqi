@@ -10,6 +10,7 @@ import json
 import os
 from datetime import datetime
 from pathlib import Path
+from uuid import uuid4
 
 ROOT = Path(__file__).resolve().parent.parent
 STATE_DIR = Path(os.getenv("STATE_DIR") or ROOT)  # persistent disk on Render, see pilot.py
@@ -35,7 +36,7 @@ def read_all() -> list[dict]:
 
 def log_post(record: dict) -> str:
     LOG.parent.mkdir(parents=True, exist_ok=True)
-    pid = datetime.now().strftime("%Y%m%d%H%M%S")
+    pid = datetime.now().strftime("%Y%m%d%H%M%S") + "-" + uuid4().hex[:8]
     row = {"event": "generated", "id": pid, "date": _now(), **record}
     with LOG.open("a", encoding="utf-8") as f:
         f.write(json.dumps(row, ensure_ascii=False) + "\n")
@@ -43,7 +44,8 @@ def log_post(record: dict) -> str:
 
 
 def mark_published(pid: str) -> bool:
-    if not any(r.get("event") == "generated" and r["id"] == pid for r in _read()):
+    if not any(r.get("event") == "generated" and r["id"] == pid
+               and r.get("quality_status", "accepted") == "accepted" for r in _read()):
         return False
     with LOG.open("a", encoding="utf-8") as f:
         f.write(json.dumps({"event": "published", "id": pid, "date": _now()}, ensure_ascii=False) + "\n")

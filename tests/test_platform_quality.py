@@ -2,20 +2,9 @@
 No API keys or network calls required.
 """
 import sys
-import types
 import unittest
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "bot"))
-
-# quality imports the LLM interface, but these tests exercise deterministic checks only.
-stub = types.ModuleType("llm")
-class Result:
-    pass
-async def generate(*args, **kwargs):
-    raise AssertionError("Tests must never call an LLM")
-stub.Result = Result
-stub.generate = generate
-sys.modules.setdefault("llm", stub)
 
 from platform_intelligence import PROFILES, LEGACY_FORMATS, get_profile
 from quality import check, split_owner_note

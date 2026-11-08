@@ -111,7 +111,7 @@ def build_system_prompt(fmt: str) -> str:
         "# صيغ الهوك\n\n" + _read(KB / "hooks" / "hooks_ar.yaml"),
         "# مستويات العمق\n\n" + _read(KB / "formats" / "levels.yaml"),
         strategy_prompt(profile_key),
-        "# Required platform-specific output structure (editorial template, not official ranking rule)\n\n" + NATIVE_OUTPUTS[profile_key],
+        "# Required platform-specific output structure (editorial template, not official ranking rule)\n\n" + NATIVE_OUTPUTS[profile_key].replace("\\n", "\n"),
         "Follow ONLY the native output structure above; ignore older example layouts that demand three generic blocks.",
     ]
     examples = _examples()

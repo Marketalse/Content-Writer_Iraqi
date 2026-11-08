@@ -51,6 +51,8 @@ class Result:
     cache_read: int = 0
     cache_write: int = 0
     cost_usd: float = 0.0
+    truncated: bool = False
+    usage_known: bool = True
 
 
 def estimate_cost(model: str, inp: int, out: int, cache_read: int, cache_write: int) -> float:
@@ -60,9 +62,9 @@ def estimate_cost(model: str, inp: int, out: int, cache_read: int, cache_write: 
     return (inp * pin + out * pout + cache_read * pin * 0.1 + cache_write * pin * 1.25) / 1_000_000
 
 
-_anthropic = anthropic.AsyncAnthropic(api_key=os.getenv("ANTHROPIC_API_KEY") or None)
+_anthropic = anthropic.AsyncAnthropic(api_key=os.getenv("ANTHROPIC_API_KEY") or "not-configured", max_retries=0, timeout=40.0)
 _nous = (
-    openai.AsyncOpenAI(api_key=os.environ["NOUS_API_KEY"], base_url=NOUS_BASE_URL)
+    openai.AsyncOpenAI(api_key=os.environ["NOUS_API_KEY"], base_url=NOUS_BASE_URL, max_retries=0, timeout=40.0)
     if os.getenv("NOUS_API_KEY")
     else None
 )
@@ -93,7 +95,7 @@ async def generate(system: str, user: str, model: str | None = None,
         cost = estimate_cost(model, u.input_tokens, u.output_tokens, cache_read, cache_write)
         log.info("anthropic model=%s in=%s out=%s cache_read=%s cache_write=%s cost=$%.5f",
                  model, u.input_tokens, u.output_tokens, cache_read, cache_write, cost)
-        stats = dict(model=model, input_tokens=u.input_tokens, output_tokens=u.output_tokens,
+        stats = dict(truncated=resp.stop_reason == "max_tokens", usage_known=model in PRICES, model=model, input_tokens=u.input_tokens, output_tokens=u.output_tokens,
                      cache_read=cache_read, cache_write=cache_write, cost_usd=cost)
         if resp.stop_reason == "refusal":
             return Result("", "anthropic", refused=True, **stats)
@@ -101,8 +103,8 @@ async def generate(system: str, user: str, model: str | None = None,
         return Result(text, "anthropic", **stats)
     except (anthropic.APIConnectionError, anthropic.APIStatusError) as exc:
         if not _should_fallback(exc):
-            raise LLMError(f"Anthropic error, no fallback for this error: {exc}") from exc
-        log.warning("Anthropic failed (%s), trying Nous Portal", exc)
+            raise LLMError("Anthropic request rejected") from exc
+        log.warning("Anthropic unavailable; trying configured fallback")
 
     if _nous is None:
         raise LLMError("Anthropic is unavailable and NOUS_API_KEY is not set")
@@ -113,6 +115,11 @@ async def generate(system: str, user: str, model: str | None = None,
             messages=[{"role": "system", "content": system}, {"role": "user", "content": user}],
         )
     except (openai.APIConnectionError, openai.APIStatusError) as exc:
-        raise LLMError(f"Both providers failed. Nous error: {exc}") from exc
+        raise LLMError("Both providers unavailable") from exc
     text = (r.choices[0].message.content or "").strip()
-    return Result(text, "nous", model=NOUS_MODEL)
+    usage = r.usage
+    return Result(text, "nous", model=NOUS_MODEL,
+                  truncated=r.choices[0].finish_reason == "length",
+                  input_tokens=usage.prompt_tokens if usage else 0,
+                  output_tokens=usage.completion_tokens if usage else 0,
+                  usage_known=False)  # configured fallback pricing is unknown; stop further calls
