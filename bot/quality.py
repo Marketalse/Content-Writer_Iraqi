@@ -59,6 +59,10 @@ def _common(text: str, key: str) -> list[str]:
     issues = []
     if not text.strip():
         return ["empty output"]
+    legacy_headers = (r"بداية الفيديو\s*\|\s*Hook", r"المحتوى\s*\|\s*Content",
+                      r"القفلة\s*\|\s*CTA")
+    if all(re.search(pattern, text, re.I) for pattern in legacy_headers):
+        issues.append("retired universal caption template is not a native format")
     count = len(text.split())
     lower, upper = WORD_RANGES[key]
     if not lower <= count <= upper:
