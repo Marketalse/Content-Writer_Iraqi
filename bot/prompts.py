@@ -9,6 +9,9 @@ from pathlib import Path
 
 from platform_intelligence import strategy_prompt, LEGACY_FORMATS
 from format_contracts import NATIVE_OUTPUTS, format_contract
+from source_knowledge import lesson_prompt
+from briefs import Brief
+from editorial import approved_examples
 
 ROOT = Path(__file__).resolve().parent.parent
 KB = ROOT / "knowledge"
@@ -65,9 +68,11 @@ def _read(path: Path) -> str:
     return path.read_text(encoding="utf-8") if path.exists() else ""
 
 
-def _examples(fmt: str) -> str:
+def _examples(fmt: str, story_mode: str = 'moment') -> str:
     """Creator's own transcripts and published posts, used as style examples."""
-    parts = []
+    parts = ["Human-approved STYLE example (facts are not evidence for a new brief):\n"
+             + row['text'] + "\nHuman review reason: " + row['reason']
+             for row in approved_examples(fmt, story_mode)]
     key = LEGACY_FORMATS.get(fmt, fmt)
     # Published posts are LinkedIn examples; transcripts belong only to spoken videos.
     # Do not condition Stories, Instants or community messages on long-form layouts.
@@ -86,9 +91,11 @@ def _examples(fmt: str) -> str:
     return "\n\n".join(parts)[:EXAMPLE_LIMIT]
 
 
-def build_system_prompt(fmt: str) -> str:
+def build_system_prompt(fmt: str, *, brief: Brief | None = None) -> str:
     if fmt not in FORMATS:
         raise ValueError(f"unknown format: {fmt}")
+    brief = brief or Brief()
+    brief.validate_format(fmt)
     profile_key = LEGACY_FORMATS.get(fmt, fmt)
 
     sections = [
@@ -100,9 +107,10 @@ def build_system_prompt(fmt: str) -> str:
         "# عبارات ممنوعة (أسلوب AI)\n\n" + _read(KB / "copywriting" / "ai_phrases_ar.yaml"),
         "# مستويات العمق\n\n" + _read(KB / "formats" / "levels.yaml"),
         strategy_prompt(profile_key),
+        lesson_prompt(profile_key, brief.distribution),
     ]
-    examples = _examples(fmt)
+    examples = _examples(fmt, brief.story_mode)
     if examples:
         sections.append("# أمثلة من كلامي الحقيقي (فيديوهات ومنشورات)\n\n" + examples)
-    sections.append(format_contract(profile_key))
+    sections.append(format_contract(profile_key, brief.story_mode))
     return "\n\n".join(s for s in sections if s.strip())

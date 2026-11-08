@@ -55,7 +55,7 @@ def _field(text: str, name: str) -> str:
     end = m.end() + following.start() if following else len(text)
     return (m.group(1) + "\n" + text[m.end():end]).strip()
 
-def _common(text: str, key: str) -> list[str]:
+def _common(text: str, key: str, scale: int = 1) -> list[str]:
     issues = []
     if not text.strip():
         return ["empty output"]
@@ -65,6 +65,7 @@ def _common(text: str, key: str) -> list[str]:
         issues.append("retired universal caption template is not a native format")
     count = len(text.split())
     lower, upper = WORD_RANGES[key]
+    upper *= scale
     if not lower <= count <= upper:
         issues.append(f"{key}: editorial word target {lower}-{upper}; found {count}")
     tags = HASHTAG.findall(text)
@@ -104,10 +105,35 @@ def _carousel(text: str, key: str) -> list[str]:
         issues.append("carousel: missing CTA:")
     return issues
 
-def check(fmt: str, text: str) -> list[str]:
+def _story_sequence(key: str, text: str, mode: str) -> list[str]:
+    from format_contracts import STORY_TREATMENTS
+    if mode not in STORY_TREATMENTS:
+        raise ValueError('invalid Story mode')
+    matches = list(re.finditer(r'(?m)^(FRAME (\d+)|INTERACTION)[ \t]*:[ \t]*(.*)$', text))
+    frames = [m for m in matches if m.group(2)]
+    issues = _common(text, key, max(1, len(frames)))
+    labels = re.findall(r'(?m)^([A-Z][A-Z ]*(?: \d+)?)[ \t]*:', text)
+    if matches and text[:matches[0].start()].strip():
+        issues.append('unexpected content before Story frames')
+    expected = [f'FRAME {i}' for i in range(1, len(frames) + 1)] + ['INTERACTION']
+    if not 2 <= len(frames) <= 8 or labels != expected:
+        issues.append('Story sequence requires 2-8 consecutive FRAME N: sections then INTERACTION:')
+    for i, match in enumerate(matches):
+        end = matches[i+1].start() if i+1 < len(matches) else len(text)
+        body = (match.group(3) + text[match.end():end]).strip()
+        if not body or (match.group(2) and len(body.split()) > 140):
+            issues.append('Story frame/interaction empty or frame too dense')
+    return issues
+
+
+def check(fmt: str, text: str, *, story_mode: str = 'moment') -> list[str]:
     """Deterministic checks for the selected profile, returning actionable issues."""
     key = LEGACY_FORMATS.get(fmt, fmt)
     get_profile(key)  # reject unknown keys, never silently use a generic format
+    if story_mode != 'moment':
+        if key not in ('instagram_story', 'tiktok_story'):
+            raise ValueError('Story mode requires Story format')
+        return _story_sequence(key, text, story_mode)
     issues = _common(text, key)
     labels = re.findall(r"(?m)^([A-Z][A-Z ]*(?: \d+)?)\s*:", text)
     if len(labels) != len(set(labels)):
@@ -152,6 +178,8 @@ class Checked:
     review_history: list[dict] = field(default_factory=list)
     planning: dict = field(default_factory=dict)
     clarification: str = ""
+    story_mode: str = "moment"
+    production_plan: dict = field(default_factory=dict)
 
 async def generate_checked(fmt: str, system: str, topic: str,
                            angle: str = "", notes: str = "") -> Checked:

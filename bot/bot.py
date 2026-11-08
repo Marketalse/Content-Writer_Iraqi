@@ -15,6 +15,7 @@ Environment variables (see .env.example):
 """
 
 import logging
+import json
 import os
 import re
 import sys
@@ -37,6 +38,9 @@ load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 from pipeline import run_pipeline  # noqa: E402
 from build_info import build_info  # noqa: E402
 from quality import check  # noqa: E402
+from briefs import Brief, parse_brief  # noqa: E402
+from production import validate_plan, render_plan  # noqa: E402
+from editorial import feedback, record_result, report, approve_example, remove_example, register_experiment  # noqa: E402
 from pilot import add as pilot_add, check as pilot_check, list_text, quota_text, set_active, is_owner  # noqa: E402
 from postlog import log_post, mark_published  # noqa: E402
 from prompts import ANGLE_BUTTONS, ANGLES, FORMATS, build_system_prompt  # noqa: E402
@@ -122,6 +126,7 @@ async def cmd_format(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.chat_data.pop("format", None)
     context.chat_data.pop("angle", None)
     context.chat_data.pop("pending_clarification", None)
+    context.chat_data.pop("content_brief", None)
     await update.message.reply_text("شنو نوع المحتوى؟", reply_markup=_format_keyboard())
 
 
@@ -136,12 +141,104 @@ async def cmd_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(f"رقم حسابك: {_chat_id(update)}\nارسله لصاحب البوت حتى يفعّلك.")
 
 
+async def cmd_brief(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not _allowed_chat(update):
+        return
+    raw = update.message.text.split(maxsplit=1)
+    try:
+        if len(raw) == 1:
+            text = json.dumps(context.chat_data.get("content_brief", Brief()).data(), ensure_ascii=False)
+            for part in _chunks(text):
+                await update.message.reply_text(part)
+            return
+        if raw[1].strip() == "reset":
+            context.chat_data.pop("content_brief", None)
+        else:
+            brief = parse_brief(raw[1])
+            if context.chat_data.get("format"):
+                brief.validate_format(context.chat_data["format"])
+            context.chat_data["content_brief"] = brief
+        context.chat_data.pop("pending_clarification", None)
+        await update.message.reply_text("تم تحديث البريف. هسه دز الموضوع، أو /brief حتى تشوف الإعدادات.")
+    except (ValueError, TypeError):
+        await update.message.reply_text("صيغة البريف مو صحيحة. مثال: /brief {\"audience\":\"أصحاب المحلات\",\"purpose\":\"educate\"}")
+
+
+async def cmd_feedback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not _allowed_chat(update):
+        return
+    try:
+        _, pid, decision, reason = update.message.text.split(maxsplit=3)
+        feedback(pid, _chat_id(update), decision, reason)
+        await update.message.reply_text("تم تسجيل تقييمك. التقييم ما يغير النص أو قواعد البوت تلقائياً.")
+    except (ValueError, TypeError):
+        await update.message.reply_text("الصيغة: /feedback رقم_المنشور accept أو reject وبعدها سبب التقييم")
+
+
+async def cmd_results(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not _allowed_chat(update):
+        return
+    try:
+        _, pid, raw = update.message.text.split(maxsplit=2)
+        if len(raw) > 3000:
+            raise ValueError('outcome too long')
+        record_result(pid, _chat_id(update), json.loads(raw))
+        await update.message.reply_text("تم تسجيل النتيجة كمعلومة يدوية، بدون افتراض إن المحتوى وحده سببها.")
+    except (ValueError, TypeError):
+        await update.message.reply_text('الصيغة: /results رقم_المنشور {"metric":"replies","value":4,"denominator":200,"window_hours":24,"source":"manual_insights"}')
+
+
+async def cmd_experiment(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not _allowed_chat(update):
+        return
+    try:
+        raw = update.message.text.split(maxsplit=1)[1]
+        if len(raw) > 3000:
+            raise ValueError('experiment too long')
+        register_experiment(_chat_id(update), json.loads(raw))
+        await update.message.reply_text("تم تسجيل الفرضية. قارن نفس فترة القياس؛ ما نعتبر النتيجة دليل سببي تلقائياً.")
+    except (ValueError, TypeError, IndexError):
+        await update.message.reply_text('الصيغة: /experiment {"baseline_post_id":"ID1","variant_post_id":"ID2","variable":"opening","hypothesis":"افتتاحية أوضح","window_hours":24}')
+
+
+async def cmd_report(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not _allowed_chat(update):
+        return
+    for part in _chunks(json.dumps(report(_chat_id(update)), ensure_ascii=False, indent=2)):
+        await update.message.reply_text(part)
+
+
+async def cmd_example(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not is_owner(_chat_id(update)):
+        return
+    try:
+        raw = update.message.text.split(maxsplit=1)[1]
+        if raw.startswith('remove '):
+            removed = remove_example(raw.split(maxsplit=1)[1].strip(), _chat_id(update))
+            await update.message.reply_text("تم الحذف." if removed else "ما لكيت المثال.")
+        else:
+            header, text = raw.split('\n', 1)
+            selection, reason = header.split('|', 1)
+            fields = selection.split()
+            identifier = approve_example(fields[0], fields[1] if len(fields) > 1 else 'moment',
+                                         text, reason.strip(), _chat_id(update))
+            await update.message.reply_text("تم اعتماد المثال: " + identifier)
+        for fmt in FORMATS:
+            SYSTEM_PROMPTS[fmt] = build_system_prompt(fmt)
+    except (ValueError, TypeError, IndexError):
+        await update.message.reply_text("الصيغة: /example story moment | سبب اعتماد المثال\nالنص بنفس بنية الفورمات. للحذف: /example remove رقم_المثال")
+
+
 async def cmd_version(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Report the responding worker's build, without credentials or user content."""
     if not _allowed_chat(update):
         return
     fmt = context.chat_data.get("format", "story")
-    info = build_info(SYSTEM_PROMPTS.get(fmt, ""))
+    brief = context.chat_data.get("content_brief", Brief())
+    system = build_system_prompt(fmt, brief=brief) if fmt in FORMATS else ""
+    info = build_info(system)
+    info["story_mode"] = brief.story_mode
+    info["production_mode"] = str(brief.production).lower()
     await update.message.reply_text(
         "نسخة البوت اللي تجاوبك:\n" + "\n".join(f"{k}={v}" for k, v in info.items())
         + f"\nselected_format={fmt}")
@@ -199,6 +296,7 @@ async def on_format_chosen(update: Update, context: ContextTypes.DEFAULT_TYPE):
     key = query.data.removeprefix("fmt:")
     if key not in FORMATS:
         return
+    context.chat_data.pop("content_brief", None)
     context.chat_data["format"] = key
     context.chat_data.pop("angle", None)
     context.chat_data.pop("pending_clarification", None)
@@ -245,10 +343,17 @@ async def on_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if resuming:
         topic = (pending["topic"] + "\nسؤال التوضيح: " + pending["question"]
                  + "\nإجابة المستخدم: " + topic)
+    brief = context.chat_data.get("content_brief", Brief())
+    try:
+        brief.validate_format(fmt)
+    except ValueError:
+        await update.message.reply_text("إعدادات البريف ما تناسب الفورمات. عدل /brief أو استخدم /brief reset.")
+        return
+    system = build_system_prompt(fmt, brief=brief) if "content_brief" in context.chat_data else SYSTEM_PROMPTS[fmt]
     status = await update.message.reply_text("عاد أكتبلك… ⏳")
     try:
-        run = await run_pipeline(fmt, SYSTEM_PROMPTS[fmt], topic, ANGLES[angle],
-                                 clarification_allowed=not resuming)
+        run = await run_pipeline(fmt, system, topic, ANGLES[angle],
+                                 clarification_allowed=not resuming, brief=brief)
     except Exception:
         log.error("pipeline failed (%s)", type(sys.exc_info()[1]).__name__)
         await status.edit_text("صار خطأ بالاتصال بالموديل. جرب مرة ثانية بعد شوية.")
@@ -258,11 +363,18 @@ async def on_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Enforce structure at the final delivery boundary, independently of pipeline status.
     # This guards against a future regression returning a wrongly accepted legacy layout.
     if checked.status == "accepted":
-        delivery_failures = check(fmt, checked.text)
+        delivery_failures = check(fmt, checked.text, story_mode=brief.story_mode)
+        if checked.story_mode != brief.story_mode:
+            delivery_failures.append("Story mode mismatch")
+        if brief.production:
+            try:
+                validate_plan(checked.production_plan, checked.text, brief.duration_seconds)
+            except (ValueError, TypeError):
+                delivery_failures.append("invalid production plan")
         if delivery_failures or checked.refused:
             checked.failures = delivery_failures or ["writer refused"]
             checked.status = "blocked"
-    runtime = build_info(SYSTEM_PROMPTS[fmt])
+    runtime = build_info(system)
     log.info("generation build=%s source=%s prompt=%s quality=%s",
              runtime["commit"], runtime["source"], runtime["prompt"], checked.status)
     log.info("fmt=%s angle=%s provider=%s attempts=%s calls=%d cost=$%.5f",
@@ -275,6 +387,9 @@ async def on_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "attempts": checked.attempts, "failures": checked.failures,
         "quality_status": checked.status, "review_history": checked.review_history,
         "build": runtime, "planning": checked.planning,
+        "objective": brief.purpose, "story_mode": brief.story_mode,
+        "journey_stage": brief.journey_stage, "distribution": brief.distribution,
+        "production_mode": brief.production,
         "elapsed_ms": run.elapsed_ms, "stage_timings": run.timings,
         "usage_known": usage_known,
         "quota_cost_usd": round(run.cost_usd if usage_known else max(run.cost_usd, 0.25), 6),
@@ -298,6 +413,9 @@ async def on_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(part)
     if checked.failures:
         await update.message.reply_text("⚠️ تحقق يدوي قبل النشر:\n- " + "\n- ".join(checked.failures))
+    if checked.production_plan:
+        for part in _chunks(render_plan(checked.production_plan)):
+            await update.message.reply_text(part)
     if checked.owner_note:
         await update.message.reply_text("📝 ملاحظة لك (لا تنشرها):\n" + checked.owner_note)
     await update.message.reply_text(
@@ -316,6 +434,12 @@ def main():
     app.add_handler(CommandHandler("id", cmd_id))
     app.add_handler(CommandHandler("quota", cmd_quota))
     app.add_handler(CommandHandler("version", cmd_version))
+    app.add_handler(CommandHandler("brief", cmd_brief))
+    app.add_handler(CommandHandler("feedback", cmd_feedback))
+    app.add_handler(CommandHandler("results", cmd_results))
+    app.add_handler(CommandHandler("report", cmd_report))
+    app.add_handler(CommandHandler("experiment", cmd_experiment))
+    app.add_handler(CommandHandler("example", cmd_example))
     app.add_handler(CommandHandler("pilot", cmd_pilot))
     app.add_handler(CallbackQueryHandler(on_format_chosen, pattern=r"^fmt:"))
     app.add_handler(CallbackQueryHandler(on_angle_chosen, pattern=r"^ang:"))

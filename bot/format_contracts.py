@@ -84,15 +84,45 @@ or identical captions on every slide.''',
 assert NATIVE_OUTPUTS.keys() == GUIDANCE.keys() == PROFILES.keys()
 
 
-def format_contract(fmt: str) -> str:
+STORY_TREATMENTS = {
+    'teaching': 'Teach one useful concept through connected frames; develop the reasoning and resolve the initial question.',
+    'poll': 'Invite a genuine poll or question, develop its context and offer a useful follow-up; never invent audience results.',
+    'reveal': 'Show a supplied starting situation and a supported contrast or explicitly hypothetical desired state, then the takeaway.',
+    'demonstration': 'Show how a supplied process or product works across clear frames, explaining its practical relevance.',
+    'referral': 'Give useful context and value before referring to an existing supplied resource or destination; never invent links or automation.',
+}
+
+
+def format_contract(fmt: str, story_mode: str = 'moment') -> str:
     key = LEGACY_FORMATS.get(fmt, fmt)
     if key not in GUIDANCE:
         raise ValueError(f'Unknown platform format: {fmt}')
-    return ('# Format character and creative treatment (' + FORMAT_CONTRACT_VERSION + ')\n' + GUIDANCE[key]
+    guidance, output = GUIDANCE[key], NATIVE_OUTPUTS[key]
+    if story_mode != 'moment':
+        if key not in ('instagram_story', 'tiktok_story') or story_mode not in STORY_TREATMENTS:
+            raise ValueError('invalid Story mode')
+        guidance = ('Connected native Story sequence. ' + STORY_TREATMENTS[story_mode]
+                    + ' Keep the Iraqi conversational voice. Choose 2-8 frames according to the idea, '
+                      'not a fixed number of tips. Each frame has one clear purpose. '
+                      'An interaction can be a relevant question, poll or truthful resource action.')
+        output = ('FRAME 1: establish the situation\nFRAME 2: develop or resolve it\n'
+                  'Add consecutive FRAME N: sections only as needed (2-8 total).\n'
+                  'INTERACTION: one relevant question, poll or next action')
+    return ('# Format character and creative treatment (' + FORMAT_CONTRACT_VERSION + ')\n' + guidance
             + '\n\n# Required platform-specific output structure (editorial template, not official ranking rule)\n'
-            + NATIVE_OUTPUTS[key]
+            + output
             + '\nUse the exact native section labels above, each once and in order. '
             'Explanatory lines describe the contract; do not copy them into the output. '
             'Choose narrative, detail and point count from the topic and this format. '
             'There is no universal Hook / three points / CTA template. '
             'Shared voice examples provide diction and rhythm only, never another format layout.')
+
+
+def adapt_contract(system: str, fmt: str, story_mode: str) -> str:
+    if story_mode == 'moment':
+        return system
+    if system.endswith(format_contract(fmt, story_mode)):
+        return system
+    original = format_contract(fmt)
+    prefix = system[:-len(original)] if system.endswith(original) else system + '\n'
+    return prefix + format_contract(fmt, story_mode)
