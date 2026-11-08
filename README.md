@@ -40,7 +40,15 @@ bot/bot.py                                بوت تلگرام + استدعاء C
 
 ## ملاحظات
 
-- الموديل: `claude-opus-5-5`. الـ system prompt ثابت ومُخزّن بالكاش (`cache_control`)، فالطلبات المتكررة أرخص وأسرع. راقب `cache_read` بالـ logs.
+- الموديل: `claude-sonnet-5-5`. الـ system prompt ثابت ومُخزّن بالكاش (`cache_control`)، فالطلبات المتكررة أرخص وأسرع. راقب `cache_read` بالـ logs.
 - تقييد الاستخدام: حط `ALLOWED_CHAT_IDS` بالـ `.env` حتى ما يستعمله أي أحد.
 - لتعديل النبرة أو القواعد، عدّل ملفات `guidelines/` و `formats/`. ما تحتاج تغيّر الكود.
 - الحالة (اختيار النوع) محفوظة بالذاكرة، فإذا انتهى التشغيل ينمسح.
+
+## AI quality review
+
+See [Phase 2 architecture, configuration, tests and rollout](docs/AI_QUALITY_ENGINE.md).
+The bot independently reviews native drafts and can revise weak sections once by default.
+Failed or incomplete reviews are withheld from Telegram delivery. Publication remains manual.
+
+Offline checks: `python -m unittest discover -s tests -v` after installing `bot/requirements.txt`.

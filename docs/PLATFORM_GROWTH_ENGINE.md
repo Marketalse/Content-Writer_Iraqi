@@ -1,6 +1,6 @@
 # Platform-Native Growth Engine — Implementation Strategy
 
-Status: **Phase 1 foundation (review branch)**. Not a claim of automated growth or API publishing.
+Status: **Phase 1 merged; Phase 2 AI quality engine implemented for PR review**. Not a claim of automated growth or API publishing.
 
 ## Problem uncovered in original repository
 - Four menu types were conflating Instagram and TikTok, while LinkedIn Post and Article had no distinction.
@@ -18,6 +18,10 @@ Status: **Phase 1 foundation (review branch)**. Not a claim of automated growth 
 5. Add offline regression tests. No live Anthropic/Telegram tests performed.
 
 ## Phase 2 — quality, evidence and publishing controls
+
+The AI reviewer and bounded revision engine are implemented; see
+[architecture, validation and remaining scope](AI_QUALITY_ENGINE.md). The broader items
+below include future work; typed draft schemas and an approval queue are not yet implemented.
 - Separate user-verified numbers from invented numbers: accept statistics only when supplied with provenance; mark unsupported numeric claims for human review, not a naïve ban on all numbers.
 - Structured JSON drafting with a typed schema per format, then deterministic formatting for Telegram. This eliminates brittle text header parsing.
 - Confidence labels on research statements: `official_documented`, `creative_hypothesis`, `account_specific`, `unverified`. Retain official URL, checked_at, version, and scope.
