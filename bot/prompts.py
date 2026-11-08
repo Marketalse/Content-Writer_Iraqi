@@ -7,6 +7,8 @@ per-user data in it. Files are read once at import time.
 
 from pathlib import Path
 
+from platform_intelligence import strategy_prompt
+
 ROOT = Path(__file__).resolve().parent.parent
 KB = ROOT / "knowledge"
 EXAMPLE_LIMIT = 30000  # chars of creator examples (transcripts + posts) per request
@@ -87,6 +89,7 @@ def build_system_prompt(fmt: str) -> str:
         "# مستويات العمق\n\n" + _read(KB / "formats" / "levels.yaml"),
         "# مواصفات الفورمة (ملف الكود)\n\n" + _read(KB / "formats" / spec_name),
         "# قواعد الفورمة\n\n" + _read(guide_path),
+        strategy_prompt(fmt),
         "# شكل الرد النهائي (إلزامي، يلغي أي شكل آخر أعلاه)\n\n" + _read(KB / "formats" / OUTPUT_SPEC[fmt]),
     ]
     examples = _examples()
