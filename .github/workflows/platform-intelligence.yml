@@ -8,6 +8,7 @@ on:
       - "knowledge/**"
       - "guidelines/**"
       - "tests/**"
+      - "render.yaml"
       - ".github/workflows/platform-intelligence.yml"
 jobs:
   test:

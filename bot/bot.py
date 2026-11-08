@@ -35,7 +35,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
 from pipeline import run_pipeline  # noqa: E402
-from format_contracts import FORMAT_CONTRACT_VERSION  # noqa: E402
+from build_info import build_info  # noqa: E402
+from quality import check  # noqa: E402
 from pilot import add as pilot_add, check as pilot_check, list_text, quota_text, set_active, is_owner  # noqa: E402
 from postlog import log_post, mark_published  # noqa: E402
 from prompts import ANGLE_BUTTONS, ANGLES, FORMATS, build_system_prompt  # noqa: E402
@@ -132,6 +133,17 @@ async def cmd_cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def cmd_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(f"رقم حسابك: {_chat_id(update)}\nارسله لصاحب البوت حتى يفعّلك.")
+
+
+async def cmd_version(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Report the responding worker's build, without credentials or user content."""
+    if not _allowed_chat(update):
+        return
+    fmt = context.chat_data.get("format", "story")
+    info = build_info(SYSTEM_PROMPTS.get(fmt, ""))
+    await update.message.reply_text(
+        "نسخة البوت اللي تجاوبك:\n" + "\n".join(f"{k}={v}" for k, v in info.items())
+        + f"\nselected_format={fmt}")
 
 
 async def cmd_quota(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -234,6 +246,16 @@ async def on_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     checked = run.checked
+    # Enforce structure at the final delivery boundary, independently of pipeline status.
+    # This guards against a future regression returning a wrongly accepted legacy layout.
+    if checked.status == "accepted":
+        delivery_failures = check(fmt, checked.text)
+        if delivery_failures or checked.refused:
+            checked.failures = delivery_failures or ["writer refused"]
+            checked.status = "blocked"
+    runtime = build_info(SYSTEM_PROMPTS[fmt])
+    log.info("generation build=%s source=%s prompt=%s quality=%s",
+             runtime["commit"], runtime["source"], runtime["prompt"], checked.status)
     log.info("fmt=%s angle=%s provider=%s attempts=%s calls=%d cost=$%.5f",
              fmt, angle, checked.provider, checked.attempts, len(run.calls), run.cost_usd)
 
@@ -243,6 +265,7 @@ async def on_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "chat_id": cid, "format": fmt, "angle": angle, "topic": topic, "provider": checked.provider,
         "attempts": checked.attempts, "failures": checked.failures,
         "quality_status": checked.status, "review_history": checked.review_history,
+        "build": runtime,
         "elapsed_ms": run.elapsed_ms, "stage_timings": run.timings,
         "usage_known": usage_known,
         "quota_cost_usd": round(run.cost_usd if usage_known else max(run.cost_usd, 0.25), 6),
@@ -277,11 +300,14 @@ def main():
     app.add_handler(CommandHandler("published", cmd_published))
     app.add_handler(CommandHandler("id", cmd_id))
     app.add_handler(CommandHandler("quota", cmd_quota))
+    app.add_handler(CommandHandler("version", cmd_version))
     app.add_handler(CommandHandler("pilot", cmd_pilot))
     app.add_handler(CallbackQueryHandler(on_format_chosen, pattern=r"^fmt:"))
     app.add_handler(CallbackQueryHandler(on_angle_chosen, pattern=r"^ang:"))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, on_text))
-    log.info("bot started format_contract=%s", FORMAT_CONTRACT_VERSION)
+    runtime = build_info()
+    log.info("bot started format_contract=%s commit=%s branch=%s source=%s",
+             runtime["format_contract"], runtime["commit"], runtime["branch"], runtime["source"])
     app.run_polling(allowed_updates=Update.ALL_TYPES)
 
 

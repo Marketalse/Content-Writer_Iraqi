@@ -199,3 +199,26 @@ Confirm its startup log contains `format_contract=native-v2`. Prompt strings are
 built at process startup, so editing files without restarting cannot update a
 running worker. A merge alone does not prove that Render deployed that commit.
 No deployment branch or publishing integration is changed by this correction.
+
+
+## Runtime diagnosis and final delivery validation
+
+A reported Story screenshot used the exact retired bilingual emoji headers. The
+repository Render Blueprint and deployment guide still named the old
+`claude/festive-meitner-3m5y3a` branch; that branch's `bot/prompts.py` explicitly
+loads its universal `caption.yaml`. These are confirmed repository findings.
+The actual running Render service/commit was not inspected, so this does not
+establish which process sent the screenshot.
+
+The Blueprint now targets `main`. `/version` reports the responding worker's safe
+build metadata, source and selected-prompt fingerprints, and selected format.
+Startup/generation logs and post metadata include matching build identity. Secrets
+and prompt contents are never included. Unknown commits are reported as unknown.
+The delivery boundary rechecks structural validity even when a pipeline result
+claims acceptance, and the exact retired header combination is rejected even if
+embedded inside native sections.
+
+Validation: 68 tests passed, including a screenshot-layout fixture, pipeline early
+rejection, forced-accepted-result delivery rejection, build identity redaction,
+version command permissions and Blueprint branch/start-command checks. Compilation
+and diff validation passed. Live Render/Telegram behavior remains unverified.

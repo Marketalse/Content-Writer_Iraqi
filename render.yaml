@@ -9,7 +9,7 @@ services:
     runtime: python
     plan: starter
     region: frankfurt            # any region is fine; pick the one closest to you
-    branch: claude/festive-meitner-3m5y3a
+    branch: main
     autoDeploy: true
     buildCommand: pip install -r bot/requirements.txt
     startCommand: python bot/bot.py

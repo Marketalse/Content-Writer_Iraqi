@@ -101,7 +101,7 @@ class TelegramTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(ctx.chat_data, {})
 
     async def test_long_content_delivered_in_safe_plain_chunks(self):
-        text = '<&>😀' * 2300
+        text = 'STORY: ' + '<&>😀' * 2300 + '\nINTERACTION: شنو رأيك؟'
         upd, _ = update()
         with patch.object(telegram_bot, '_allowed_chat', return_value=True), \
              patch.object(telegram_bot, 'pilot_check', return_value=(True, '')), \
