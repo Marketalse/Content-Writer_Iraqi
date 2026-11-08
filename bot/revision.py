@@ -15,7 +15,7 @@ from source_knowledge import lesson_prompt
 from production import PRODUCTION_INSTRUCTION, unpack_draft, validate_plan
 from platform_intelligence import LEGACY_FORMATS, get_profile
 from quality import Checked, check, split_owner_note
-from reviewer import WEIGHTS, parse_review, reviewer_system
+from reviewer import review_weights, parse_review, reviewer_system
 
 HEADER = re.compile(r'(?m)^(?:([A-Z][A-Z ]*(?: \d+)?)\s*:[ \t]*|##[ \t]+([^\n]+)\n?)')
 
@@ -159,7 +159,7 @@ async def execute(fmt: str, system: str, topic: str, angle: str,
     get_profile(fmt)  # reject unknown IDs before spending
     brief = brief or Brief()
     brief.validate_format(fmt)
-    system = adapt_contract(system, fmt, brief.story_mode)
+    system = adapt_contract(system, fmt, brief.story_mode, brief.story_intent)
     if brief.distribution == 'paid':
         system += '\n' + lesson_prompt(fmt, 'paid')
     if brief.production:
@@ -173,13 +173,14 @@ async def execute(fmt: str, system: str, topic: str, angle: str,
     checked = Checked('', '', failures=['review incomplete'])
     checked.status = 'needs_review'
     checked.story_mode = brief.story_mode
+    checked.story_intent = brief.story_intent
     notes = analyst_notes
     history = []
     original = ''
     previous_score = None
     try:
         if cfg.analyst:
-            analyst = await session.call('analyst', analyst_system(fmt, library, story_mode=brief.story_mode),
+            analyst = await session.call('analyst', analyst_system(fmt, library, story_mode=brief.story_mode, story_intent=brief.story_intent),
                 payload(topic=topic, angle=angle, verified_facts=verified_facts, brief=brief.data()),
                 model=FAST_MODEL, max_tokens=600)
             plan = parse_plan(analyst.text, fmt, library) if not (
@@ -220,7 +221,7 @@ async def execute(fmt: str, system: str, topic: str, angle: str,
         original = checked.text
         for revision in range(cfg.max_revisions + 1):
             checked.attempts = revision + 1
-            deterministic = check(fmt, checked.text, story_mode=brief.story_mode)
+            deterministic = check(fmt, checked.text, story_mode=brief.story_mode, story_intent=brief.story_intent)
             try:
                 parts = sections(checked.text)
             except ValueError as exc:
@@ -236,7 +237,7 @@ async def execute(fmt: str, system: str, topic: str, angle: str,
                 checked.failures = ['verified fact missing or altered']
                 checked.status = 'blocked'
                 break
-            response = await session.call('review', reviewer_system(fmt, story_mode=brief.story_mode), payload(
+            response = await session.call('review', reviewer_system(fmt, story_mode=brief.story_mode, story_intent=brief.story_intent), payload(
                 topic=topic, angle=angle, verified_facts=verified_facts,
                 original_draft=original, current_draft=checked.text, section_names=list(parts),
                 brief=brief.data(), production_plan=checked.production_plan),
@@ -245,16 +246,16 @@ async def execute(fmt: str, system: str, topic: str, angle: str,
                 checked.failures = ['reviewer refused or returned empty output']
                 break
             review = parse_review(response.text, set(parts))
-            score = review.score(fmt)
+            score = review.score(fmt, brief.story_intent)
             history.append({'attempt': revision + 1, 'score': round(score, 3),
                             'scores': review.scores, 'gates': review.gates, 'issues': list(review.issues)})
             checked.review_history = history
-            weights = WEIGHTS[LEGACY_FORMATS.get(fmt, fmt)]
+            weights = review_weights(fmt, brief.story_intent)
             creative_ok = score >= cfg.threshold and all(
                 review.scores[k] >= cfg.dimension_floor for k, weight in weights.items() if weight)
             checked.failures = review.blockers + ([] if creative_ok else ['creative thresholds not met'])
             checked.status = 'blocked' if review.blockers else 'needs_review'
-            if review.acceptable(fmt, cfg.threshold, cfg.dimension_floor):
+            if review.acceptable(fmt, cfg.threshold, cfg.dimension_floor, brief.story_intent):
                 checked.failures = []
                 checked.status = 'accepted'
                 break

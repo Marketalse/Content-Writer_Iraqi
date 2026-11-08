@@ -9,6 +9,7 @@ from pathlib import Path
 
 from llm import Result
 from platform_intelligence import get_profile, LEGACY_FORMATS
+from story_styles import STORY_STYLES, is_story
 
 ROOT = Path(__file__).resolve().parent.parent
 OWNER_NOTE = re.compile(r"\*{0,2}NOTE FOR OWNER:?\*{0,2}", re.I)
@@ -37,12 +38,12 @@ MAX_HASHTAGS = {
 }
 # Soft editorial bounds; not platform technical limits.
 WORD_RANGES = {
-    "instagram_story": (4, 140), "instagram_reel": (35, 320),
+    "instagram_story": (2, 140), "instagram_reel": (35, 320),
     "instagram_post": (8, 300), "instagram_carousel": (30, 500),
     "instagram_instants": (1, 35), "instagram_live": (35, 500),
     "instagram_broadcast_channel": (4, 160),
     "linkedin_post": (35, 380), "linkedin_article": (180, 2500),
-    "tiktok_story": (4, 140), "tiktok_video": (25, 300),
+    "tiktok_story": (2, 140), "tiktok_video": (25, 300),
     "tiktok_photo_carousel": (25, 420),
 }
 
@@ -126,27 +127,42 @@ def _story_sequence(key: str, text: str, mode: str) -> list[str]:
     return issues
 
 
-def check(fmt: str, text: str, *, story_mode: str = 'moment') -> list[str]:
+def check(fmt: str, text: str, *, story_mode: str = 'moment', story_intent: str = 'auto') -> list[str]:
     """Deterministic checks for the selected profile, returning actionable issues."""
     key = LEGACY_FORMATS.get(fmt, fmt)
     get_profile(key)  # reject unknown keys, never silently use a generic format
+    if story_intent not in ('auto', *STORY_STYLES) or (story_intent != 'auto' and (not is_story(key) or story_mode != 'moment')):
+        raise ValueError('invalid short Story intent')
     if story_mode != 'moment':
         if key not in ('instagram_story', 'tiktok_story'):
             raise ValueError('Story mode requires Story format')
         return _story_sequence(key, text, story_mode)
     issues = _common(text, key)
+    required = ('STORY',) if story_intent != 'auto' else FIELDS.get(key, ())
+    if is_story(key):
+        spoken = '\n'.join(_field(text, name) for name in ('STORY', 'INTERACTION')).strip()
+        if len(spoken.split()) > 75 or len(spoken) > 800:
+            issues.append('short Story exceeds the 30-second editorial ceiling (75 words / 800 characters)')
+        triad = all(marker in text for marker in ('📊', '🔥', '💡'))
+        plain = re.sub(r'[*_`]', '', text)
+        labelled = re.findall(r'(?m)^\s*(?:[📊🔥💡]\s*)?(?:أول شي|اول شي|ثاني شي|بس انتبه)\s*:', plain)
+        numbered = re.findall(r'(?m)^\s*([1-3١-٣])[.)]\s+\S', plain)
+        if triad or len(labelled) >= 3 or (len(numbered) >= 3 and story_intent != 'ask_audience'):
+            issues.append('retired three-point lesson is not a short Story')
+        if story_intent == 'ask_audience' and not re.search(r'[؟?]', _field(text, 'STORY')):
+            issues.append('audience-question Story requires a genuine question')
     labels = re.findall(r"(?m)^([A-Z][A-Z ]*(?: \d+)?)\s*:", text)
     if len(labels) != len(set(labels)):
         issues.append("duplicate native section")
     if key not in ("instagram_carousel", "tiktok_photo_carousel"):
-        if labels != list(FIELDS[key]):
+        if labels != list(required):
             issues.append("native sections must appear once in the required order")
     if key in ("instagram_carousel", "tiktok_photo_carousel"):
         return issues + _carousel(text, key)
-    for name in FIELDS[key]:
+    for name in required:
         if not _field(text, name):
             issues.append(f"{key}: missing or empty {name}:")
-    if key in ("instagram_story", "tiktok_story") and not re.search(r"[؟?]", _field(text, "INTERACTION")):
+    if key in ("instagram_story", "tiktok_story") and story_intent == "auto" and not re.search(r"[؟?]", _field(text, "INTERACTION")):
         issues.append(f"{key}: INTERACTION should include a question")
     if key == "linkedin_article":
         headings = list(HEADING.finditer(text))
@@ -179,6 +195,7 @@ class Checked:
     planning: dict = field(default_factory=dict)
     clarification: str = ""
     story_mode: str = "moment"
+    story_intent: str = "auto"
     production_plan: dict = field(default_factory=dict)
 
 async def generate_checked(fmt: str, system: str, topic: str,
@@ -189,3 +206,11 @@ async def generate_checked(fmt: str, system: str, topic: str,
     settings = replace(Settings.from_env(), analyst=False)
     checked, _, _ = await execute(fmt, system, topic, angle, settings, analyst_notes=notes)
     return checked
+
+
+def render_story_copy(text: str) -> str:
+    """Remove transport labels after validation; the audience gets only spoken copy."""
+    story, interaction = _field(text, 'STORY'), _field(text, 'INTERACTION')
+    if not interaction or story.endswith(interaction):
+        return story
+    return story + '\n\n' + interaction

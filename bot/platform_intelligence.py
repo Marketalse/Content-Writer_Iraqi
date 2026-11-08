@@ -5,6 +5,7 @@ This module is intentionally side-effect-free and does not enable publishing.
 """
 from dataclasses import dataclass
 from typing import Tuple
+from story_styles import short_story_policy, is_story
 
 @dataclass(frozen=True)
 class Profile:
@@ -53,9 +54,15 @@ def get_profile(key: str) -> Profile:
     except KeyError as exc:
         raise ValueError(f"Unknown platform format: {key}") from exc
 
-def strategy_prompt(key: str) -> str:
+def strategy_prompt(key: str, *, story_intent: str = 'auto') -> str:
     """Stable policy fragment suitable for cached system prompts."""
     p = get_profile(key)
+    if story_intent != 'auto':
+        if not is_story(key):
+            raise ValueError('Story intent requires Story format')
+        return ('# Native short Story strategy (editorial guidance)\nPlatform: ' + p.platform
+                + '\n' + short_story_policy(story_intent)
+                + '\nNo engagement or ranking guarantees; never invent evidence.')
     return "\n".join([
         "# Platform-native creative strategy (recommendations, not algorithm requirements)",
         f"Platform: {p.platform}",

@@ -57,3 +57,5 @@ Offline checks: `python -m unittest discover -s tests -v` after installing `bot/
 Optional [copywriting frameworks and brief clarification](docs/FRAMEWORKS.md) use the existing analyst call while preserving native format contracts.
 
 See the [source-learning roadmap](docs/LEARNING_ROADMAP.md) and [workflow/commands/testing guide](docs/SOURCE_LEARNING_GUIDE.md) for optional briefs, Story treatments, video production, human-reviewed examples and outcome tracking.
+
+The [short Story flow](docs/STORY_FLOW.md) offers entertaining, educational, everyday-life, audience-question and question-answer styles before asking for a topic.

@@ -2,6 +2,7 @@
 import json
 from dataclasses import asdict, dataclass
 from platform_intelligence import LEGACY_FORMATS, get_profile
+from story_styles import STORY_STYLES
 
 STORY_MODES = ('moment', 'teaching', 'poll', 'reveal', 'demonstration', 'referral')
 VIDEO_FORMATS = ('instagram_reel', 'tiktok_video')
@@ -16,6 +17,7 @@ class Brief:
     journey_stage: str = 'awareness'
     distribution: str = 'organic'
     story_mode: str = 'moment'
+    story_intent: str = 'auto'
     production: bool = False
     duration_seconds: int = 30
     filming_constraints: str = ''
@@ -33,6 +35,10 @@ class Brief:
             raise ValueError('invalid purpose')
         if self.journey_stage not in ('awareness', 'consideration', 'decision', 'relationship'):
             raise ValueError('invalid journey stage')
+        if self.story_intent not in ('auto', *STORY_STYLES):
+            raise ValueError('invalid Story intent')
+        if self.story_intent != 'auto' and self.story_mode != 'moment':
+            raise ValueError('short Story intent cannot be combined with sequence mode')
         if self.distribution not in ('organic', 'paid') or self.story_mode not in STORY_MODES:
             raise ValueError('invalid distribution or Story mode')
         if type(self.production) is not bool or type(self.duration_seconds) is not int or not 5 <= self.duration_seconds <= 180:
@@ -47,6 +53,8 @@ class Brief:
     def validate_format(self, fmt: str):
         key = LEGACY_FORMATS.get(fmt, fmt)
         get_profile(key)
+        if self.story_intent != 'auto' and key not in ('instagram_story', 'tiktok_story'):
+            raise ValueError('Story intent requires a Story format')
         if self.story_mode != 'moment' and key not in ('instagram_story', 'tiktok_story'):
             raise ValueError('Story modes require a Story format')
         if self.production and key not in VIDEO_FORMATS:
@@ -70,12 +78,13 @@ def parse_brief(raw: str) -> Brief:
 
 FIELD_LABELS = {'الجمهور': 'audience', 'الهدف': 'purpose', 'الخلاصة': 'takeaway',
     'التفاعل': 'desired_action', 'المرحلة': 'journey_stage', 'التوزيع': 'distribution',
-    'الستوري': 'story_mode', 'خطة تصوير': 'production', 'المدة': 'duration_seconds',
+    'الستوري': 'story_mode', 'ستايل الستوري': 'story_intent', 'خطة تصوير': 'production', 'المدة': 'duration_seconds',
     'الإمكانيات': 'filming_constraints', 'المصدر': 'source_material', 'الدليل': 'evidence'}
 VALUES = {
     'purpose': {'تعليم': 'educate', 'ترفيه': 'entertain', 'ثقة': 'trust', 'حوار': 'conversation', 'ترويج': 'promote'},
     'journey_stage': {'وعي': 'awareness', 'تقييم': 'consideration', 'قرار': 'decision', 'علاقة': 'relationship'},
     'distribution': {'عضوي': 'organic', 'مدفوع': 'paid'},
+    'story_intent': {'تلقائي': 'auto', 'ترفيهي': 'entertain', 'تعليمي': 'educational', 'موقف يومي': 'everyday', 'سؤال للجمهور': 'ask_audience', 'جواب سؤال': 'answer_question'},
     'story_mode': {'لحظة': 'moment', 'شرح': 'teaching', 'تصويت': 'poll', 'كشف': 'reveal', 'عرض': 'demonstration', 'إحالة': 'referral'},
 }
 
