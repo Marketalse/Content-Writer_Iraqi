@@ -7,17 +7,27 @@ per-user data in it. Files are read once at import time.
 
 from pathlib import Path
 
-from platform_intelligence import strategy_prompt
+from platform_intelligence import strategy_prompt, LEGACY_FORMATS
 
 ROOT = Path(__file__).resolve().parent.parent
 KB = ROOT / "knowledge"
 EXAMPLE_LIMIT = 30000  # chars of creator examples (transcripts + posts) per request
 
+# Each Telegram choice maps to a distinct native content profile.
+# Keep old IDs for saved conversations; new choices use explicit platform IDs.
 FORMATS = {
-    "story": ("📱 ستوري ٣٠ ثانية", ROOT / "formats" / "stories" / "guide.md", "story_30s.yaml"),
-    "carousel": ("🖼️ كاروسيل", ROOT / "formats" / "carousels" / "guide.md", "post.yaml"),
-    "reel": ("🎥 ريل ٦٠+ ثانية", ROOT / "formats" / "reels" / "guide.md", "reel_60s.yaml"),
-    "linkedin": ("💼 لينكدإن", ROOT / "formats" / "linkedin" / "guide.md", "linkedin_post.yaml"),
+    "story": ("📸 Instagram Story", None, None),
+    "reel": ("🎬 Instagram Reel", None, None),
+    "carousel": ("🗂 Instagram Carousel", None, None),
+    "linkedin": ("💼 LinkedIn Post", None, None),
+    "instagram_post": ("🖼 Instagram Post", None, None),
+    "instagram_instants": ("⚡ Instagram Instants", None, None),
+    "instagram_live": ("🔴 Instagram Live", None, None),
+    "instagram_broadcast_channel": ("📣 Instagram Broadcast", None, None),
+    "linkedin_article": ("📄 LinkedIn Article", None, None),
+    "tiktok_story": ("📱 TikTok Story", None, None),
+    "tiktok_video": ("🎥 TikTok Video", None, None),
+    "tiktok_photo_carousel": ("🖼 TikTok Photo Carousel", None, None),
 }
 
 FORMULAS = ROOT / "knowledge" / "formulas" / "formulas.md"
@@ -41,8 +51,21 @@ ANGLES = {
     "flip": "Problem flip: the reader's wrong belief, then the right one",
 }
 
-# Every format replies in the emoji text layout (knowledge/formats/caption.yaml).
-OUTPUT_SPEC = {fmt: "caption.yaml" for fmt in ("story", "reel", "carousel", "linkedin")}
+# A format has its own explicit output layout; no universal caption.yaml.
+NATIVE_OUTPUTS = {
+    "instagram_story": "STORY: short, human first-person moment or explanation\\nINTERACTION: one question usable with a Story sticker",
+    "instagram_reel": "HOOK: spoken opening\\nSCRIPT: complete natural spoken video\\nVISUALS: editing, on-screen highlights or demonstration cues\\nCTA: one natural ask",
+    "instagram_post": "HEADLINE: one visual claim\\nCAPTION: complete feed caption with substance\\nCTA: one appropriate ask",
+    "instagram_carousel": "SLIDE 1: compelling cover\\nSLIDE 2: context\\nSLIDE 3: first insight\\nSLIDE 4: explanation\\nSLIDE 5: example\\nSLIDE 6: conclusion\\nCAPTION: accompanying post caption\\nCTA: one ask",
+    "instagram_instants": "CAPTION: a single short spontaneous caption; do not invent visual assets or claim API publishing",
+    "instagram_live": "OPENING: host opening\\nTALKING POINTS: practical outline with several points\\nAUDIENCE QUESTIONS: at least three prompts\\nCLOSING: summary and one next action",
+    "instagram_broadcast_channel": "UPDATE: direct personal message with useful substance\\nPROMPT: one question, poll or reaction request",
+    "linkedin_post": "INSIGHT: one professional observation\\nBODY: relevant experience, reasoning and practical lesson in clear paragraphs\\nDISCUSSION: one meaningful professional question",
+    "linkedin_article": "TITLE: specific title\\nSUMMARY: executive summary\\n## Problem\\n## Analysis\\n## Practical framework\\nCONCLUSION: actionable synthesis",
+    "tiktok_story": "STORY: one casual moment or quick point\\nINTERACTION: a reply question",
+    "tiktok_video": "HOOK: fast spoken or visual opening\\nSCRIPT: natural and entertaining complete explanation\\nVISUALS: shot directions, demonstration and text cues\\nCTA: natural participation prompt",
+    "tiktok_photo_carousel": "SLIDE 1: curiosity cover\\nSLIDE 2: relatable problem\\nSLIDE 3: insight\\nSLIDE 4: example\\nSLIDE 5: payoff\\nCAPTION: short contextual description\\nCTA: one action",
+}
 
 BASE_INSTRUCTIONS = """أنت كاتب محتوى محترف متخصص باللهجة العراقية (البغدادية المفهومة بكل العراق).
 تكتب حصراً باللهجة العراقية. استخدم گ و چ بشكل طبيعي (مثل: گدر، أگلكم، چيبس، أحچي) كما في أسلوب صاحب الحساب.
@@ -75,7 +98,7 @@ def _examples() -> str:
 def build_system_prompt(fmt: str) -> str:
     if fmt not in FORMATS:
         raise ValueError(f"unknown format: {fmt}")
-    _, guide_path, spec_name = FORMATS[fmt]
+    profile_key = LEGACY_FORMATS.get(fmt, fmt)
 
     sections = [
         BASE_INSTRUCTIONS,
@@ -87,10 +110,9 @@ def build_system_prompt(fmt: str) -> str:
         "# عبارات ممنوعة (أسلوب AI)\n\n" + _read(KB / "copywriting" / "ai_phrases_ar.yaml"),
         "# صيغ الهوك\n\n" + _read(KB / "hooks" / "hooks_ar.yaml"),
         "# مستويات العمق\n\n" + _read(KB / "formats" / "levels.yaml"),
-        "# مواصفات الفورمة (ملف الكود)\n\n" + _read(KB / "formats" / spec_name),
-        "# قواعد الفورمة\n\n" + _read(guide_path),
-        strategy_prompt(fmt),
-        "# شكل الرد النهائي (إلزامي، يلغي أي شكل آخر أعلاه)\n\n" + _read(KB / "formats" / OUTPUT_SPEC[fmt]),
+        strategy_prompt(profile_key),
+        "# Required platform-specific output structure (editorial template, not official ranking rule)\n\n" + NATIVE_OUTPUTS[profile_key],
+        "Follow ONLY the native output structure above; ignore older example layouts that demand three generic blocks.",
     ]
     examples = _examples()
     if examples:
