@@ -1,8 +1,10 @@
-# Instagram Reel / TikTok text post
+# instagram_reel
 
-Reply in the three-block layout from `knowledge/formats/caption.yaml`:
-🪝 Hook · 💬 Content (intro, then 📊 🔥 💡 points) · 🫵 CTA.
+A spoken narrative or demonstration with visual progression and a delivered payoff.
 
-- Up to 5 hashtags at the end, if any.
-- No greeting. No sign-off. Baghdadi, with گ and چ used naturally.
-- Figures are `{{رقمك}}` placeholders.
+Use the matching contract in `bot/format_contracts.py`. This guide describes only
+this profile; TikTok and other formats have independent contracts there.
+
+Choose the progression and number of ideas from the topic. No shared numbered
+lesson template applies. Use supplied evidence and natural Iraqi voice. Recommendations
+are editorial choices, not official ranking factors or growth guarantees.

@@ -1,4 +1,8 @@
-# Caption formulas (12). Use one per post. Write in Baghdadi, with the owner's voice.
+# Optional copywriting references
+
+These are brainstorming tools, not required structures. Native format contracts in
+`bot/format_contracts.py` determine treatment. Do not choose a formula automatically.
+Write in Baghdadi with the owner's voice.
 
 1. **FAB**: Features, Advantages, Benefits. Feature (what it is) → advantage (what it does better) → benefit (what the customer gets).
 2. **Social Proof Stack**: a result from a real customer → a second proof → the offer. Use {{رقمك}} for any figure.
@@ -11,10 +15,4 @@
 9. **BAB**: Before (the current state) → After (the desired state) → Bridge (how to get there).
 10. **4Cs**: Clear, Concise, Compelling, Credible. Check each line against all four.
 11. **AIDA**: Attention (hook) → Interest (one detail) → Desire (what changes for them) → Action (the ask).
-12. **1-2-3 List**: one line of setup, then exactly three points, then one ask.
-
-## Defaults per format
-- **story (30 s)**: hook = Curiosity Gap or Contrarian Opener. Content = Story Spine. CTA = sticker and one ask.
-- **carousel**: 1-2-3 List or BAB.
-- **reel**: Question Stack, or PPPP for a product.
-- **linkedin**: Contrarian Opener (the problem-flip) for the hook. AIDA when the post is an offer.
+12. **Checklist**: when the brief calls for steps, include only the steps the subject needs.

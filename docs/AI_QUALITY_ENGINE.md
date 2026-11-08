@@ -62,7 +62,7 @@ emphasize evidence and useful analysis; videos emphasize an honest opening and p
 Stories emphasize immediacy and interaction. Standard Arabic words without a dictionary
 replacement are allowed. Natural voice matters more than artificially inserting letters.
 
-Factual integrity, safety, topic preservation and voice preservation are mandatory
+Factual integrity, safety, topic preservation, voice preservation and format identity are mandatory
 `pass` / `fail` / `uncertain` gates. No creative score overrides a failed or uncertain gate.
 Uncertain or failed critical gates go to human review, rather than asking a model to
 cosmetically erase a factual/safety objection. Invalid native structures also stop early,
@@ -176,3 +176,26 @@ service or a guarantee of safe publication. Originality scoring is not plagiaris
    supported experiments. Run held-out regressions, cost/latency budgets, canary rollout and
    rollback before promoting prompt/rubric changes. Never silently train on private briefs
    or auto-publish. Publishing API permissions and media constraints remain separate work.
+
+
+## Format identity correction — native-v2
+
+The shared formula library, general hook library, universal hook/CTA checklist and
+cross-format examples created conflicting conditioning. Writer prompts now load
+only common voice/dialect/safety material, relevant examples, and the selected
+format contract as the final instruction. `bot/format_contracts.py` defines 12
+individual creative treatments used by both writer and reviewer. Old universal
+caption/three-point format documents are retired or replaced by native references.
+The additional `format_identity` gate blocks a generic lesson hidden behind correct
+native labels. Explicitly requested lists remain valid when appropriate to the format.
+
+Regression validation: 59 tests pass, including prompt isolation for all 12 formats,
+scoped examples, legacy layout rejection, disguised-template gate failure and native
+contract preservation during revision. These mocked tests establish prompt/routing
+behavior; live creative variety still needs human evaluation.
+
+After merge, deploy the merged commit from `main` and restart the Telegram worker.
+Confirm its startup log contains `format_contract=native-v2`. Prompt strings are
+built at process startup, so editing files without restarting cannot update a
+running worker. A merge alone does not prove that Render deployed that commit.
+No deployment branch or publishing integration is changed by this correction.

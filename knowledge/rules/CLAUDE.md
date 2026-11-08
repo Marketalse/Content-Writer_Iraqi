@@ -26,7 +26,7 @@ them the rows to paste into the Google Sheet (the Drive connector can read the s
 - Never invent numbers, results, clients or quotes in scripts; use `{{رقمك}}` placeholders.
 - Nothing is ever posted automatically. The owner records and posts.
 - Model calls go through one module only (default `claude-opus-5-5`).
-- Hooks must pass `knowledge/hooks/hooks_ar.yaml` rules: spoken line ≤ 2 seconds, on-screen ≤ 6 words.
+- Select the platform/format contract from `bot/format_contracts.py`. Hook references are optional for videos; never impose hook, point-count or CTA requirements on every format.
 - Run the AI-phrase check (`knowledge/copywriting/ai_phrases_ar.yaml`) on every draft before delivery.
 
 - Model calls go through `bot/llm.py` only. Main model: `claude-sonnet-5-5` (Anthropic SDK).

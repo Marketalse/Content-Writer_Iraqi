@@ -5,12 +5,13 @@
 # STATUS: draft. The Baghdadi examples were written by Claude. Review them, fix the wording,
 # and add your own best-performing hooks as new entries. Spelling rule: ك not گ, ج not چ.
 #
-# Every hook has two lines: `spoken` (first 2 seconds) and `on_screen` (6 words or fewer).
+# Optional video hook reference only; not a shared output contract.
+# Each example has two lines: `spoken` (first 2 seconds) and `on_screen` (6 words or fewer).
 
 rules:
   - Write the spoken line and the on-screen line separately. On screen is shorter, 6 words max.
   - No greeting, no "in this video". Start at the sentence you would normally reach at second six.
-  - Say the number. "هواية" is not a number.
+  - Use numbers only when supported by the brief; do not force a numeric hook.
   - If the hook would work for any other creator, it is not your hook. Put in the thing only you can say.
   - A hook is a promise. Deliver it before the halfway mark.
 

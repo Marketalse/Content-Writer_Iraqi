@@ -1,49 +1,7 @@
-# Final reply format for EVERY format (story, reel, carousel, LinkedIn): three blocks in this order.
-#   🪝 Hook header, then the hook text
-#   💬 Content header, then an intro, then exactly three points marked 📊, 🔥, 💡
-#   🫵 CTA header, then one call to action
-# Headers are written as **bold**. Do not write seconds, SPOKEN / ON SCREEN, or any other layout.
-
-blocks:
-  hook:
-    header: "🪝 **بداية الفيديو | Hook**"
-    job: "One or two lines that make the reader keep reading. A surprise, a question about their own situation, or a sharp claim about their business. 25 words or fewer."
-  content:
-    header: "💬 **المحتوى | Content**"
-    intro: "One or two lines that name the problem and why it matters. Can end with one question."
-    points:
-      - {marker: "📊", label: "أول شي:", job: "Point 1. The first practical step. 40 words or fewer."}
-      - {marker: "🔥", label: "ثاني شي:", job: "Point 2. The second step, with the one thing that makes it work. 40 words or fewer."}
-      - {marker: "💡", label: "بس انتبه:", job: "Point 3. The warning or the most important check. 40 words or fewer."}
-  cta:
-    header: "🫵 **القفلة | CTA**"
-    job: "One line with exactly one call to action, as a question or a single ask. 25 words or fewer."
-
+# Retired: there is no universal caption template.
+status: retired
+replacement: bot/format_contracts.py
 rules:
-  - "Blocks in this order: Hook, Content, CTA. The three headers appear exactly once each."
-  - "Content has exactly three point lines, marked 📊 then 🔥 then 💡."
-  - "Baghdadi, with گ and چ used naturally. No greeting, no sign-off."
-  - "Figures are {{رقمك}} placeholders. Never invent numbers."
-  - "Hashtags only where the format allows them (carousel and reel: up to 5; story and LinkedIn: none)."
-  - "NOTE FOR OWNER: optional, after the CTA. Never published."
-
-example: |
-  🪝 **بداية الفيديو | Hook**
-
-  تعرف ليش زبونك بأول الشهر يشتري منك وهو مغمّض، وبنص الشهر يصير يفاصل وياك حتى على الربع؟ 😂💸
-
-  💬 **المحتوى | Content**
-
-  السبب اللي إنت تعرفه وآني أعرفه… هو الراتب! 💰
-
-  زين، شلون نستغل هالمعلومة حتى مبيعاتنا ما توگع بنص الشهر؟ 🤔
-
-  📊 **أول شي:** افتح مبيعاتك لآخر 3 أشهر، وشوف بأي أسبوع تبدي المبيعات تنزل. بالأول؟ بالثاني؟ لو بالثالث؟
-
-  🔥 **ثاني شي:** لا تنتظر المبيعات توگع! سوّي عروض مؤقتة ومدروسة بالأسبوع اللي عادةً تنزل بيه مبيعاتك، حتى تحرّك البضاعة وما تخليها نايمة بالمخزن. 📦
-
-  💡 **بس انتبه:** مو كل عرض يعني ربح! احسب هامش ربحك قبل لا تنزل أي خصم.
-
-  🫵 **القفلة | CTA**
-
-  هسه سولفلي… إنت مبيعاتك بأي أسبوع تبدي توگع؟ الثاني لو الثالث؟ 👀👇
+  - "Select the platform and format before drafting."
+  - "Use that format's native contract and creative character."
+  - "No shared block sequence or fixed number of points is required."
