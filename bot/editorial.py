@@ -163,7 +163,11 @@ def report(actor: int) -> dict:
         group['drafts'] += 1
         group['accepted_by_engine'] += row.get('quality_status') == 'accepted'
     latencies = sorted(r['elapsed_ms'] for r in drafts if type(r.get('elapsed_ms')) in (int, float))
+    by_id = {r['id']: r for r in drafts}
     return {
+        'human_engine_disagreements': {
+            'human_rejected_engine_accepted': sum(r['decision'] == 'reject' and by_id[pid].get('quality_status') == 'accepted' for pid, r in latest.items()),
+            'human_accepted_engine_not_accepted': sum(r['decision'] == 'accept' and by_id[pid].get('quality_status') != 'accepted' for pid, r in latest.items())},
         'drafts': len(drafts), 'clarifications': len(rows) - len(drafts),
         'engine_accepted': sum(r.get('quality_status') == 'accepted' for r in drafts),
         'human_reviewed': len(latest),

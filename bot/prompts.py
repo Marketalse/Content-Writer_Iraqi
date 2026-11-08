@@ -7,7 +7,7 @@ per-user data in it. Files are read once at import time.
 
 from pathlib import Path
 
-from platform_intelligence import strategy_prompt, LEGACY_FORMATS
+from platform_intelligence import strategy_prompt, LEGACY_FORMATS, PROFILES
 from format_contracts import NATIVE_OUTPUTS, format_contract
 from source_knowledge import lesson_prompt
 from briefs import Brief
@@ -92,7 +92,7 @@ def _examples(fmt: str, story_mode: str = 'moment') -> str:
 
 
 def build_system_prompt(fmt: str, *, brief: Brief | None = None) -> str:
-    if fmt not in FORMATS:
+    if fmt not in FORMATS and fmt not in PROFILES:
         raise ValueError(f"unknown format: {fmt}")
     brief = brief or Brief()
     brief.validate_format(fmt)

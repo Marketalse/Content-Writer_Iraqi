@@ -38,7 +38,7 @@ load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 from pipeline import run_pipeline  # noqa: E402
 from build_info import build_info  # noqa: E402
 from quality import check  # noqa: E402
-from briefs import Brief, parse_brief  # noqa: E402
+from briefs import Brief, parse_brief_input, render_brief  # noqa: E402
 from production import validate_plan, render_plan  # noqa: E402
 from editorial import feedback, record_result, report, approve_example, remove_example, register_experiment  # noqa: E402
 from pilot import add as pilot_add, check as pilot_check, list_text, quota_text, set_active, is_owner  # noqa: E402
@@ -147,21 +147,21 @@ async def cmd_brief(update: Update, context: ContextTypes.DEFAULT_TYPE):
     raw = update.message.text.split(maxsplit=1)
     try:
         if len(raw) == 1:
-            text = json.dumps(context.chat_data.get("content_brief", Brief()).data(), ensure_ascii=False)
+            text = render_brief(context.chat_data.get("content_brief", Brief()))
             for part in _chunks(text):
                 await update.message.reply_text(part)
             return
         if raw[1].strip() == "reset":
             context.chat_data.pop("content_brief", None)
         else:
-            brief = parse_brief(raw[1])
+            brief = parse_brief_input(raw[1])
             if context.chat_data.get("format"):
                 brief.validate_format(context.chat_data["format"])
             context.chat_data["content_brief"] = brief
         context.chat_data.pop("pending_clarification", None)
         await update.message.reply_text("تم تحديث البريف. هسه دز الموضوع، أو /brief حتى تشوف الإعدادات.")
     except (ValueError, TypeError):
-        await update.message.reply_text("صيغة البريف مو صحيحة. مثال: /brief {\"audience\":\"أصحاب المحلات\",\"purpose\":\"educate\"}")
+        await update.message.reply_text("صيغة البريف مو صحيحة. مثال:\n/brief\nالجمهور: أصحاب المحلات\nالهدف: تعليم\nالستوري: شرح")
 
 
 async def cmd_feedback(update: Update, context: ContextTypes.DEFAULT_TYPE):

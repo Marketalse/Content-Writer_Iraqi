@@ -8,6 +8,7 @@ production has duration_seconds, scenes, caption, facts_to_confirm and checks.
 Each scene has start_seconds, end_seconds, shot, action, spoken, overlay and fallback.
 Scenes are contiguous from 0 to the requested duration, without gaps or overlaps (1-16 scenes).
 Every nonempty spoken line must appear verbatim in the content's HOOK, SCRIPT or CTA.
+Together the scenes must cover ALL spoken HOOK, SCRIPT and CTA text exactly once in order.
 Respect supplied filming constraints; provide feasible fallback footage. Overlays are readable
 short phrases, not the full spoken paragraph. Use only supplied facts, placeholders for unknowns.
 No invented testimonials, results, urgency, links, rights clearance or automation.
@@ -22,7 +23,8 @@ def validate_plan(plan: dict, content: str, duration: int) -> dict:
         raise ValueError('production duration mismatch')
     if not isinstance(plan['scenes'], list) or not 1 <= len(plan['scenes']) <= 16:
         raise ValueError('invalid production scenes')
-    from quality import _field
+    from quality import _field, split_owner_note
+    content, _ = split_owner_note(content)
     speech = '\n'.join(_field(content, k) for k in ('HOOK', 'SCRIPT', 'CTA'))
     previous = 0
     for scene in plan['scenes']:
@@ -42,6 +44,9 @@ def validate_plan(plan: dict, content: str, duration: int) -> dict:
         if len(scene['overlay'].split()) > 12:
             raise ValueError('overlay too dense (editorial bound)')
         previous = end
+    spoken = ' '.join(scene['spoken'] for scene in plan['scenes'])
+    if ' '.join(spoken.split()) != ' '.join(speech.split()):
+        raise ValueError('production must cover the complete spoken script in order')
     if previous != duration or not isinstance(plan['caption'], str) or len(plan['caption']) > 1500:
         raise ValueError('invalid production end/caption')
     for name in ('facts_to_confirm', 'checks'):

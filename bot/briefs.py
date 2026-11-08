@@ -67,3 +67,72 @@ def parse_brief(raw: str) -> Brief:
             raise ValueError('evidence must be a list')
         data['evidence'] = tuple(data['evidence'])
     return Brief(**data)
+
+FIELD_LABELS = {'الجمهور': 'audience', 'الهدف': 'purpose', 'الخلاصة': 'takeaway',
+    'التفاعل': 'desired_action', 'المرحلة': 'journey_stage', 'التوزيع': 'distribution',
+    'الستوري': 'story_mode', 'خطة تصوير': 'production', 'المدة': 'duration_seconds',
+    'الإمكانيات': 'filming_constraints', 'المصدر': 'source_material', 'الدليل': 'evidence'}
+VALUES = {
+    'purpose': {'تعليم': 'educate', 'ترفيه': 'entertain', 'ثقة': 'trust', 'حوار': 'conversation', 'ترويج': 'promote'},
+    'journey_stage': {'وعي': 'awareness', 'تقييم': 'consideration', 'قرار': 'decision', 'علاقة': 'relationship'},
+    'distribution': {'عضوي': 'organic', 'مدفوع': 'paid'},
+    'story_mode': {'لحظة': 'moment', 'شرح': 'teaching', 'تصويت': 'poll', 'كشف': 'reveal', 'عرض': 'demonstration', 'إحالة': 'referral'},
+}
+
+
+def parse_brief_input(raw: str) -> Brief:
+    """Readable Arabic field lines; JSON remains available for existing API/power users."""
+    if raw.lstrip().startswith('{'):
+        return parse_brief(raw)
+    if len(raw) > 22000:
+        raise ValueError('brief too large')
+    data = {}; current = None
+    for line in raw.splitlines():
+        if not line.strip():
+            continue
+        label, sep, value = line.partition(':')
+        field = FIELD_LABELS.get(label.strip(), label.strip())
+        if not sep or field not in Brief.__dataclass_fields__:
+            if current == 'source_material':
+                data[current] += '\n' + line
+                continue
+            raise ValueError('unknown brief field')
+        value = value.strip()
+        if field == 'evidence':
+            fact, divider, source = value.partition('|')
+            if not divider:
+                raise ValueError('evidence needs fact and source')
+            data.setdefault(field, []).append({'text': fact.strip(), 'source': source.strip()})
+        else:
+            if field in data:
+                raise ValueError('duplicate brief field')
+            if field in VALUES:
+                value = VALUES[field].get(value, value)
+            if field == 'production':
+                if value not in ('نعم', 'لا', 'true', 'false'):
+                    raise ValueError('production needs yes/no')
+                value = value in ('نعم', 'true')
+            if field == 'duration_seconds':
+                value = int(value)
+            data[field] = value
+        current = field
+    if not data:
+        raise ValueError('empty brief')
+    return parse_brief(json.dumps(data, ensure_ascii=False))
+
+
+def render_brief(brief: Brief) -> str:
+    lines = ['إعدادات المحتوى الحالية:']
+    for label, field in FIELD_LABELS.items():
+        value = getattr(brief, field)
+        if field == 'evidence':
+            value = str(len(value)) + ' معلومات مع مصدر'
+        elif field in VALUES:
+            value = next((k for k, v in VALUES[field].items() if v == value), value)
+        elif field == 'production':
+            value = 'نعم' if value else 'لا'
+        elif field == 'source_material':
+            value = 'موجود' if value else 'مو محدد'
+        lines.append(label + ': ' + (str(value) if value != '' else 'مو محدد'))
+    lines.append('للتعديل دز /brief وبعده حقول مثل: الجمهور: أصحاب المحلات. للتصفير /brief reset')
+    return '\n'.join(lines)

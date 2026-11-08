@@ -129,7 +129,8 @@ Additional review criteria (not extra JSON gate keys): assess the opening's prom
 or misleading claims under factual_integrity. Check connected reasoning, supplied audience/takeaway,
 journey intent, ethical persuasion and whether the requested next action is real and achievable.
 Apply the same factual, safety and voice gates to any optional production plan, including overlays,
-scene directions and captions. Never invent a resource, scarcity, rights clearance or delivery workflow.
+scene directions and captions. Check filming feasibility, resource constraints and whether
+speech/overlays fit the requested duration. Never invent a resource, scarcity, rights clearance or delivery workflow.
 format_identity: the content itself must match this format's character and creative treatment,
 not merely use the right section labels. Fail an imposed universal Hook/three-points/CTA
 lesson disguised inside native sections. Explicitly requested lists can pass when native to
