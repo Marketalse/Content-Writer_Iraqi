@@ -1,0 +1,23 @@
+name: Platform intelligence checks
+on:
+  push:
+    branches: [feature/platform-intelligence-growth-engine]
+  pull_request:
+    paths:
+      - "bot/platform_intelligence.py"
+      - "bot/prompts.py"
+      - "bot/quality.py"
+      - "tests/**"
+      - ".github/workflows/platform-intelligence.yml"
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Compile edited modules
+        run: python -m py_compile bot/platform_intelligence.py bot/prompts.py bot/quality.py
+      - name: Run no-network unit tests
+        run: python -m unittest discover -s tests -v

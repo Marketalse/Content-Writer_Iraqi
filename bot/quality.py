@@ -1,248 +1,131 @@
-"""Quality gate for generated content.
+"""Format-native structural quality gates for twelve social publishing formats.
 
-Formats:
-  story, reel   timed script: [0-3s] HOOK | SPOKEN ... ; CONTENT lines with 1. 2. 3.; CTA last
-  carousel, linkedin  labelled caption: Hook:, Content: (intro + 1. 2. 3.), CTA:, then Keywords:
-check(fmt, text) returns failures (empty = passes). generate_checked() retries once with the
-failures listed and returns the draft with any remaining failures for the owner.
+These are local editorial checks, not official ranking rules or fact verification.
+The checker never treats a creative heuristic as a platform API limit.
 """
-
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
 
 from llm import Result, generate
+from platform_intelligence import get_profile, LEGACY_FORMATS
 
 ROOT = Path(__file__).resolve().parent.parent
-PHRASES_FILE = ROOT / "knowledge" / "copywriting" / "ai_phrases_ar.yaml"
 MAX_ATTEMPTS = 2
+OWNER_NOTE = re.compile(r"\*{0,2}NOTE FOR OWNER:?\*{0,2}", re.I)
+AI_PHRASES = ROOT / "knowledge" / "copywriting" / "ai_phrases_ar.yaml"
+SLIDE = re.compile(r"(?im)^SLIDE\s+(\d+)\s*:\s*(.*)$")
+HEADING = re.compile(r"(?im)^#{2,3}\s+\S")
+HASHTAG = re.compile(r"(?<!\w)#[\w\u0600-\u06ff]+")
+FIELDS = {
+    "instagram_story": ("STORY", "INTERACTION"),
+    "instagram_reel": ("HOOK", "SCRIPT", "VISUALS", "CTA"),
+    "instagram_post": ("HEADLINE", "CAPTION", "CTA"),
+    "instagram_instants": ("CAPTION",),
+    "instagram_live": ("OPENING", "TALKING POINTS", "AUDIENCE QUESTIONS", "CLOSING"),
+    "instagram_broadcast_channel": ("UPDATE", "PROMPT"),
+    "linkedin_post": ("INSIGHT", "BODY", "DISCUSSION"),
+    "linkedin_article": ("TITLE", "SUMMARY", "CONCLUSION"),
+    "tiktok_story": ("STORY", "INTERACTION"),
+    "tiktok_video": ("HOOK", "SCRIPT", "VISUALS", "CTA"),
+}
+MAX_HASHTAGS = {
+    "instagram_story": 0, "instagram_instants": 0, "instagram_live": 0,
+    "instagram_broadcast_channel": 0, "linkedin_post": 0,
+    "linkedin_article": 0, "tiktok_story": 0,
+    "instagram_reel": 5, "instagram_post": 5, "instagram_carousel": 5,
+    "tiktok_video": 5, "tiktok_photo_carousel": 5,
+}
+# Soft editorial bounds; not platform technical limits.
+WORD_RANGES = {
+    "instagram_story": (4, 140), "instagram_reel": (35, 320),
+    "instagram_post": (8, 300), "instagram_carousel": (30, 500),
+    "instagram_instants": (1, 35), "instagram_live": (35, 500),
+    "instagram_broadcast_channel": (4, 160),
+    "linkedin_post": (35, 380), "linkedin_article": (180, 2500),
+    "tiktok_story": (4, 140), "tiktok_video": (25, 300),
+    "tiktok_photo_carousel": (25, 420),
+}
 
-GREETINGS = ["هلا بيكم", "هلا والله", "مرحبا", "السلام عليكم", "أهلاً", "اهلا"]
-DIACRITICS = re.compile(r"[ً-ْـ]")
-KEYCAP = re.compile(r"([0-9])️?⃣")
-ARABIC_DIGITS = str.maketrans("٠١٢٣٤٥٦٧٨٩", "0123456789")
-SECTION = re.compile(r"^\s*(Hook|Content|CTA)\s*:", re.MULTILINE | re.IGNORECASE)
-KEYWORDS = re.compile(r"^\s*Keywords\s*:\s*(.*)$", re.MULTILINE | re.IGNORECASE)
-NUMBERED = re.compile(r"^\s*[1-3١-٣][.)]\s+\S", re.MULTILINE)
-SCRIPT_POINT = re.compile(r"^[1-3١-٣][.)]\s")
-TIMED_LABEL = re.compile(r"\[\s*\d+\s*-\s*\d+\s*s\s*\]\s*\**\s*(HOOK|CONTENT|CTA)\b", re.IGNORECASE)
-OWNER_NOTE = re.compile(r"\*{0,2}NOTE FOR OWNER:?\*{0,2}", re.IGNORECASE)
+def _field(text: str, name: str) -> str:
+    pattern = re.compile(r"(?im)^" + re.escape(name) + r"\s*:\s*(.*)$")
+    m = pattern.search(text)
+    if not m:
+        return ""
+    following = re.search(r"(?m)^[A-Z][A-Z ]+\s*:", text[m.end():])
+    end = m.end() + following.start() if following else len(text)
+    return (m.group(1) + "\n" + text[m.end():end]).strip()
 
-ASK_VERBS = {"اكتب", "اكتبلي", "دز", "دزلي", "دزه", "تابع", "تابعني", "احفظ", "شارك",
-             "ارسل", "اضغط", "سجل", "اطلب", "راسل", "شوف", "جرب", "صوت", "علّق", "علق"}
-HOOK_MAX_CHARS = {"carousel": 125, "linkedin": 210}
-HASHTAG_LIMITS = {"story": 0, "linkedin": 0, "reel": 5, "carousel": 5}
-# Total reply length in words per format. Speaking pace is about 2.5 Arabic words a second,
-# so a 30 second story is about 75 words and a 60+ second reel is about 150 words or more.
-LENGTH = {"story": (50, 110), "reel": (140, 260), "carousel": (50, 200), "linkedin": (50, 200)}
-# Max words for one numbered point. Reels get longer points because they run longer.
-POINT_MAX = {"story": 40, "reel": 60, "carousel": 40, "linkedin": 40}
+def _common(text: str, key: str) -> list[str]:
+    issues = []
+    if not text.strip():
+        return ["empty output"]
+    count = len(text.split())
+    lower, upper = WORD_RANGES[key]
+    if not lower <= count <= upper:
+        issues.append(f"{key}: editorial word target {lower}-{upper}; found {count}")
+    tags = HASHTAG.findall(text)
+    if len(tags) > MAX_HASHTAGS[key]:
+        issues.append(f"{key}: too many hashtags ({len(tags)} > {MAX_HASHTAGS[key]})")
+    if AI_PHRASES.exists():
+        source = AI_PHRASES.read_text(encoding="utf-8")
+        banned = re.findall(r"\{phrase:\s*(.+?),\s*fix:", source)
+        for phrase in banned:
+            if phrase.strip() and phrase.strip() in text:
+                issues.append("AI cliche detected: " + phrase.strip())
+                break
+    return issues
 
-
-def _norm(s: str) -> str:
-    s = DIACRITICS.sub("", s)
-    return s.replace("أ", "ا").replace("إ", "ا").replace("آ", "ا")
-
-
-def _banned_phrases() -> list[str]:
-    if not PHRASES_FILE.exists():
-        return []
-    text = PHRASES_FILE.read_text(encoding="utf-8")
-    return [m.group(1).strip() for m in re.finditer(r"\{phrase:\s*(.+?),\s*fix:", text)]
-
-
-def _words(s: str) -> int:
-    return len(s.split())
-
-
-def _hashtags(text: str) -> list[str]:
-    return re.findall(r"#\S+", text)
-
-
-def _fields(text: str, label: str) -> list[str]:
-    """Values of 'LABEL: value' fields. A line may hold several fields split by ' | '."""
-    out = []
-    for line in text.splitlines():
-        for part in line.split("|"):
-            part = re.sub(r"\[[^\]]*\]", " ", part).replace("*", " ").strip()
-            if part.upper().startswith(label + ":"):
-                out.append(part[len(label) + 1:].strip().strip("*").strip())
-    return out
-
-
-def _invented_numbers(text: str) -> list[str]:
-    t = text.translate(ARABIC_DIGITS)
-    t = re.sub(r"\{\{.*?\}\}", " ", t)          # placeholders are allowed
-    t = re.sub(r"\[[^\]]*\]", " ", t)           # timing labels like [8-14s]
-    t = KEYCAP.sub(" ", t)                      # 1️⃣ markers
-    t = re.sub(r"(?m)^\s*\d+[.)]\s", " ", t)    # 1. list markers
-    bad = []
-    for m in re.finditer(r"(\d+)\s*(%|٪|ألف|مليون|دينار|د\.ع|\$)?", t):
-        n = int(m.group(1))
-        if m.group(2) or n > 10:
-            bad.append(m.group(0).strip())
-    return bad
-
-
-def _common(text: str) -> list[str]:
-    fails = []
-    norm = _norm(text)
-    for g in GREETINGS:
-        if _norm(g) in norm:
-            fails.append(f"greeting found: '{g}' (no greetings allowed)")
-    for p in _banned_phrases():
-        if _norm(p) and _norm(p) in norm:
-            fails.append(f"AI-sounding phrase found: '{p}' (rewrite it)")
-    nums = _invented_numbers(text)
-    if nums:
-        fails.append(f"numbers that must be {{{{placeholders}}}} instead: {', '.join(nums)}")
-    return fails
-
-
-def _label(raw: str) -> str:
-    return "CTA" if raw.upper() == "CTA" else raw.capitalize()
-
-
-def _sections(text: str) -> dict[str, list[str]]:
-    found = list(SECTION.finditer(text))
-    out: dict[str, list[str]] = {}
-    for i, m in enumerate(found):
-        end = found[i + 1].start() if i + 1 < len(found) else len(text)
-        out.setdefault(_label(m.group(1)), []).append(text[m.end():end].strip())
-    return out
-
-
-def split_keywords(text: str) -> tuple[str, str]:
-    """Return (caption without the Keywords line, keywords text)."""
-    m = None
-    for m in KEYWORDS.finditer(text):
-        pass
-    if m is None:
-        return text, ""
-    return text[: m.start()].rstrip(), m.group(1).strip()
-
-
-HEADERS = [("🪝", "Hook"), ("💬", "Content"), ("🫵", "CTA")]
-POINT_MARKERS = ["📊", "🔥", "💡"]
-
-
-def _layout(main: str, fmt: str = "") -> list[str]:
-    """Three blocks: Hook, Content (intro + 3 points 📊 🔥 💡), CTA with one ask."""
-    fails = []
-    plain = [l.replace("**", "").strip() for l in main.splitlines() if l.strip()]
-    idx = []
-    for marker, label in HEADERS:
-        found = [i for i, l in enumerate(plain) if l.startswith(marker) and label.lower() in l.lower()]
-        if len(found) != 1:
-            fails.append(f"the {marker} {label} header must appear exactly once")
-            return fails
-        idx.append(found[0])
-    if idx != sorted(idx):
-        fails.append("the blocks must come in the order Hook, Content, CTA")
-        return fails
-    h, c, cta = idx
-    hook_body = plain[h + 1:c]
-    content_body = plain[c + 1:cta]
-    cta_body = plain[cta + 1:]
-
-    if not hook_body:
-        fails.append("the Hook block is empty")
-    elif _words(" ".join(hook_body)) > 25:
-        fails.append(f"Hook has {_words(' '.join(hook_body))} words, max 25")
-
-    points = [l for l in content_body if l[:1] in POINT_MARKERS or any(l.startswith(m) for m in POINT_MARKERS)]
-    point_markers = [next(m for m in POINT_MARKERS if l.startswith(m)) for l in points]
-    if point_markers != POINT_MARKERS:
-        fails.append(f"Content needs exactly 3 points marked 📊 then 🔥 then 💡 (found {point_markers})")
-    intro = [l for l in content_body if l not in points]
-    if not intro:
-        fails.append("Content needs a short intro line before the points")
-    point_max = POINT_MAX.get(fmt, 40)
-    for l in points:
-        if _words(l) > point_max:
-            fails.append(f"point '{l[:30]}' has {_words(l)} words, max {point_max}")
-
-    if len(cta_body) != 1:
-        fails.append(f"CTA must be exactly one line (found {len(cta_body)})")
-    else:
-        cta = cta_body[0]
-        if _words(cta) > 25:
-            fails.append(f"CTA has {_words(cta)} words, max 25")
-        words = re.findall(r"[\u0621-\u064Aa-zA-Z]+", cta)
-        asks = [w for w in words if w in ASK_VERBS or (w.startswith("و") and w[1:] in ASK_VERBS)]
-        if len(asks) > 1:
-            fails.append("CTA has more than one ask; keep exactly one call to action")
-
-    total = _words(main)
-    low, high = LENGTH.get(fmt, (50, 200))
-    if not low <= total <= high:
-        fails.append(f"reply has {total} words, must be {low} to {high} for {fmt or 'this format'}")
-    return fails
-
-
-def _readability(text: str) -> list[str]:
-    for para in re.split(r"\n\s*\n", text):
-        if _words(para) > 60:
-            return [f"a paragraph has {_words(para)} words, max 60 (split it with a blank line)"]
-    return []
-
-
-TIMED_LIMIT_NOTE = "spoken total"
-
-
-def _timed(text: str) -> list[str]:
-    fails = []
-    labels = [m.group(1).upper() for m in TIMED_LABEL.finditer(text)]
-    if not labels:
-        return ["script lines must start with [0-3s] HOOK, CONTENT lines, then CTA"]
-    if labels[0] != "HOOK" or labels[-1] != "CTA" or labels.count("HOOK") != 1 or labels.count("CTA") != 1:
-        fails.append(f"block order must be HOOK, CONTENT, CTA (found {labels})")
-    spoken = [s for s in _fields(text, "SPOKEN") if s]
-    points = [s for s in spoken if SCRIPT_POINT.match(s)]
-    if len(points) != 3:
-        fails.append(f"CONTENT has {len(points)} numbered points, must be exactly 3 (1. 2. 3.)")
-    if spoken and SCRIPT_POINT.match(spoken[-1]):
-        fails.append("the last SPOKEN line must be the CTA, not a numbered point")
-    if spoken and _words(spoken[0]) > 7:
-        fails.append(f"HOOK has {_words(spoken[0])} spoken words, must be 7 or fewer")
-    total = sum(_words(s) for s in spoken)
-    if total > 75:
-        fails.append(f"spoken words total {total}, must be 75 or fewer")
-    for on in _fields(text, "ON SCREEN"):
-        if _words(on) > 6:
-            fails.append(f"on-screen card '{on[:40]}' has {_words(on)} words, max 6")
-    return fails
-
+def _carousel(text: str, key: str) -> list[str]:
+    issues = []
+    slides = list(SLIDE.finditer(text))
+    if not 4 <= len(slides) <= 12:
+        issues.append("carousel: expected 4-12 sequential SLIDE N: sections (editorial range)")
+    indices = [int(m.group(1)) for m in slides]
+    if indices != list(range(1, len(indices) + 1)):
+        issues.append("carousel: slide numbering must be consecutive from 1")
+    for i, match in enumerate(slides):
+        stop = slides[i+1].start() if i+1 < len(slides) else len(text)
+        section = text[match.start():stop].split("CAPTION:", 1)[0].split("CTA:", 1)[0]
+        if len(section.split()) > 70:
+            issues.append(f"slide {i+1}: too dense, shorten copy")
+    if not _field(text, "CAPTION"):
+        issues.append("carousel: missing CAPTION:")
+    if not _field(text, "CTA"):
+        issues.append("carousel: missing CTA:")
+    return issues
 
 def check(fmt: str, text: str) -> list[str]:
-    main, _ = split_keywords(text)
-    fails = _common(text) + _layout(main, fmt) + _readability(text)
-    limit = HASHTAG_LIMITS.get(fmt, 5)
-    if len(_hashtags(text)) > limit:
-        fails.append(f"{len(_hashtags(text))} hashtags, max {limit} for {fmt}")
-    if fmt == "story" and not re.search(r"[?؟]", main.split("🫵")[-1] if "🫵" in main else main):
-        fails.append("story needs a question in the CTA so viewers can answer with the sticker")
-    return fails
-
+    """Deterministic checks for the selected profile, returning actionable issues."""
+    key = LEGACY_FORMATS.get(fmt, fmt)
+    get_profile(key)  # reject unknown keys, never silently use a generic format
+    issues = _common(text, key)
+    if key in ("instagram_carousel", "tiktok_photo_carousel"):
+        return issues + _carousel(text, key)
+    for name in FIELDS[key]:
+        if not _field(text, name):
+            issues.append(f"{key}: missing or empty {name}:")
+    if key in ("instagram_story", "tiktok_story") and not re.search(r"[؟?]", _field(text, "INTERACTION")):
+        issues.append(f"{key}: INTERACTION should include a question")
+    if key == "linkedin_article" and len(HEADING.findall(text)) < 2:
+        issues.append("linkedin_article: include at least two ## section headings")
+    if key in ("instagram_reel", "tiktok_video") and len(_field(text, "HOOK").split()) > 30:
+        issues.append(f"{key}: hook too long (editorial target <=30 words)")
+    return issues
 
 def split_owner_note(text: str) -> tuple[str, str]:
-    """Separate the publishable reply from the NOTE FOR OWNER block (never published)."""
     m = OWNER_NOTE.search(text)
-    if not m:
-        return text.strip(), ""
-    return text[: m.start()].strip(), text[m.end():].strip()
-
+    return (text[:m.start()].strip(), text[m.end():].strip()) if m else (text.strip(), "")
 
 @dataclass
 class Checked:
-    text: str                 # publishable reply only
+    text: str
     provider: str
     refused: bool = False
     failures: list[str] = field(default_factory=list)
     attempts: int = 1
-    owner_note: str = ""      # for the owner only; never publish
+    owner_note: str = ""
     calls: list[Result] = field(default_factory=list)
-
 
 async def generate_checked(fmt: str, system: str, topic: str,
                            angle: str = "", notes: str = "") -> Checked:
@@ -253,8 +136,6 @@ async def generate_checked(fmt: str, system: str, topic: str,
         base += f"\nتحليل الجمهور:\n{notes}"
     prompt = base
     calls: list[Result] = []
-    result = None
-    failures: list[str] = []
     for attempt in range(1, MAX_ATTEMPTS + 1):
         result = await generate(system, prompt)
         calls.append(result)
@@ -264,10 +145,5 @@ async def generate_checked(fmt: str, system: str, topic: str,
         failures = check(fmt, content)
         if not failures:
             return Checked(content, result.provider, False, [], attempt, note, calls)
-        prompt = (
-            base
-            + "\n\nالنسخة السابقة فيها هذي المشاكل، صححها وأعد كتابة الرد كامل بنفس الشكل:\n- "
-            + "\n- ".join(failures)
-        )
-    content, note = split_owner_note(result.text)
+        prompt = base + "\n\nFix these format-specific quality issues without changing the selected platform format:\n- " + "\n- ".join(failures)
     return Checked(content, result.provider, False, failures, MAX_ATTEMPTS, note, calls)
