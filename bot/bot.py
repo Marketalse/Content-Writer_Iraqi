@@ -36,6 +36,7 @@ from telegram.ext import (
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
+from diagnostics import diagnostic_report, failure_message
 from pipeline import run_pipeline  # noqa: E402
 from build_info import build_info  # noqa: E402
 from quality import check, render_story_copy  # noqa: E402
@@ -232,6 +233,22 @@ async def cmd_report(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not _allowed_chat(update):
         return
     for part in _chunks(json.dumps(report(_chat_id(update)), ensure_ascii=False, indent=2)):
+        await update.message.reply_text(part)
+
+
+async def cmd_diagnose(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not _allowed_chat(update):
+        return
+    parts = update.message.text.split()
+    if len(parts) != 2 or not re.fullmatch(r'[A-Za-z0-9-]{1,80}', parts[1]):
+        await update.message.reply_text("الصيغة: /diagnose رقم_المراجعة")
+        return
+    try:
+        result = diagnostic_report(parts[1], _chat_id(update))
+    except ValueError:
+        await update.message.reply_text("ما لكيت مراجعة متاحة لهذا الحساب بهالرقم.")
+        return
+    for part in _chunks(json.dumps(result, ensure_ascii=False, indent=2)):
         await update.message.reply_text(part)
 
 
@@ -555,6 +572,7 @@ async def on_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if delivery_failures or checked.refused:
             checked.failures = delivery_failures or ["writer refused"]
             checked.status = "blocked"
+            checked.failure_stage, checked.failure_code = "delivery", "invalid_structure"
     runtime = build_info(system)
     log.info("generation build=%s source=%s prompt=%s quality=%s",
              runtime["commit"], runtime["source"], runtime["prompt"], checked.status)
@@ -568,6 +586,7 @@ async def on_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "attempts": checked.attempts, "failures": checked.failures,
         "quality_status": checked.status, "review_history": checked.review_history,
         "transport_normalized": checked.transport_normalized,
+        "failure_stage": checked.failure_stage, "failure_code": checked.failure_code,
         "build": runtime, "planning": checked.planning,
         "objective": brief.purpose, "story_mode": brief.story_mode, "story_intent": brief.story_intent,
         "structure_id": brief.structure_id,
@@ -587,9 +606,10 @@ async def on_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     if checked.status != "accepted":
-        await status.edit_text("ما گدرت أجهّز نسخة تجتاز المراجعة بهالمحاولة. "
-                               "أعد إرسال الموضوع حتى نجرب مرة ثانية، أو /format حتى تغيّر الاختيارات.\n"
-                               + f"رقم المراجعة: {pid}")
+        log.warning("generation_not_delivered review=%s stage=%s code=%s", pid,
+                    checked.failure_stage or 'unknown', checked.failure_code or 'unknown')
+        await status.edit_text(failure_message({
+            'failure_code': checked.failure_code, 'failures': checked.failures}, pid))
         return
 
     await status.delete()
@@ -633,6 +653,7 @@ def create_application(token: str, *, request=None):
     app.add_handler(CommandHandler("feedback", cmd_feedback))
     app.add_handler(CommandHandler("results", cmd_results))
     app.add_handler(CommandHandler("report", cmd_report))
+    app.add_handler(CommandHandler("diagnose", cmd_diagnose))
     app.add_handler(CommandHandler("experiment", cmd_experiment))
     app.add_handler(CommandHandler("example", cmd_example))
     app.add_handler(CommandHandler("pilot", cmd_pilot))

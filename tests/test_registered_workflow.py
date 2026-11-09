@@ -161,6 +161,13 @@ class RegisteredWorkflowTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn('bot_username=WorkflowTestBot',result['text'])
         self.assertNotIn('fake_test_token',log+result['text'])
 
+    async def test_diagnosis_command_is_registered_and_does_not_generate(self):
+        with patch.object(app,'diagnostic_report',return_value={'failure_code':'invalid_response'}) as report:
+            result=await self.send(text='/diagnose saved-review-id')
+        report.assert_called_once_with('saved-review-id',123)
+        self.assertIn('invalid_response',result['text'])
+        self.pipeline.assert_not_awaited()
+
     async def test_unauthorized_commands_and_buttons_do_not_mutate_or_reply(self):
         self.auth.stop()
         self.auth=patch.object(app,'_allowed_chat',return_value=False)
