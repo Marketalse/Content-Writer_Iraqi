@@ -32,7 +32,7 @@ def result(text, **kwargs):
 
 def draft(fmt):
     from quality import FIELDS
-    if fmt in ('instagram_carousel', 'tiktok_photo_carousel'):
+    if fmt in ('instagram_carousel', 'tiktok_photo_carousel', 'linkedin_carousel'):
         return '\n'.join([f'SLIDE {i}: هسه خل نفهم التسويق ونراجع شغلنا حتى نختار عرض مناسب.'
                           for i in range(1, 5)] + ['CAPTION: خل نبدي بخطوة بسيطة ومفيدة.', 'CTA: شنو رأيك؟'])
     if fmt == 'linkedin_article':
@@ -50,7 +50,7 @@ def draft(fmt):
 class ContractTests(unittest.TestCase):
     def test_all_formats_have_distinct_focus_and_weights(self):
         self.assertEqual(set(FOCUS), set(PROFILES))
-        self.assertEqual(len(set(FOCUS.values())), 12)
+        self.assertEqual(len(set(FOCUS.values())), 13)
         self.assertEqual(set(WEIGHTS), set(PROFILES))
 
     def test_strict_reviews_reject_malformed(self):

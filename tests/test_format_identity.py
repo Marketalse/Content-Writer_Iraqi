@@ -19,7 +19,7 @@ from quality import check
 class FormatIdentityTests(unittest.TestCase):
     def test_each_format_has_individual_treatment(self):
         self.assertEqual(set(GUIDANCE), set(PROFILES))
-        self.assertEqual(len(set(GUIDANCE.values())), 12)
+        self.assertEqual(len(set(GUIDANCE.values())), 13)
         for fmt in PROFILES:
             with self.subTest(fmt=fmt):
                 choice = next((old for old, new in LEGACY_FORMATS.items() if new == fmt), fmt)

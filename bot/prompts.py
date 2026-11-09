@@ -12,6 +12,7 @@ from format_contracts import NATIVE_OUTPUTS, format_contract
 from source_knowledge import lesson_prompt
 from briefs import Brief
 from editorial import approved_examples
+from content_choices import structure_prompt
 from story_styles import STORY_STYLES, STORY_ANGLE_KEYS, is_story
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -29,6 +30,7 @@ FORMATS = {
     "instagram_instants": ("⚡ Instagram Instants", None, None),
     "instagram_live": ("🔴 Instagram Live", None, None),
     "instagram_broadcast_channel": ("📣 Instagram Broadcast", None, None),
+    "linkedin_carousel": ("📑 LinkedIn Carousel · مستند", None, None),
     "linkedin_article": ("📄 LinkedIn Article", None, None),
     "tiktok_story": ("📱 TikTok Story · ٣٠ ثانية", None, None),
     "tiktok_video": ("🎥 TikTok Video", None, None),
@@ -125,5 +127,6 @@ def build_system_prompt(fmt: str, *, brief: Brief | None = None) -> str:
     examples = _examples(fmt, brief.story_mode, brief.story_intent)
     if examples:
         sections.append("# أمثلة من كلامي الحقيقي (فيديوهات ومنشورات)\n\n" + examples)
+    sections.append(structure_prompt(profile_key, brief.structure_id))
     sections.append(format_contract(profile_key, brief.story_mode, brief.story_intent))
     return "\n\n".join(s for s in sections if s.strip())

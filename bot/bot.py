@@ -44,6 +44,7 @@ from production import validate_plan, render_plan  # noqa: E402
 from editorial import feedback, record_result, report, approve_example, remove_example, register_experiment  # noqa: E402
 from pilot import add as pilot_add, check as pilot_check, list_text, quota_text, set_active, is_owner  # noqa: E402
 from postlog import log_post, mark_published  # noqa: E402
+from content_choices import FAMILIES, structure_options, get_structure
 from prompts import ANGLE_BUTTONS, ANGLES, FORMATS, build_system_prompt, angle_options, angle_description  # noqa: E402
 from story_styles import STORY_STYLES, STORY_ANGLE_KEYS, is_story  # noqa: E402
 
@@ -74,14 +75,34 @@ def _allowed_chat(update: Update) -> bool:
 
 def _format_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton(label, callback_data=f"fmt:{key}")]
-        for key, (label, _, _) in FORMATS.items()
+        [InlineKeyboardButton(label, callback_data=f"fam:{key}")]
+        for key, (label, _) in FAMILIES.items()
     ])
 
 
-def _angle_keyboard(fmt: str | None = None) -> InlineKeyboardMarkup:
+def _platform_keyboard(family: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton(text, callback_data=f"ang:{key}")]
+        [InlineKeyboardButton(FORMATS[key][0], callback_data=f"fmt:{key}")]
+        for key in FAMILIES[family][1]
+    ] + [[InlineKeyboardButton("↩️ أنواع المحتوى", callback_data="fam:root")]])
+
+
+def _structure_keyboard(fmt: str) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton(item.label, callback_data=f"str:{fmt}:{item.id}")]
+        for item in structure_options(fmt)
+    ])
+
+
+def _clear_selection(data: dict) -> None:
+    for key in ('family', 'menu_stage', 'format', 'angle', 'structure_id',
+                'pending_clarification', 'content_brief'):
+        data.pop(key, None)
+
+
+def _angle_keyboard(fmt: str | None = None, *, scoped: bool = False) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton(text, callback_data=f"pick:{fmt}:{key}" if scoped else f"ang:{key}")]
         for key, text in angle_options(fmt).items()
     ])
 
@@ -116,8 +137,9 @@ def _chunks(text: str, size: int = TELEGRAM_LIMIT):
 async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not _allowed_chat(update):
         return
+    _clear_selection(context.chat_data)
     await update.message.reply_text(
-        "هلا بيك! 👋 اختار نوع المحتوى، وبعدين الزاوية، وبعدين دزلي الموضوع كتابةً.",
+        "هلا بيك! 👋 اختار نوع المحتوى، بعدها المنصة والستايل والبنية، وبعدين دز الموضوع.",
         reply_markup=_format_keyboard(),
     )
 
@@ -125,10 +147,7 @@ async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def cmd_format(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not _allowed_chat(update):
         return
-    context.chat_data.pop("format", None)
-    context.chat_data.pop("angle", None)
-    context.chat_data.pop("pending_clarification", None)
-    context.chat_data.pop("content_brief", None)
+    _clear_selection(context.chat_data)
     await update.message.reply_text("شنو نوع المحتوى؟", reply_markup=_format_keyboard())
 
 
@@ -157,9 +176,13 @@ async def cmd_brief(update: Update, context: ContextTypes.DEFAULT_TYPE):
             context.chat_data.pop("content_brief", None)
         else:
             brief = parse_brief_input(raw[1])
+            if not brief.structure_id and context.chat_data.get('structure_id'):
+                brief = replace(brief, structure_id=context.chat_data['structure_id'])
             if context.chat_data.get("format"):
                 brief.validate_format(context.chat_data["format"])
             context.chat_data["content_brief"] = brief
+            if brief.structure_id:
+                context.chat_data['structure_id'] = brief.structure_id
             if is_story(context.chat_data.get("format")) and brief.story_intent != 'auto':
                 context.chat_data["angle"] = 'story_' + brief.story_intent
         context.chat_data.pop("pending_clarification", None)
@@ -244,6 +267,7 @@ async def cmd_version(update: Update, context: ContextTypes.DEFAULT_TYPE):
     info = build_info(system)
     info["story_mode"] = brief.story_mode
     info["story_intent"] = brief.story_intent
+    info["structure_id"] = context.chat_data.get("structure_id", brief.structure_id)
     info["production_mode"] = str(brief.production).lower()
     await update.message.reply_text(
         "نسخة البوت اللي تجاوبك:\n" + "\n".join(f"{k}={v}" for k, v in info.items())
@@ -294,6 +318,49 @@ async def cmd_published(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 
+async def on_family_chosen(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    if not _allowed_chat(update):
+        return
+    family = query.data.removeprefix("fam:")
+    if family != 'root' and family not in FAMILIES:
+        return
+    _clear_selection(context.chat_data)
+    if family == 'root':
+        await query.edit_message_text("اختار نوع المحتوى:", reply_markup=_format_keyboard())
+        return
+    context.chat_data.update(family=family, menu_stage='platform')
+    await query.edit_message_text(
+        "اختار بوست لو مقال:" if family == 'linkedin' else "لأي منصة تريد هذا المحتوى؟",
+        reply_markup=_platform_keyboard(family))
+
+
+async def on_structure_chosen(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    if not _allowed_chat(update):
+        return
+    parts = query.data.split(':')
+    if len(parts) != 3:
+        return
+    _, fmt, key = parts
+    data = context.chat_data
+    if data.get('menu_stage') != 'structure' or data.get('format') != fmt:
+        return
+    try:
+        selected = get_structure(fmt, key)
+    except ValueError:
+        return
+    data['structure_id'] = key
+    data['content_brief'] = replace(data.get('content_brief', Brief()), structure_id=key)
+    data.pop('pending_clarification', None)
+    data['menu_stage'] = 'topic'
+    intent = STORY_ANGLE_KEYS.get(data.get('angle'))
+    prompt = STORY_STYLES[intent]['topic_prompt'] if intent else "هسه دزلي الموضوع كتابةً."
+    await query.edit_message_text("البنية: " + selected.label + "\n" + prompt)
+
+
 async def on_format_chosen(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -302,14 +369,20 @@ async def on_format_chosen(update: Update, context: ContextTypes.DEFAULT_TYPE):
     key = query.data.removeprefix("fmt:")
     if key not in FORMATS:
         return
+    family = context.chat_data.get('family')
+    if family and (context.chat_data.get('menu_stage') != 'platform' or key not in FAMILIES[family][1]):
+        return
     context.chat_data.pop("content_brief", None)
+    context.chat_data.pop("structure_id", None)
     context.chat_data["format"] = key
+    if family:
+        context.chat_data['menu_stage'] = 'angle'
     context.chat_data.pop("angle", None)
     context.chat_data.pop("pending_clarification", None)
     await query.edit_message_text(
         ("ستوري قصيرة، تقريباً ٣٠ ثانية: شنو الستايل اللي تريده؟"
          if is_story(key) else f"تمام، اخترت {FORMATS[key][0]}. هسة اختار الزاوية:"),
-        reply_markup=_angle_keyboard(key),
+        reply_markup=_angle_keyboard(key, scoped=bool(family)),
     )
 
 
@@ -318,8 +391,19 @@ async def on_angle_chosen(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.answer()
     if not _allowed_chat(update):
         return
-    key = query.data.removeprefix("ang:")
     fmt = context.chat_data.get("format")
+    if query.data.startswith('pick:'):
+        parts = query.data.split(':')
+        if (len(parts) != 3 or parts[1] != fmt
+                or context.chat_data.get('menu_stage') != 'angle'):
+            return
+        key = parts[2]
+    else:
+        if context.chat_data.get('menu_stage'):
+            return  # Saved legacy callbacks cannot skip the current menu flow.
+        key = query.data.removeprefix("ang:")
+    if fmt not in FORMATS:
+        return
     if key not in ANGLES and not (is_story(fmt) and key in STORY_ANGLE_KEYS):
         return
     context.chat_data.pop("pending_clarification", None)
@@ -330,11 +414,16 @@ async def on_angle_chosen(update: Update, context: ContextTypes.DEFAULT_TYPE):
         current = context.chat_data.get("content_brief", Brief())
         context.chat_data["content_brief"] = replace(current, story_mode="moment", story_intent=intent,
             purpose=style['purpose'], duration_seconds=30, production=False)
-        await query.edit_message_text(f"{style['label']} — فكرة وحدة، حچي بسيط ومباشر.\n" + style['topic_prompt'])
+        topic_prompt = f"{style['label']} — فكرة وحدة، حچي بسيط ومباشر.\n" + style['topic_prompt']
     else:
         if is_story(fmt) and 'content_brief' in context.chat_data:
             context.chat_data['content_brief'] = replace(context.chat_data['content_brief'], story_intent='auto')
-        await query.edit_message_text(f"الزاوية: {ANGLE_BUTTONS[key]}. هسة دزلي الموضوع كتابةً.")
+        topic_prompt = f"الزاوية: {ANGLE_BUTTONS[key]}. هسة دزلي الموضوع كتابةً."
+    if context.chat_data.get('family'):
+        context.chat_data['menu_stage'] = 'structure'
+        await query.edit_message_text("اختار بنية تناسب الفكرة:", reply_markup=_structure_keyboard(fmt))
+    else:
+        await query.edit_message_text(topic_prompt)
 
 
 async def on_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -343,18 +432,24 @@ async def on_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     fmt = context.chat_data.get("format")
     angle = context.chat_data.get("angle")
     if not fmt:
-        await update.message.reply_text("گبل شي اختار نوع المحتوى 👇", reply_markup=_format_keyboard())
+        family = context.chat_data.get('family')
+        await update.message.reply_text("اختار المنصة 👇" if family else "گبل شي اختار نوع المحتوى 👇",
+            reply_markup=_platform_keyboard(family) if family else _format_keyboard())
         return
     if not angle:
         await update.message.reply_text("شنو الستايل اللي تريده؟" if is_story(fmt) else "اختار الزاوية 👇",
-                                        reply_markup=_angle_keyboard(fmt))
+                                        reply_markup=_angle_keyboard(fmt, scoped=bool(context.chat_data.get("family"))))
+        return
+
+    if context.chat_data.get('family') and not context.chat_data.get('structure_id'):
+        await update.message.reply_text("اختار البنية قبل الموضوع 👇", reply_markup=_structure_keyboard(fmt))
         return
 
     try:
         selected_angle = angle_description(fmt, angle)
     except KeyError:
         context.chat_data.pop("angle", None)
-        await update.message.reply_text("اختار الستايل من جديد.", reply_markup=_angle_keyboard(fmt))
+        await update.message.reply_text("اختار الستايل من جديد.", reply_markup=_angle_keyboard(fmt, scoped=bool(context.chat_data.get("family"))))
         return
     cid = _chat_id(update)
     ok, msg = pilot_check(cid)
@@ -369,6 +464,8 @@ async def on_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         topic = (pending["topic"] + "\nسؤال التوضيح: " + pending["question"]
                  + "\nإجابة المستخدم: " + topic)
     brief = context.chat_data.get("content_brief", Brief())
+    if context.chat_data.get('structure_id'):
+        brief = replace(brief, structure_id=context.chat_data['structure_id'])
     if is_story(fmt) and angle in STORY_ANGLE_KEYS and brief.story_mode == 'moment':
         intent = STORY_ANGLE_KEYS[angle]
         brief = replace(brief, story_intent=intent, duration_seconds=30)
@@ -379,7 +476,7 @@ async def on_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except ValueError:
         await update.message.reply_text("إعدادات البريف ما تناسب الفورمات. عدل /brief أو استخدم /brief reset.")
         return
-    system = build_system_prompt(fmt, brief=brief) if "content_brief" in context.chat_data or brief.story_intent != "auto" else SYSTEM_PROMPTS[fmt]
+    system = build_system_prompt(fmt, brief=brief) if "content_brief" in context.chat_data or brief.story_intent != "auto" or brief.structure_id else SYSTEM_PROMPTS[fmt]
     status = await update.message.reply_text("عاد أكتبلك… ⏳")
     try:
         run = await run_pipeline(fmt, system, topic, selected_angle,
@@ -418,6 +515,7 @@ async def on_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "quality_status": checked.status, "review_history": checked.review_history,
         "build": runtime, "planning": checked.planning,
         "objective": brief.purpose, "story_mode": brief.story_mode, "story_intent": brief.story_intent,
+        "structure_id": brief.structure_id,
         "journey_stage": brief.journey_stage, "distribution": brief.distribution,
         "production_mode": brief.production,
         "elapsed_ms": run.elapsed_ms, "stage_timings": run.timings,
@@ -472,6 +570,9 @@ def main():
     app.add_handler(CommandHandler("experiment", cmd_experiment))
     app.add_handler(CommandHandler("example", cmd_example))
     app.add_handler(CommandHandler("pilot", cmd_pilot))
+    app.add_handler(CallbackQueryHandler(on_family_chosen, pattern=r"^fam:"))
+    app.add_handler(CallbackQueryHandler(on_structure_chosen, pattern=r"^str:"))
+    app.add_handler(CallbackQueryHandler(on_angle_chosen, pattern=r"^pick:"))
     app.add_handler(CallbackQueryHandler(on_format_chosen, pattern=r"^fmt:"))
     app.add_handler(CallbackQueryHandler(on_angle_chosen, pattern=r"^ang:"))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, on_text))

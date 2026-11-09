@@ -1,4 +1,4 @@
-"""Format-native structural quality gates for twelve social publishing formats.
+"""Format-native structural quality gates for platform-specific social publishing formats.
 
 These are local editorial checks, not official ranking rules or fact verification.
 The checker never treats a creative heuristic as a platform API limit.
@@ -32,7 +32,7 @@ FIELDS = {
 MAX_HASHTAGS = {
     "instagram_story": 0, "instagram_instants": 0, "instagram_live": 0,
     "instagram_broadcast_channel": 0, "linkedin_post": 0,
-    "linkedin_article": 0, "tiktok_story": 0,
+    "linkedin_article": 0, "linkedin_carousel": 0, "tiktok_story": 0,
     "instagram_reel": 5, "instagram_post": 5, "instagram_carousel": 5,
     "tiktok_video": 5, "tiktok_photo_carousel": 5,
 }
@@ -43,6 +43,7 @@ WORD_RANGES = {
     "instagram_instants": (1, 35), "instagram_live": (35, 500),
     "instagram_broadcast_channel": (4, 160),
     "linkedin_post": (35, 380), "linkedin_article": (180, 2500),
+    "linkedin_carousel": (30, 600),
     "tiktok_story": (2, 140), "tiktok_video": (25, 300),
     "tiktok_photo_carousel": (25, 420),
 }
@@ -52,7 +53,7 @@ def _field(text: str, name: str) -> str:
     m = pattern.search(text)
     if not m:
         return ""
-    following = re.search(r"(?m)^[A-Z][A-Z ]+\s*:", text[m.end():])
+    following = re.search(r"(?m)^[A-Z][A-Z 0-9]+\s*:", text[m.end():])
     end = m.end() + following.start() if following else len(text)
     return (m.group(1) + "\n" + text[m.end():end]).strip()
 
@@ -94,9 +95,8 @@ def _carousel(text: str, key: str) -> list[str]:
     if labels != expected:
         issues.append("carousel: native section order invalid")
     for i, match in enumerate(slides):
-        stop = slides[i+1].start() if i+1 < len(slides) else len(text)
-        section = text[match.start():stop].split("CAPTION:", 1)[0].split("CTA:", 1)[0]
-        if not match.group(2).strip() and not text[match.end():stop].strip():
+        section = _field(text, f"SLIDE {i+1}")
+        if not section:
             issues.append(f"slide {i+1}: empty content")
         if len(section.split()) > 70:
             issues.append(f"slide {i+1}: too dense, shorten copy")
@@ -154,10 +154,10 @@ def check(fmt: str, text: str, *, story_mode: str = 'moment', story_intent: str 
     labels = re.findall(r"(?m)^([A-Z][A-Z ]*(?: \d+)?)\s*:", text)
     if len(labels) != len(set(labels)):
         issues.append("duplicate native section")
-    if key not in ("instagram_carousel", "tiktok_photo_carousel"):
+    if key not in ("instagram_carousel", "tiktok_photo_carousel", "linkedin_carousel"):
         if labels != list(required):
             issues.append("native sections must appear once in the required order")
-    if key in ("instagram_carousel", "tiktok_photo_carousel"):
+    if key in ("instagram_carousel", "tiktok_photo_carousel", "linkedin_carousel"):
         return issues + _carousel(text, key)
     for name in required:
         if not _field(text, name):

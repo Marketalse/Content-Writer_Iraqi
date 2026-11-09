@@ -17,6 +17,7 @@ NATIVE_OUTPUTS = {
     'instagram_live': 'OPENING: host opening\nTALKING POINTS: flexible discussion outline\nAUDIENCE QUESTIONS: useful live conversation prompts\nCLOSING: recap and natural next step',
     'instagram_broadcast_channel': 'UPDATE: useful insider message\nPROMPT: one relevant reaction, reply or poll invitation',
     'linkedin_post': 'INSIGHT: specific professional observation\nBODY: reasoning, experience supplied in the brief, or a practical lesson\nDISCUSSION: a substantive professional question',
+    'linkedin_carousel': 'SLIDE 1: professional document cover\nSLIDE 2: context\nSLIDE 3: develop reasoning\nSLIDE 4: practical synthesis\nAdditional consecutive slides only as needed (4-12 total).\nCAPTION: accompanying professional context\nCTA: one substantive discussion question or relevant next action',
     'linkedin_article': 'TITLE: specific analytical title\nSUMMARY: executive summary\n## Topic-specific section title\nDevelop the analysis.\n## Another topic-specific section title\nDevelop evidence, trade-offs and recommendations. Add sections as needed.\nCONCLUSION: actionable synthesis',
     'tiktok_story': 'STORY: a casual in-the-moment observation\nINTERACTION: an easy reply question',
     'tiktok_video': 'HOOK: immediate spoken or visual opening\nSCRIPT: complete entertaining explanation or demonstration\nVISUALS: action, shot progression and on-screen cues\nCTA: one natural participation invitation',
@@ -61,6 +62,12 @@ Open with a specific observation, develop the reasoning and trade-offs in short 
 and invite substantive discussion. Use only supplied experience; never invent clients or
 results. A story, analysis, counterexample or lesson can work. Do not impose three numbered
 points, an algorithmic hook or an unrelated follow CTA.''',
+    'linkedin_carousel': '''An organic LinkedIn document-post script, not a carousel ad.
+Build a professional swipeable argument, decision guide or supported case study. One idea
+per page, meaningful progression and a useful final synthesis. The caption adds professional
+context without repeating the document. Never invent experience, results or sources.
+Choose page count from the reasoning, not a mandatory three-point lesson. Only write copy;
+do not claim to create/upload a PDF or publish automatically.''',
     'linkedin_article': '''An analytical article, not an expanded caption. Use a clear title,
 executive summary and topic-specific section headings. Develop the problem, evidence,
 reasoning, trade-offs and practical recommendations as the topic requires. Distinguish
