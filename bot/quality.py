@@ -197,6 +197,7 @@ class Checked:
     story_mode: str = "moment"
     story_intent: str = "auto"
     production_plan: dict = field(default_factory=dict)
+    transport_normalized: bool = False
 
 async def generate_checked(fmt: str, system: str, topic: str,
                            angle: str = "", notes: str = "") -> Checked:

@@ -11,6 +11,7 @@ from llm import FAST_MODEL, LLMError, Result, generate
 from frameworks import analyst_system, load_library, parse_plan
 from briefs import Brief
 from format_contracts import adapt_contract
+from draft_transport import normalize_short_story
 from source_knowledge import lesson_prompt
 from production import PRODUCTION_INSTRUCTION, unpack_draft, validate_plan
 from platform_intelligence import LEGACY_FORMATS, get_profile
@@ -222,6 +223,10 @@ async def execute(fmt: str, system: str, topic: str, angle: str,
             checked.failures = ['writer output truncated']
             checked.status = 'blocked'
             return checked, session, notes
+        normalized = normalize_short_story(checked.text, fmt, story_mode=brief.story_mode,
+                                           story_intent=brief.story_intent)
+        checked.transport_normalized = normalized != checked.text
+        checked.text = normalized
         original = checked.text
         for revision in range(cfg.max_revisions + 1):
             checked.attempts = revision + 1

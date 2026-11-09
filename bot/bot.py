@@ -567,6 +567,7 @@ async def on_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "chat_id": cid, "format": fmt, "angle": angle, "topic": topic, "provider": checked.provider,
         "attempts": checked.attempts, "failures": checked.failures,
         "quality_status": checked.status, "review_history": checked.review_history,
+        "transport_normalized": checked.transport_normalized,
         "build": runtime, "planning": checked.planning,
         "objective": brief.purpose, "story_mode": brief.story_mode, "story_intent": brief.story_intent,
         "structure_id": brief.structure_id,
@@ -586,8 +587,9 @@ async def on_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     if checked.status != "accepted":
-        await status.edit_text("⚠️ المسودة تحتاج مراجعة؛ ما اجتازت فحوص الجودة.\n"
-                               + "\n".join(checked.failures)[:2500])
+        await status.edit_text("ما گدرت أجهّز نسخة تجتاز المراجعة بهالمحاولة. "
+                               "أعد إرسال الموضوع حتى نجرب مرة ثانية، أو /format حتى تغيّر الاختيارات.\n"
+                               + f"رقم المراجعة: {pid}")
         return
 
     await status.delete()
