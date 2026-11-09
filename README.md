@@ -28,7 +28,10 @@ bot/bot.py                                بوت تلگرام + استدعاء C
    pip install -r requirements.txt
    python bot.py
    ```
-4. بتلگرام: `/start` ← اختار النوع ← دز الموضوع.
+4. بتلگرام: `/start` ← نوع المحتوى ← المنصة ← الستايل/الزاوية ← البنية ← الموضوع.
+   Story: Instagram أو TikTok. Carousel: Instagram أو TikTok أو LinkedIn (مستند).
+   فيديو قصير: Instagram Reel أو TikTok Video. LinkedIn: بوست أو مقال.
+   باقي فورمات Instagram تبقى ضمن «فورمات إضافية». [تفاصيل التدفق والبنى](docs/CONTENT_NAVIGATION.md).
 
 ## الأوامر
 

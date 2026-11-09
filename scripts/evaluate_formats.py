@@ -22,8 +22,8 @@ from reviewer import DIMENSIONS, GATES
 FIXTURES = Path(__file__).resolve().parents[1] / 'tests/fixtures/cross_format_drafts.json'
 
 
-async def evaluate(mode='offline', limit=36, max_usd=3.0):
-    if mode not in ('offline', 'live') or not 1 <= limit <= 36 or not 0 < max_usd <= 20:
+async def evaluate(mode='offline', limit=39, max_usd=3.0):
+    if mode not in ('offline', 'live') or not 1 <= limit <= 39 or not 0 < max_usd <= 20:
         raise ValueError('invalid evaluation limits')
     if mode == 'live' and not os.getenv('ANTHROPIC_API_KEY'):
         raise ValueError('Live evaluation unavailable: configure ANTHROPIC_API_KEY in environment settings.')
@@ -71,7 +71,7 @@ async def evaluate(mode='offline', limit=36, max_usd=3.0):
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--mode',choices=('offline','live'),default='offline')
-    parser.add_argument('--limit',type=int,default=36)
+    parser.add_argument('--limit',type=int,default=39)
     parser.add_argument('--max-usd',type=float,default=3)
     parser.add_argument('--output',type=Path)
     args=parser.parse_args()

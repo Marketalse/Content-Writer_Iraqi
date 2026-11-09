@@ -23,6 +23,7 @@ FOCUS = {
     'instagram_live': 'Host opening, coherent talking points, useful audience questions and closing recap.',
     'instagram_broadcast_channel': 'Insider update with substance and a natural community reaction or poll.',
     'linkedin_post': 'Professional insight, credible reasoning, trade-offs and substantive discussion.',
+    'linkedin_carousel': 'Professional document argument, one idea per page, supported reasoning and practical synthesis.',
     'linkedin_article': 'Specific title, analytical sections, evidence, usable framework and actionable synthesis.',
     'tiktok_story': 'Casual moment with immediate context and an easy reply invitation.',
     'tiktok_video': 'Fast authentic opening, relatable problem, visual progression and delivered payoff.',
@@ -38,6 +39,7 @@ WEIGHTS = {key: dict(zip(DIMENSIONS, weights)) for key, weights in {
     'instagram_live': (1, 3, 2, 3, 2, 2, 1),
     'instagram_broadcast_channel': (1, 1, 3, 3, 2, 2, 1),
     'linkedin_post': (2, 2, 3, 3, 2, 1, 3),
+    'linkedin_carousel': (2, 3, 3, 3, 2, 1, 2),
     'linkedin_article': (1, 3, 3, 3, 1, 1, 3),
     'tiktok_story': (1, 1, 3, 2, 3, 2, 1),
     'tiktok_video': (3, 3, 3, 2, 2, 1, 2),
@@ -99,9 +101,11 @@ def parse_review(text: str, section_names: set[str]) -> Review:
     return Review(scores, gates, tuple(issues))
 
 
-def reviewer_system(fmt: str, *, story_mode: str = 'moment', story_intent: str = 'auto') -> str:
+def reviewer_system(fmt: str, *, story_mode: str = 'moment', story_intent: str = 'auto', structure_id: str = '') -> str:
     key = LEGACY_FORMATS.get(fmt, fmt)
     p = get_profile(key)
+    from content_choices import structure_prompt
+    narrative = structure_prompt(key, structure_id)
     voice = (ROOT / 'knowledge/voice/voice.md').read_text(encoding='utf-8')
     dialect = (ROOT / 'knowledge/dialect/iraqi_words.csv').read_text(encoding='utf-8')
     other = (ROOT / 'knowledge/dialect/other_dialects.yaml').read_text(encoding='utf-8')
@@ -112,6 +116,8 @@ Platform: {p.platform}; format: {p.format}; character: {p.character}; objective:
 Editorial focus: {short_story_policy(story_intent) if story_intent != 'auto' else (FOCUS[key] if story_mode == 'moment' else 'Connected native Story sequence, one useful progression and relevant interaction.')}
 The following contract describes the DRAFT to evaluate. Do not write a draft; return the review JSON below.
 {format_contract(key, story_mode, story_intent)}
+{narrative}
+The selected narrative is part of format_identity; fail a draft that ignores it.
 Score each dimension 0-10: hook (specific honest opening), storytelling (useful progression
 and payoff appropriate to format, not mandatory fiction), platform_fit (native structure
 and tone), audience_relevance (Iraqi audience intent), iraqi_dialect (natural Baghdadi,

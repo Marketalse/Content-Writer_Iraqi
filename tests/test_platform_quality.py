@@ -11,7 +11,7 @@ from quality import check, split_owner_note
 
 class PlatformQualityTest(unittest.TestCase):
     def test_all_twelve_profiles_exist(self):
-        self.assertEqual(len(PROFILES), 12)
+        self.assertEqual(len(PROFILES), 13)
         for key in PROFILES:
             self.assertTrue(get_profile(key).official_urls)
 

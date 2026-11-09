@@ -298,6 +298,12 @@ class ExperimentAndReportTests(unittest.TestCase):
         with self.assertRaises(ValueError): editorial.register_experiment(123, {**data, 'variant_post_id': wrong})
         paid = postlog.log_post({'chat_id': 123, 'format': 'story', 'objective': 'conversation', 'distribution': 'paid'})
         with self.assertRaises(ValueError): editorial.register_experiment(123, {**data, 'variant_post_id': paid})
+        different_structure = postlog.log_post({'chat_id': 123, 'format': 'story',
+            'objective': 'conversation', 'structure_id': 'insight'})
+        with self.assertRaises(ValueError):
+            editorial.register_experiment(123, {**data, 'variant_post_id': different_structure})
+        editorial.register_experiment(123, {**data, 'variant_post_id': different_structure, 'variable': 'narrative'})
+        self.assertEqual(len(editorial.report(123)['cohorts']), 4)
 
     def test_latest_human_feedback_and_report_cohorts_are_explicit(self):
         editorial.feedback(self.pid, 123, 'accept', 'first opinion')
@@ -361,15 +367,15 @@ class FinalBoundaryTests(unittest.IsolatedAsyncioTestCase):
 
 
 class CrossFormatHarnessTests(unittest.IsolatedAsyncioTestCase):
-    async def test_all_36_shared_topic_contract_cases_and_no_false_semantic_claim(self):
+    async def test_all_39_shared_topic_contract_cases_and_no_false_semantic_claim(self):
         sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
         from evaluate_formats import evaluate
         data = await evaluate()
-        self.assertEqual(data['cases_run'], 36)
-        self.assertEqual(data['contract_passes'], 36)
+        self.assertEqual(data['cases_run'], 39)
+        self.assertEqual(data['contract_passes'], 39)
         self.assertFalse(data['semantic_quality_verified'])
         self.assertTrue(all(r['logical_calls'] == 3 for r in data['results']))
-        self.assertEqual(len({r['format'] for r in data['results']}), 12)
+        self.assertEqual(len({r['format'] for r in data['results']}), 13)
         self.assertEqual(len({r['topic'] for r in data['results']}), 3)
 
     async def test_live_harness_does_not_fake_success_without_credentials(self):

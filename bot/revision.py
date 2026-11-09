@@ -159,7 +159,11 @@ async def execute(fmt: str, system: str, topic: str, angle: str,
     get_profile(fmt)  # reject unknown IDs before spending
     brief = brief or Brief()
     brief.validate_format(fmt)
+    from content_choices import structure_prompt
+    narrative = structure_prompt(fmt, brief.structure_id)
     system = adapt_contract(system, fmt, brief.story_mode, brief.story_intent)
+    if narrative and narrative not in system:
+        system += "\n" + narrative
     if brief.distribution == 'paid':
         system += '\n' + lesson_prompt(fmt, 'paid')
     if brief.production:
@@ -237,7 +241,7 @@ async def execute(fmt: str, system: str, topic: str, angle: str,
                 checked.failures = ['verified fact missing or altered']
                 checked.status = 'blocked'
                 break
-            response = await session.call('review', reviewer_system(fmt, story_mode=brief.story_mode, story_intent=brief.story_intent), payload(
+            response = await session.call('review', reviewer_system(fmt, story_mode=brief.story_mode, story_intent=brief.story_intent, structure_id=brief.structure_id), payload(
                 topic=topic, angle=angle, verified_facts=verified_facts,
                 original_draft=original, current_draft=checked.text, section_names=list(parts),
                 brief=brief.data(), production_plan=checked.production_plan),

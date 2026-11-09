@@ -91,10 +91,14 @@ def register_experiment(actor: int, data: dict):
     variant = authorized_post(data['variant_post_id'], actor)
     if baseline['id'] == variant['id'] or data['variable'] not in ('opening', 'cta', 'visuals', 'narrative'):
         raise ValueError('experiment needs distinct drafts and one supported variable')
-    for name in ('format', 'objective', 'story_mode', 'story_intent', 'journey_stage', 'distribution'):
+    for name in ('format', 'objective', 'story_mode', 'story_intent', 'structure_id', 'journey_stage', 'distribution'):
         left, right = baseline.get(name), variant.get(name)
         if name == 'format':
             left, right = LEGACY_FORMATS.get(left, left), LEGACY_FORMATS.get(right, right)
+        if name == 'structure_id':
+            left, right = left or '', right or ''
+            if data['variable'] == 'narrative':
+                continue
         if left != right:
             raise ValueError('experiment cohorts must match')
     if (not isinstance(data['hypothesis'], str) or not 1 <= len(data['hypothesis'].strip()) <= 1000
@@ -158,7 +162,7 @@ def report(actor: int) -> dict:
     cohorts = {}
     for row in drafts:
         key = LEGACY_FORMATS.get(row['format'], row['format'])
-        cohort = '|'.join((key, row.get('story_mode', 'moment'), row.get('story_intent', 'auto'), row.get('objective', 'unspecified'),
+        cohort = '|'.join((key, row.get('story_mode', 'moment'), row.get('story_intent', 'auto'), row.get('structure_id', ''), row.get('objective', 'unspecified'),
                            row.get('journey_stage', 'unspecified'), row.get('distribution', 'organic')))
         group = cohorts.setdefault(cohort, {'drafts': 0, 'accepted_by_engine': 0})
         group['drafts'] += 1
