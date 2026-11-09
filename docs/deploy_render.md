@@ -84,3 +84,20 @@ Environment tab. For direct inspection, use an already authenticated shared brow
 logging into an account is a user action, and passwords/login codes stay outside chat.
 A second process must not poll the production Telegram token for testing. The automated
 workflow tests use a simulated Bot API transport instead.
+
+## Read diagnostics in Telegram instead of using Render Shell
+
+After deploying the diagnostic-command update, the authorized chat can send:
+
+```text
+/diagnose 20261109093608-589a503b
+/diagnose 20261109093637-f430ef9b
+```
+
+These are the two review IDs from the November 9 report. They are looked up on the existing
+persistent disk; no new model call or generated post is required. Copy the diagnostic response
+for investigation. It contains stage/codes/gates/scores, not draft text or API keys. If a record
+is unavailable, verify the service still uses its original `/var/data` disk and the requesting
+chat owns the attempt (or is the configured bot owner). Do not delete or replace the disk.
+Older records can lack stage/provider metadata; this is explicitly unknown, not evidence of
+a successful check. New failures also emit a fixed-code log line tied to their review ID.

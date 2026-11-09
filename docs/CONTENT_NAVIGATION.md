@@ -194,3 +194,24 @@ and fact preservation, critical-gate failures, legacy template rejection, real p
 Telegram delivery with mocked LLM transport, and internal-only diagnostics. The offline
 shared-topic contract evaluation remains 39/39. The successful default path remains three
 AI calls (analyst, writer, reviewer), or two with analysis disabled.
+
+## Inspect a failed attempt without another generation
+
+`/diagnose POST_ID` reads an existing generated-attempt record. The originating chat and
+bot owner may inspect it; other users receive the same unavailable response as an unknown ID.
+This command does not call a model, consume generation quota, change a draft or publish.
+It reports the format/intent/structure, build, fixed failure code and stage, safe call metadata,
+validator tags and reviewer gates/scores. It excludes topic, draft, issue reasons, raw errors,
+analyst notes and credentials. Historical records remain readable; missing metadata stays
+unknown rather than inventing a cause.
+
+New generation records distinguish invalid native structure, missing verified facts, critical
+review gates, creative thresholds, invalid response parsing, provider errors/timeouts, unknown
+pricing and resource limits. The attempted next stage is recorded even when a budget stops a
+call before it begins. Successful replies clear the failure metadata. Stage telemetry records
+output length/refusal/truncation, not raw output. Render logs have a fixed-code
+`generation_not_delivered review=... stage=... code=...` event for future failures.
+Telegram's failure message offers an action based on the recorded category and the diagnostic
+command instead of recommending blind repeated generation for every failure. These changes
+add observability only: no scoring thresholds, mandatory gates, model retries or call budgets
+were relaxed, and no cause for the two November 9 live failures is claimed without their records.

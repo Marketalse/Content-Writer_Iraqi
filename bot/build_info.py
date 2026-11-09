@@ -9,7 +9,7 @@ from content_choices import WORKFLOW_VERSION
 
 ROOT = Path(__file__).resolve().parent
 SOURCE_FILES = ('bot.py', 'build_info.py', 'prompts.py', 'format_contracts.py',
-                'draft_transport.py', 'platform_intelligence.py', 'pipeline.py', 'revision.py', 'quality.py', 'reviewer.py',
+                'diagnostics.py', 'draft_transport.py', 'platform_intelligence.py', 'pipeline.py', 'revision.py', 'quality.py', 'reviewer.py',
                 'frameworks.py', 'content_choices.py', 'briefs.py', 'story_styles.py', 'production.py', 'source_knowledge.py', 'editorial.py',
                 '../knowledge/frameworks.toml', '../knowledge/source_lessons.toml')
 
