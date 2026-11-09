@@ -139,7 +139,7 @@ async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     _clear_selection(context.chat_data)
     await update.message.reply_text(
-        "الخطوة ١/٥ — نوع المحتوى\nهلا بيك! 👋 اختار النوع، بعدها المنصة والستايل والبنية، وبعدين الموضوع.",
+        "الخطوة 1/5 — نوع المحتوى\nهلا بيك! 👋 اختار النوع، بعدها المنصة والستايل والبنية، وبعدين الموضوع.",
         reply_markup=_format_keyboard(),
     )
 
@@ -148,7 +148,7 @@ async def cmd_format(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not _allowed_chat(update):
         return
     _clear_selection(context.chat_data)
-    await update.message.reply_text("الخطوة ١/٥ — شنو نوع المحتوى؟", reply_markup=_format_keyboard())
+    await update.message.reply_text("الخطوة 1/5 — شنو نوع المحتوى؟", reply_markup=_format_keyboard())
 
 
 async def cmd_cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -333,7 +333,7 @@ async def _show_platform(query, data: dict, family: str):
     _clear_selection(data)
     data.update(family=family, menu_stage='platform')
     prompt = "بوست لو مقال؟" if family == 'linkedin' else "لأي منصة تريد هذا المحتوى؟"
-    await query.edit_message_text("الخطوة ٢/٥ — " + FAMILIES[family][0] + "\n" + prompt,
+    await query.edit_message_text("الخطوة 2/5 — " + FAMILIES[family][0] + "\n" + prompt,
                                  reply_markup=_platform_keyboard(family))
 
 
@@ -355,7 +355,7 @@ async def on_back(update: Update, context: ContextTypes.DEFAULT_TYPE):
         for key in ('angle', 'structure_id', 'content_brief', 'pending_clarification'):
             data.pop(key, None)
         data['menu_stage'] = 'angle'
-        await query.edit_message_text("الخطوة ٣/٥ — " + FORMATS[fmt][0] + "\nاختار الستايل / الزاوية:",
+        await query.edit_message_text("الخطوة 3/5 — " + FORMATS[fmt][0] + "\nاختار الستايل / الزاوية:",
                                      reply_markup=_angle_keyboard(fmt, scoped=True))
     elif previous == 'topic':
         data.pop('structure_id', None)
@@ -363,7 +363,7 @@ async def on_back(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if 'content_brief' in data:
             data['content_brief'] = replace(data['content_brief'], structure_id='')
         data['menu_stage'] = 'structure'
-        await query.edit_message_text("الخطوة ٤/٥ — " + FORMATS[fmt][0] + "\nاختار البنية:",
+        await query.edit_message_text("الخطوة 4/5 — " + FORMATS[fmt][0] + "\nاختار البنية:",
                                      reply_markup=_structure_keyboard(fmt))
 
 
@@ -377,7 +377,7 @@ async def on_family_chosen(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     _clear_selection(context.chat_data)
     if family == 'root':
-        await query.edit_message_text("الخطوة ١/٥ — اختار نوع المحتوى:", reply_markup=_format_keyboard())
+        await query.edit_message_text("الخطوة 1/5 — اختار نوع المحتوى:", reply_markup=_format_keyboard())
         return
     await _show_platform(query, context.chat_data, family)
 
@@ -404,7 +404,7 @@ async def on_structure_chosen(update: Update, context: ContextTypes.DEFAULT_TYPE
     data['menu_stage'] = 'topic'
     intent = STORY_ANGLE_KEYS.get(data.get('angle'))
     prompt = STORY_STYLES[intent]['topic_prompt'] if intent else "هسه دزلي الموضوع كتابةً."
-    await query.edit_message_text("الخطوة ٥/٥ — " + FORMATS[fmt][0] + "\nالبنية: " + selected.label + "\n" + prompt,
+    await query.edit_message_text("الخطوة 5/5 — " + FORMATS[fmt][0] + "\nالبنية: " + selected.label + "\n" + prompt,
         reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("↩️ غيّر البنية", callback_data="back:topic")]]))
 
 
@@ -430,7 +430,7 @@ async def on_format_chosen(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.chat_data.pop("angle", None)
     context.chat_data.pop("pending_clarification", None)
     await query.edit_message_text(
-        "الخطوة ٣/٥ — " + FORMATS[key][0] + "\n" +
+        "الخطوة 3/5 — " + FORMATS[key][0] + "\n" +
         ("ستوري قصيرة، تقريباً ٣٠ ثانية: شنو الستايل اللي تريده؟"
          if is_story(key) else "هسة اختار الزاوية:"),
         reply_markup=_angle_keyboard(key, scoped=True),
@@ -456,7 +456,7 @@ async def on_angle_chosen(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if fmt not in FORMATS:
         if query.data.startswith('ang:') and key in {*ANGLES, *STORY_ANGLE_KEYS}:
             _clear_selection(context.chat_data)
-            await query.edit_message_text("الخطوة ١/٥ — حدّثنا الاختيارات، اختار نوع المحتوى:",
+            await query.edit_message_text("الخطوة 1/5 — حدّثنا الاختيارات، اختار نوع المحتوى:",
                                          reply_markup=_format_keyboard())
         return
     if key not in ANGLES and not (is_story(fmt) and key in STORY_ANGLE_KEYS):
@@ -476,7 +476,7 @@ async def on_angle_chosen(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if is_story(fmt) and 'content_brief' in context.chat_data:
             context.chat_data['content_brief'] = replace(context.chat_data['content_brief'], story_intent='auto')
     context.chat_data['menu_stage'] = 'structure'
-    await query.edit_message_text("الخطوة ٤/٥ — " + FORMATS[fmt][0] + "\nاختار بنية تناسب الفكرة:",
+    await query.edit_message_text("الخطوة 4/5 — " + FORMATS[fmt][0] + "\nاختار بنية تناسب الفكرة:",
                                  reply_markup=_structure_keyboard(fmt))
 
 
@@ -567,6 +567,7 @@ async def on_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "chat_id": cid, "format": fmt, "angle": angle, "topic": topic, "provider": checked.provider,
         "attempts": checked.attempts, "failures": checked.failures,
         "quality_status": checked.status, "review_history": checked.review_history,
+        "transport_normalized": checked.transport_normalized,
         "build": runtime, "planning": checked.planning,
         "objective": brief.purpose, "story_mode": brief.story_mode, "story_intent": brief.story_intent,
         "structure_id": brief.structure_id,
@@ -586,8 +587,9 @@ async def on_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     if checked.status != "accepted":
-        await status.edit_text("⚠️ المسودة تحتاج مراجعة؛ ما اجتازت فحوص الجودة.\n"
-                               + "\n".join(checked.failures)[:2500])
+        await status.edit_text("ما گدرت أجهّز نسخة تجتاز المراجعة بهالمحاولة. "
+                               "أعد إرسال الموضوع حتى نجرب مرة ثانية، أو /format حتى تغيّر الاختيارات.\n"
+                               + f"رقم المراجعة: {pid}")
         return
 
     await status.delete()

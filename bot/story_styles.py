@@ -39,7 +39,7 @@ def short_story_policy(intent: str) -> str:
     return ('Short spoken Story, approximately 30 seconds. One idea, simple direct Baghdadi speech. '
             'Use only the context necessary to make the point. Target 35-65 spoken words at most '
             'for explanation, fewer for a question; hard editorial ceiling 75 words and 800 characters. '
-            'Do not pad a short answer to meet a word target. No named hook/content/CTA blocks, '
+            'Do not pad a short answer to meet a word target. No audience-facing hook/content/CTA blocks, '
             'no numbered three-tip lesson, no 📊/🔥/💡 point stack, no generic follow/sales closing. '
             'A natural opening is enough; no mandatory suspense, slogan or greeting. '
             + STORY_STYLES[intent]['instruction'])

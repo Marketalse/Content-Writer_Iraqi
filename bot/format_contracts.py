@@ -110,7 +110,9 @@ def format_contract(fmt: str, story_mode: str = 'moment', story_intent: str = 'a
         if not is_story(key) or story_mode != 'moment':
             raise ValueError('short Story intent requires a single Story')
         guidance = short_story_policy(story_intent)
-        output = 'STORY: the complete short spoken script only; no extra section or mandatory closing'
+        output = ('STORY: the complete short spoken script only; no extra section or mandatory closing'
+                  '\nThe literal STORY: prefix is required for transport. It is removed before Telegram delivery; '
+                  'it is not an audience-facing heading. Do not omit it or wrap it in markdown.')
     if story_mode != 'moment':
         if key not in ('instagram_story', 'tiktok_story') or story_mode not in STORY_TREATMENTS:
             raise ValueError('invalid Story mode')

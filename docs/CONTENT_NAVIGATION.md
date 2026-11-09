@@ -170,3 +170,27 @@ registered-handler tests. Tests feed actual decoded Telegram updates into the re
 Application dispatcher, with only the Bot API HTTP transport replaced. They exercise every
 platform route, Back, old buttons, permissions and diagnostic identity without polling live
 Telegram or spending AI tokens. Full suite: 146 tests passed; offline evaluation: 39/39.
+
+## Single-Story transport recovery
+
+An explicit short Story has one internal `STORY:` field, removed before Telegram delivery.
+Some model replies may omit that field or decorate it as `**STORY:**` / `**STORY**:`.
+`bot/draft_transport.py` adds/canonicalizes only this transport label for the five explicit
+Story intents in moment mode. It preserves the spoken body; it does not write missing
+content, infer multiple fields, or repair a creative/factual/safety failure.
+
+Ambiguous markup, JSON/code blocks, other section labels, overlength scripts, automatic
+Story mode, Story sequences and other formats are left for the strict validator to reject.
+Refusals and truncations stop before adaptation. Adapted copy still runs every native check,
+verified-fact preservation check and independent reviewer gate. No extra AI call is added.
+`transport_normalized` in the generation record identifies adapted replies without storing
+additional raw model output. Telegram receives only approved spoken copy; technical failure
+reasons remain in the generation record, while the chat shows an Arabic next action and
+review reference. Live provider output still needs deployed smoke testing; the screenshot
+alone establishes missing/invalid transport, not the exact raw reply or its creative quality.
+
+Regression evidence: 157 tests passed, including plain/Markdown Story transport, exact body
+and fact preservation, critical-gate failures, legacy template rejection, real pipeline-to-
+Telegram delivery with mocked LLM transport, and internal-only diagnostics. The offline
+shared-topic contract evaluation remains 39/39. The successful default path remains three
+AI calls (analyst, writer, reviewer), or two with analysis disabled.
