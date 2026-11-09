@@ -37,6 +37,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
 from diagnostics import diagnostic_report, failure_message
+from delivery_policy import manual_review_eligible, manual_review_warning
 from pipeline import run_pipeline  # noqa: E402
 from build_info import build_info  # noqa: E402
 from quality import check, render_story_copy  # noqa: E402
@@ -560,7 +561,8 @@ async def on_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     checked = run.checked
     # Enforce structure at the final delivery boundary, independently of pipeline status.
     # This guards against a future regression returning a wrongly accepted legacy layout.
-    if checked.status == "accepted":
+    manual_draft = checked.manual_review_ready and manual_review_eligible(checked)
+    if checked.status == "accepted" or manual_draft:
         delivery_failures = check(fmt, checked.text, story_mode=brief.story_mode, story_intent=brief.story_intent)
         if checked.story_mode != brief.story_mode or checked.story_intent != brief.story_intent:
             delivery_failures.append("Story mode mismatch")
@@ -572,6 +574,7 @@ async def on_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if delivery_failures or checked.refused:
             checked.failures = delivery_failures or ["writer refused"]
             checked.status = "blocked"
+            checked.manual_review_ready = manual_draft = False
             checked.failure_stage, checked.failure_code = "delivery", "invalid_structure"
     runtime = build_info(system)
     log.info("generation build=%s source=%s prompt=%s quality=%s",
@@ -587,6 +590,9 @@ async def on_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "quality_status": checked.status, "review_history": checked.review_history,
         "transport_normalized": checked.transport_normalized,
         "failure_stage": checked.failure_stage, "failure_code": checked.failure_code,
+        "manual_review_ready": manual_draft,
+        "delivery_status": ("approved" if checked.status == "accepted" else
+                            "manual_review" if manual_draft else "withheld"),
         "build": runtime, "planning": checked.planning,
         "objective": brief.purpose, "story_mode": brief.story_mode, "story_intent": brief.story_intent,
         "structure_id": brief.structure_id,
@@ -605,7 +611,7 @@ async def on_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await status.edit_text(checked.clarification)
         return
 
-    if checked.status != "accepted":
+    if checked.status != "accepted" and not manual_draft:
         log.warning("generation_not_delivered review=%s stage=%s code=%s", pid,
                     checked.failure_stage or 'unknown', checked.failure_code or 'unknown')
         await status.edit_text(failure_message({
@@ -614,15 +620,22 @@ async def on_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await status.delete()
     delivered = render_story_copy(checked.text) if is_story(fmt) and brief.story_mode == "moment" else checked.text
-    for part in _chunks(delivered):
-        await update.message.reply_text(part)
-    if checked.failures:
+    warning = manual_review_warning(checked) + "\n\n" if manual_draft else ""
+    chunk_size = TELEGRAM_LIMIT - len(warning.encode('utf-16-le')) // 2
+    for part in _chunks(delivered, size=chunk_size):
+        await update.message.reply_text(warning + part)
+    if checked.failures and not manual_draft:
         await update.message.reply_text("⚠️ تحقق يدوي قبل النشر:\n- " + "\n- ".join(checked.failures))
     if checked.production_plan:
-        for part in _chunks(render_plan(checked.production_plan)):
-            await update.message.reply_text(part)
+        for part in _chunks(render_plan(checked.production_plan), size=chunk_size):
+            await update.message.reply_text(warning + part)
     if checked.owner_note:
         await update.message.reply_text("📝 ملاحظة لك (لا تنشرها):\n" + checked.owner_note)
+    if manual_draft:
+        await update.message.reply_text(
+            f"رقم المسودة: {pid}\nهاي مسودة غير معتمدة وتحتاج مراجعتك وتعديلك. "
+            "لنسخة جديدة دز الموضوع ويا ملاحظاتك، أو /format حتى تغيّر الاختيارات.")
+        return
     await update.message.reply_text(
         f"رقم المنشور: {pid}\nبعد ما تنشره اكتب: /published {pid}\n"
         "تريد نعيده بشكل ثاني؟ دزلي ملاحظتك، أو /format حتى تغير النوع."

@@ -100,6 +100,21 @@ def parse_plan(text: str, fmt: str, library: dict) -> Plan:
         return Plan(fallback=True)
 
 
+def analyst_schema(library: dict) -> dict:
+    """Compact, stable planning envelope; format/purpose permissions stay local."""
+    fields = {
+        'audience_need': {'type':'string','description':'Audience need, at most 12 words.'},
+        'objection': {'type':'string','description':'One obstacle, at most 12 words; empty if none.'},
+        'purpose': {'type':'string','enum':list(library['purposes'])},
+        'framework': {'type':'string','enum':['none', *library['frameworks']]},
+        'logic_chain': {'type':'array','description':'High-level editorial beats: at most 4, each at most 8 words.',
+                        'items':{'type':'string'}},
+        'missing_information': {'type':'string','description':'Only essential missing facts; empty otherwise.'},
+        'clarification_question': {'type':'string','description':'One short Iraqi question only if essential facts are missing.'},
+    }
+    return {'type':'object','properties':fields,'required':list(fields),'additionalProperties':False}
+
+
 def analyst_system(fmt: str, library: dict, *, story_mode: str = 'moment', story_intent: str = 'auto') -> str:
     key = LEGACY_FORMATS.get(fmt, fmt)
     profile = get_profile(key)
@@ -113,8 +128,10 @@ ONE framework permitted by BOTH the format and the purpose. Choosing none is val
 and preferred when a framework adds no value. Never default an unknown type to Educational.
 Allowed for this format: {json.dumps(definitions, ensure_ascii=False)}
 Purpose choices and permissions: {json.dumps(library['purposes'])}
-Return a short internal logic_chain showing how this particular idea develops and pays off.
-It is reasoning for the writer, not audience-facing points, a fixed number of tips or headings.
+Return a compact editorial outline in logic_chain showing the content beats for the writer.
+Do not print these beats as audience-facing headings or a fixed number of tips.
+Keep audience_need and objection at most 12 words each, each beat at most 8 words.
+Return JSON immediately, no preamble or draft text; keep the entire plan concise.
 Use at most two short links for moment/caption/community formats; up to four for developed content.
 No invented statistics, personal events, quotes, client results or evidence. Plans are not facts.
 If an ESSENTIAL factual detail is missing (e.g. a case study's actual result, or the price

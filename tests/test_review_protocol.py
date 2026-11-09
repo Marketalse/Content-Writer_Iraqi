@@ -126,7 +126,7 @@ class PipelineProtocolTests(unittest.IsolatedAsyncioTestCase):
             system=kwargs['system'][0]['text']
             if system.startswith('Analyze the brief'):
                 self.assertEqual(kwargs['extra_body']['output_config']['effort'],'low')
-                self.assertNotIn('format',kwargs['extra_body']['output_config'])
+                self.assertIn('format',kwargs['extra_body']['output_config'])
                 text=json.dumps({'audience_need':'one observation','objection':'','purpose':'conversation',
                     'framework':'none','logic_chain':[],'missing_information':'','clarification_question':''})
             elif system.startswith('You are an independent'):

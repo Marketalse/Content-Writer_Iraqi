@@ -85,8 +85,11 @@ def diagnostic_report(pid: str, actor: int) -> dict:
     record = authorized_post(pid, actor)
     out = {key: record[key] for key in (
         'id', 'quality_status', 'format', 'story_mode', 'story_intent', 'structure_id',
-        'transport_normalized', 'failure_stage', 'calls', 'attempts', 'usage_known',
+        'transport_normalized', 'manual_review_ready', 'delivery_status', 'failure_stage', 'calls', 'attempts', 'usage_known',
         'elapsed_ms', 'input_tokens', 'output_tokens', 'cost_usd') if key in record}
+    out['planning'] = {key: record.get('planning', {}).get(key)
+                       for key in ('purpose','framework','fallback','fallback_reason')
+                       if key in record.get('planning', {})}
     out['failure_code'] = failure_code(record)
     out['validation_checks'] = validation_checks(record)
     out['next_action'] = NEXT_ACTIONS.get(out['failure_code'], 'راجع مراحل المحاولة؛ السجل القديم ما يحدد السبب بدقة.')
