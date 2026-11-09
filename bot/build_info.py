@@ -5,6 +5,7 @@ import re
 from pathlib import Path
 
 from format_contracts import FORMAT_CONTRACT_VERSION
+from content_choices import WORKFLOW_VERSION
 
 ROOT = Path(__file__).resolve().parent
 SOURCE_FILES = ('bot.py', 'build_info.py', 'prompts.py', 'format_contracts.py',
@@ -30,6 +31,7 @@ def build_info(system_prompt: str = '') -> dict[str, str]:
     branch = os.getenv('RENDER_GIT_BRANCH') or ''
     return {
         'format_contract': FORMAT_CONTRACT_VERSION,
+        'workflow': WORKFLOW_VERSION,
         'commit': commit if re.fullmatch(r'[0-9a-fA-F]{7,40}', commit) else 'unknown',
         'branch': branch if re.fullmatch(r'[A-Za-z0-9_./-]{1,100}', branch) else 'unknown',
         'source': SOURCE_DIGEST,

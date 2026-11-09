@@ -55,3 +55,32 @@ local process using the same token. Do not share the token in diagnostics. Multi
 pollers normally produce Telegram conflict errors. The main Story validator rejects
 Hook/Content/CTA captions before reviewer calls, and the delivery boundary revalidates
 accepted content before sending it.
+
+## If a merged update still shows the old menu
+
+First collect evidence without sharing credentials:
+
+1. In the bot chat, send `/version` and copy the complete response. If it does not answer,
+   record that fact. The workflow-repair build reports `workflow=platform-flow-v2`.
+2. In Render, open the worker, then **Events** and the latest successful deployment.
+   Copy the deployed commit ID. A merge on GitHub is not proof that the worker deployed it.
+3. In the worker **Settings**, copy the linked repository, branch and Start Command.
+   They should be `Marketalse/Content-Writer_Iraqi`, `main`, and `python bot/bot.py`.
+4. Compare the worker's deployed commit with the responding bot's `/version` commit.
+   Compare the startup `bot=@...` identity with the Telegram chat username.
+5. Only after identifying a mismatch, fix the actual service setting or deploy the intended
+   merged commit using Render's manual deployment control. Recheck `/version`, then `/start`.
+   If the menu remains old, investigate other services/local processes using the same token.
+   Stop only the duplicate process you have identified; do not delete its persistent disk.
+
+For a passing menu smoke test, `/start` shows content families. Story opens Instagram/TikTok;
+Carousel opens Instagram/TikTok/LinkedIn document; Video opens Instagram/TikTok; LinkedIn
+opens Post/Article. Continue through style, three structure choices and topic. Use Back to
+change platform and confirm downstream choices are reset. Startup logs and local tests
+alone do not establish that the live worker serves these menus.
+
+No bot token or model key is needed to share these diagnostics. Do not paste Render's
+Environment tab. For direct inspection, use an already authenticated shared browser session;
+logging into an account is a user action, and passwords/login codes stay outside chat.
+A second process must not poll the production Telegram token for testing. The automated
+workflow tests use a simulated Bot API transport instead.

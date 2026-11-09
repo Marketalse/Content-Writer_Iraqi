@@ -86,7 +86,7 @@ class NavigationTests(unittest.IsolatedAsyncioTestCase):
                 upd=await self.choose(ctx,app.on_angle_chosen,f'pick:{fmt}:{angle}')
                 self.assertEqual(ctx.chat_data['menu_stage'],'structure')
                 menu=callbacks(upd.callback_query.edit_message_text.call_args.kwargs['reply_markup'])
-                self.assertEqual(len(menu),3)
+                self.assertEqual(len([key for key in menu if key.startswith('str:')]),3)
                 # Text cannot trigger a model or quota charge before structure selection.
                 text=update()
                 with patch.object(app,'_allowed_chat',return_value=True), patch.object(app,'run_pipeline',AsyncMock()) as model, patch.object(app,'pilot_check') as quota:

@@ -96,8 +96,8 @@ Relevant platform references:
   adherence as part of the mandatory `format_identity` gate, not a creative-score bonus.
 - Family changes clear platform, angle, brief, structure and pending clarification. Scoped
   callbacks reject another platform's choices and prevent skipping menu steps. `/cancel`
-  clears the conversation. Old format IDs and legacy angle callbacks still support existing
-  conversations outside the new menu flow; old callbacks cannot skip an active new flow.
+  clears the conversation. Old format IDs remain recognized. Legacy format/angle buttons migrate to the platform
+  chooser (or family menu if state is missing); they cannot skip platform/structure selection.
 - `/brief reset` clears advanced settings while retaining the menu's selected narrative.
   `/format` or `/start` changes that selection. An explicit valid brief structure can replace it.
 - Generation logs and `/version` include `structure_id`; reports separate structure cohorts.
@@ -150,3 +150,23 @@ This is not a token estimate or a real provider latency/cost measurement. Sampli
 and shared-host scheduling dominate differences below a few milliseconds. An intermediate
 full-suite run exceeded the existing timeout test's 1.5-second wall-time assertion (1.83s);
 the isolated revision suite and subsequent full suite passed without relaxing the assertion.
+
+## Workflow repair: platform-flow-v2
+
+The November 9 recording shows a freshly sent `/start` receiving the old four-button menu
+and the old welcome message. The PR #17 implementation on `main` produces five grouped
+families, so the recording does not show that implementation responding. The live deployed
+commit/entry point and any other pollers must be checked before choosing a deployment fix.
+
+This follow-up adds five visible steps, selected-platform labels and Back buttons. Old
+inline format/angle buttons now enter the new platform chooser rather than continuing the
+legacy angle → topic shortcut. If a restart lost an old angle button's context, it opens the
+family menu. Completed legacy generation contexts remain supported for compatibility.
+
+`/version` reports `workflow=platform-flow-v2`, bot username, family and menu stage in addition
+to commit/source/prompt fingerprints. Startup logs the same workflow and bot username after
+Telegram initialization. `create_application` is shared by the production entry point and
+registered-handler tests. Tests feed actual decoded Telegram updates into the real
+Application dispatcher, with only the Bot API HTTP transport replaced. They exercise every
+platform route, Back, old buttons, permissions and diagnostic identity without polling live
+Telegram or spending AI tokens. Full suite: 146 tests passed; offline evaluation: 39/39.

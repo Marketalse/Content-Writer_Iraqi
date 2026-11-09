@@ -6,6 +6,8 @@ No model call is needed to present or validate a choice.
 from dataclasses import dataclass
 from platform_intelligence import LEGACY_FORMATS, PROFILES
 
+WORKFLOW_VERSION = "platform-flow-v2"
+
 FAMILIES = {
     'story': ('📸 Story · ٣٠ ثانية', ('story', 'tiktok_story')),
     'carousel': ('🗂 Carousel', ('carousel', 'tiktok_photo_carousel', 'linkedin_carousel')),
@@ -109,3 +111,11 @@ def structure_prompt(fmt: str, structure_id: str = '') -> str:
               'Preserve the chosen Story intent, brevity, facts, safety and native section contract. '
               'Do not print framework names or turn stages into three numbered tips. '
               'Assess and preserve this selection during review and revision.')
+
+
+def family_for_format(fmt: str) -> str:
+    canonical = LEGACY_FORMATS.get(fmt, fmt)
+    for family, (_, formats) in FAMILIES.items():
+        if any(LEGACY_FORMATS.get(key, key) == canonical for key in formats):
+            return family
+    raise ValueError('unknown content family')
