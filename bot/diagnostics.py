@@ -25,6 +25,12 @@ NEXT_ACTIONS = {
     'missing_information': 'الموضوع يحتاج تفاصيل إضافية قبل الكتابة.',
 }
 
+# Fixed parser codes share a user message; diagnosis retains the exact safe code.
+for _code in ('invalid_review_json', 'duplicate_review_key', 'oversized_review',
+              'invalid_review_keys', 'invalid_review_dimensions', 'invalid_review_scores',
+              'invalid_review_gates', 'invalid_review_issues', 'invalid_review_section_issue'):
+    NEXT_ACTIONS[_code] = 'جواب المراجعة ما طابق صيغة التقييم المطلوبة. يحتاج صاحب البوت يراجع التشخيص.'
+
 
 def validation_checks(record: dict) -> list[str]:
     """Fixed tags for historical validator messages; never echo their text."""
@@ -88,7 +94,8 @@ def diagnostic_report(pid: str, actor: int) -> dict:
                     for key in ('commit', 'source', 'workflow')}
     out['stages'] = [{key: timing[key] for key in (
         'stage', 'status', 'elapsed_ms', 'output_chars', 'truncated', 'refused', 'usage_known',
-        'provider', 'model') if key in timing} for timing in record.get('stage_timings', [])]
+        'provider', 'model', 'stop_reason', 'thinking_blocks', 'structured_output', 'effort',
+        'input_tokens', 'output_tokens') if key in timing} for timing in record.get('stage_timings', [])]
     out['reviews'] = [{
         'attempt': review.get('attempt'), 'score': review.get('score'),
         'gates': {key: review.get('gates', {}).get(key, 'unknown') for key in GATES},
