@@ -87,25 +87,25 @@ class RegisteredWorkflowTests(unittest.IsolatedAsyncioTestCase):
     async def test_recording_start_now_reaches_five_family_menu_and_all_platform_routes(self):
         for family,(_,formats) in FAMILIES.items():
             menu = await self.send(text='/start')
-            self.assertIn('١/٥',menu['text'])
+            self.assertIn('1/5',menu['text'])
             self.assertEqual([row[0]['callback_data'] for row in menu['reply_markup']['inline_keyboard']],
                              ['fam:'+key for key in FAMILIES])
             menu = await self.send(callback='fam:'+family)
-            self.assertIn('٢/٥',menu['text'])
+            self.assertIn('2/5',menu['text'])
             callbacks=[row[0]['callback_data'] for row in menu['reply_markup']['inline_keyboard']]
             self.assertEqual(set(callbacks), {'fmt:'+key for key in formats}|{'fam:root'})
             for fmt in formats:
                 await self.send(callback='fam:'+family)
                 menu=await self.send(callback='fmt:'+fmt)
-                self.assertIn('٣/٥',menu['text'])
+                self.assertIn('3/5',menu['text'])
                 angle=menu['reply_markup']['inline_keyboard'][0][0]['callback_data']
                 menu=await self.send(callback=angle)
-                self.assertIn('٤/٥',menu['text'])
+                self.assertIn('4/5',menu['text'])
                 choices=[row[0]['callback_data'] for row in menu['reply_markup']['inline_keyboard']
                          if row[0]['callback_data'].startswith('str:')]
                 self.assertEqual(len(choices),3)
                 menu=await self.send(callback=choices[0])
-                self.assertIn('٥/٥',menu['text'])
+                self.assertIn('5/5',menu['text'])
                 self.assertEqual(self.state['menu_stage'],'topic')
                 self.assertEqual(self.state['format'],fmt)
         self.pipeline.assert_not_awaited()
@@ -113,19 +113,19 @@ class RegisteredWorkflowTests(unittest.IsolatedAsyncioTestCase):
     async def test_old_inline_buttons_enter_platform_chooser_instead_of_old_angle_flow(self):
         menu=await self.send(callback='fmt:story')
         self.assertEqual(self.state['menu_stage'],'platform')
-        self.assertIn('٢/٥',menu['text'])
+        self.assertIn('2/5',menu['text'])
         self.assertNotIn('format',self.state)
         await self.send(text='/cancel')
         self.assertFalse(self.state)
         menu=await self.send(callback='ang:tip')
-        self.assertIn('١/٥',menu['text'])
+        self.assertIn('1/5',menu['text'])
         self.assertFalse(self.state)
         # A saved angle callback can also be received after losing in-memory state.
         self.application.chat_data[123].update(format='story',angle='tip')
         menu=await self.send(callback='ang:tip')
         self.assertEqual(self.state['menu_stage'],'platform')
         self.assertNotIn('angle',self.state)
-        self.assertIn('٢/٥',menu['text'])
+        self.assertIn('2/5',menu['text'])
         self.pipeline.assert_not_awaited()
 
     async def test_back_buttons_preserve_only_upstream_selections(self):
