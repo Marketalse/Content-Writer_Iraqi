@@ -38,7 +38,7 @@ STRUCTURES = {
         ('exchange', '💬 سؤال → جواب → رجعة للجمهور', 'A supplied question, a direct short answer, and only if suitable a brief return question.'),
         ('participate', '🙋 موقف → دعوة للمشاركة', 'A relatable situation and a low-effort participation prompt; no invented trend or challenge.')),
     'instagram_reel': options(
-        ('demo', '🎬 نتيجة → توضيح → تفصيل', 'Show a supported result or clearly hypothetical target, demonstrate the process, highlight a useful detail.'),
+        ('demo', '🎬 نتيجة → توضيح → تفصيل', 'Show a supported result or clearly hypothetical target, demonstrate the process with one concrete worked illustration, then highlight a useful detail. Make the process visible through a supplied or explicitly hypothetical artifact (for example a payment tracker), with matching speech and visual actions. Generic advice followed by generic B-roll is not a demonstration. If no real result is supplied, label the illustration hypothetical; never invent customer outcomes or promise zero risk.'),
         ('reversal', '🔄 اعتقاد → مثال معاكس → تفسير', 'A recognizable assumption, a supported counterexample, explanation and implication.'),
         ('story', '🎭 موقف → عقبة → قرار → نتيجة', 'A supplied situation, obstacle, decision, supported outcome and lesson.')),
     'tiktok_video': options(
