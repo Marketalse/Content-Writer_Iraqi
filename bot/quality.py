@@ -200,6 +200,8 @@ class Checked:
     transport_normalized: bool = False
     failure_stage: str = ""
     failure_code: str = ""
+    reviewed_artifact_hash: str = ""
+    manual_review_ready: bool = False
 
 async def generate_checked(fmt: str, system: str, topic: str,
                            angle: str = "", notes: str = "") -> Checked:

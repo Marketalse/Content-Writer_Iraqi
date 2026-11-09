@@ -281,3 +281,50 @@ and 39/39 offline format fixtures passed. The mock orchestration benchmark (40 s
 selected narrative, 31.64/33.74 ms with a selected Story narrative. Mean input characters
 across calls were 18,721 and 19,825 respectively, including the schema. These numbers do
 not measure live schema compilation, provider thinking, latency, tokens or writing quality.
+
+## User-authorized manual-review drafts and constrained planning
+
+The live Reel `20261109103012-a578eac4` completed five calls and one revision. Both
+reviews passed every mandatory gate; its creative score rose from 7.000 to 7.133,
+remaining below 7.5. This is a valid quality result, not a reviewer transport error.
+The same record confirms an analyst truncation: 600 tokens, a thinking block and no
+text, followed by the existing neutral planning fallback.
+
+The user explicitly chose: **show a clearly labeled manual-review draft when all
+mandatory gates pass; keep the creative threshold unchanged.**
+
+`QUALITY_SHOW_REVIEW_DRAFTS=true` implements that delivery policy. The final assessment
+must pass every factual/safety/topic/voice/format gate. The only outstanding failures may
+be creative thresholds or non-improving creative revision, and a fingerprint binds that
+assessment to the exact current text and production plan. Any subsequent change invalidates
+eligibility. A pending revision without completed reassessment is not deliverable. Native
+structure, Story mode/intent and production validity are checked again at Telegram delivery.
+
+Eligible drafts retain `quality_status=needs_review` and the creative failure code. The log
+records `delivery_status=manual_review`; accepted and withheld output remain distinguishable.
+Every content chunk and associated production-plan chunk carries an explicit unapproved
+manual-review warning and score. The bot does not offer `/published` for these drafts, and
+the existing publication marker still accepts only engine-accepted records. Human feedback
+can be recorded without changing the engine approval state. No automatic publishing or new
+manual-approval command was added. Set `QUALITY_SHOW_REVIEW_DRAFTS=false` to restore withholding.
+
+The analyst now requests its own compact, stable JSON schema through the same provider
+transport as the reviewer. Required plan fields and short editorial beats fit the existing
+600-token allocation; framework/format/purpose permissions and essential-clarification
+validation remain local. `QUALITY_STRUCTURED_ANALYST=false` preserves explicit compatibility
+mode. Refused, empty, truncated or invalid plans still fall back neutrally without another
+AI call; the fixed fallback reason is recorded and available in `/diagnose`.
+
+Validation covers the reported Reel score vectors, all critical-gate failures/uncertainties,
+missing/stale reviews, changed production plans, budget-stopped reassessment, strict delivery
+mode, labeled long Telegram chunks, final structural gates, preserved publication state,
+planner schema/API arguments and one-question clarification. All **196 tests pass**, alongside
+39/39 offline format cases, compile and whitespace checks. The normal three-call path and
+five-call single-revision path retain their limits. Mock replay does not establish improved
+live creative scores or guaranteed planner completion; those need deployment verification.
+
+Updated mock benchmark: 40 samples/scenario, three calls, 10 ms simulated call delay;
+p50/p95 31.73/32.52 ms for default selection and 31.60/32.65 ms for selected Story
+narrative. Mean input characters across calls: 19,847 / 20,951 including planner schema.
+This measures local orchestration only; live schema cold-start latency, thinking use and
+creative quality remain to be checked after deployment.

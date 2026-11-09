@@ -215,3 +215,13 @@ Telegram's failure message offers an action based on the recorded category and t
 command instead of recommending blind repeated generation for every failure. These changes
 add observability only: no scoring thresholds, mandatory gates, model retries or call budgets
 were relaxed, and no cause for the two November 9 live failures is claimed without their records.
+
+## Below-threshold drafts (explicit user preference)
+
+A completed all-pass mandatory-gate assessment may now produce a clearly labeled **manual
+review draft** when creative quality remains below threshold. The score threshold remains
+7.5 and the record remains `needs_review`, with `delivery_status=manual_review`. Every copy
+chunk is labeled unapproved; missing/failed gates, invalid structure and unfinished review
+still withhold the output. No extra generation call is made to display the reviewed draft.
+`/diagnose` reports delivery status and the analyst's fixed fallback reason. The configured
+strict alternative is `QUALITY_SHOW_REVIEW_DRAFTS=false`.

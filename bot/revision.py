@@ -8,7 +8,8 @@ from dataclasses import dataclass, field
 from time import monotonic
 
 from llm import FAST_MODEL, LLMError, Result, generate
-from frameworks import analyst_system, load_library, parse_plan
+from frameworks import analyst_system, analyst_schema, load_library, parse_plan
+from delivery_policy import artifact_fingerprint, manual_review_eligible
 from briefs import Brief
 from format_contracts import adapt_contract
 from draft_transport import normalize_short_story
@@ -36,6 +37,8 @@ class Settings:
     review_tokens: int = 1800
     analyst: bool = True
     structured_review: bool = True
+    structured_analyst: bool = True
+    show_review_drafts: bool = True
 
     def __post_init__(self):
         limits = {
@@ -53,8 +56,9 @@ class Settings:
                     or not low <= value <= high
                     or (name in integer_fields and type(value) is not int)):
                 raise ValueError(f'invalid QUALITY_{name.upper()}')
-        if type(self.analyst) is not bool or type(self.structured_review) is not bool:
-            raise ValueError('analyst and structured_review must be boolean')
+        if any(type(getattr(self,name)) is not bool for name in
+               ('analyst','structured_review','structured_analyst','show_review_drafts')):
+            raise ValueError('quality feature settings must be boolean')
 
     @classmethod
     def from_env(cls):
@@ -200,13 +204,17 @@ async def execute(fmt: str, system: str, topic: str, angle: str,
         if cfg.analyst:
             analyst = await session.call('analyst', analyst_system(fmt, library, story_mode=brief.story_mode, story_intent=brief.story_intent),
                 payload(topic=topic, angle=angle, verified_facts=verified_facts, brief=brief.data()),
-                model=FAST_MODEL, max_tokens=600)
+                model=FAST_MODEL, max_tokens=600,
+                output_schema=analyst_schema(library) if cfg.structured_analyst else None)
             phase = 'analyst_parse'
             plan = parse_plan(analyst.text, fmt, library) if not (
                 analyst.refused or analyst.truncated) else parse_plan('', fmt, library)
             notes = plan.writer_notes(library)
             checked.planning = {'purpose': plan.purpose, 'framework': plan.framework,
-                                'fallback': plan.fallback}
+                                'fallback': plan.fallback,
+                                'fallback_reason': ('refused' if analyst.refused else
+                                    'truncated' if analyst.truncated else 'empty' if not analyst.text else
+                                    'invalid_or_not_permitted' if plan.fallback else '')}
             if plan.clarification_question:
                 checked.attempts = 0
                 checked.provider = analyst.provider
@@ -283,6 +291,7 @@ async def execute(fmt: str, system: str, topic: str, angle: str,
                 break
             phase = 'review_parse'
             review = parse_review(response.text, set(parts))
+            checked.reviewed_artifact_hash = artifact_fingerprint(checked)
             score = review.score(fmt, brief.story_intent)
             history.append({'attempt': revision + 1, 'score': round(score, 3),
                             'scores': review.scores, 'gates': review.gates, 'issues': list(review.issues)})
@@ -354,4 +363,5 @@ async def execute(fmt: str, system: str, topic: str, angle: str,
     finally:
         checked.calls = session.calls
         checked.review_history = history
+        checked.manual_review_ready = cfg.show_review_drafts and manual_review_eligible(checked)
     return checked, session, notes
