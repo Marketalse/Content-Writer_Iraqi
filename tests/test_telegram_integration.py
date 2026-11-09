@@ -96,7 +96,9 @@ class TelegramTests(unittest.IsolatedAsyncioTestCase):
         ctx = self.context()
         with patch.object(telegram_bot, '_allowed_chat', return_value=True):
             await telegram_bot.on_format_chosen(upd, ctx)
-            self.assertEqual(ctx.chat_data['format'], 'reel')
+            self.assertNotIn('format',ctx.chat_data)
+            self.assertEqual(ctx.chat_data['family'],'video')
+            self.assertEqual(ctx.chat_data['menu_stage'],'platform')
             self.assertNotIn('angle', ctx.chat_data)
             await telegram_bot.cmd_cancel(upd, ctx)
             self.assertEqual(ctx.chat_data, {})

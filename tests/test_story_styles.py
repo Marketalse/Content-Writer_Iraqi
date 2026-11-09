@@ -132,19 +132,19 @@ class StoryIntentPipelineTests(unittest.IsolatedAsyncioTestCase):
 class StoryMenuTests(unittest.IsolatedAsyncioTestCase):
     async def test_story_button_opens_intent_menu_before_topic(self):
         upd, _ = update()
-        ctx = SimpleNamespace(chat_data={})
+        ctx = SimpleNamespace(chat_data={'family':'story','menu_stage':'platform'})
         with patch.object(app, '_allowed_chat', return_value=True):
             await app.on_format_chosen(upd, ctx)
         call = upd.callback_query.edit_message_text.call_args
         self.assertIn('٣٠ ثانية', call.args[0])
         callbacks = [button.callback_data for row in call.kwargs['reply_markup'].inline_keyboard for button in row]
-        self.assertEqual(set(callbacks), {'ang:' + key for key in STORY_ANGLE_KEYS})
+        self.assertEqual(set(callbacks), {'pick:story:' + key for key in STORY_ANGLE_KEYS} | {'back:angle'})
         self.assertNotIn('angle', ctx.chat_data)
 
     async def test_style_selection_sets_purpose_and_asks_for_topic_or_question(self):
         for key, intent in STORY_ANGLE_KEYS.items():
-            upd, _ = update('ang:' + key)
-            ctx = SimpleNamespace(chat_data={'format': 'story', 'pending_clarification': {'topic':'old'}})
+            upd, _ = update('pick:story:' + key)
+            ctx = SimpleNamespace(chat_data={'family':'story','menu_stage':'angle','format': 'story', 'pending_clarification': {'topic':'old'}})
             with patch.object(app, '_allowed_chat', return_value=True):
                 await app.on_angle_chosen(upd, ctx)
             brief = ctx.chat_data['content_brief']
@@ -152,6 +152,10 @@ class StoryMenuTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(brief.duration_seconds, 30)
             self.assertEqual(brief.purpose, STORY_STYLES[intent]['purpose'])
             self.assertNotIn('pending_clarification', ctx.chat_data)
+            self.assertEqual(ctx.chat_data['menu_stage'],'structure')
+            upd.callback_query.data='str:story:insight'
+            with patch.object(app, '_allowed_chat', return_value=True):
+                await app.on_structure_chosen(upd,ctx)
             self.assertIn(STORY_STYLES[intent]['topic_prompt'], upd.callback_query.edit_message_text.call_args.args[0])
 
     async def test_stale_story_button_is_ignored_for_reel(self):
@@ -162,12 +166,14 @@ class StoryMenuTests(unittest.IsolatedAsyncioTestCase):
         self.assertNotIn('angle', ctx.chat_data)
         upd.callback_query.edit_message_text.assert_not_awaited()
 
-    async def test_legacy_angle_callback_still_works(self):
+    async def test_legacy_angle_callback_migrates_to_platform_selection(self):
         upd, _ = update('ang:tip')
         ctx = SimpleNamespace(chat_data={'format': 'story'})
         with patch.object(app, '_allowed_chat', return_value=True):
             await app.on_angle_chosen(upd, ctx)
-        self.assertEqual(ctx.chat_data['angle'], 'tip')
+        self.assertNotIn('angle',ctx.chat_data)
+        self.assertEqual(ctx.chat_data['family'],'story')
+        self.assertEqual(ctx.chat_data['menu_stage'],'platform')
 
     async def test_selected_style_reaches_pipeline_and_plain_copy_delivery(self):
         upd, status = update()
@@ -194,9 +200,12 @@ class FullStoryFlowTests(unittest.IsolatedAsyncioTestCase):
         model = AsyncMock(side_effect=[analyst, Result('STORY: ' + COPIES['educational'], 'mock'), assessment(cta=0)])
         with patch.object(app, '_allowed_chat', return_value=True), patch.object(app, 'pilot_check', return_value=(True,'')), \
              patch.object(app, 'log_post', return_value='id'), patch('revision.generate', model):
-            await app.on_format_chosen(upd, ctx)
-            upd.callback_query.data = 'ang:story_educational'
+            await app.on_format_chosen(upd, ctx)  # old format button migrates to platform
+            await app.on_format_chosen(upd, ctx)  # explicit Instagram platform choice
+            upd.callback_query.data = 'pick:story:story_educational'
             await app.on_angle_chosen(upd, ctx)
+            upd.callback_query.data='str:story:insight'
+            await app.on_structure_chosen(upd,ctx)
             await app.on_text(upd, ctx)
         self.assertEqual(model.await_count, 3)
         self.assertIn(COPIES['educational'], [c.args[0] for c in upd.message.reply_text.call_args_list])
