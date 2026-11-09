@@ -16,7 +16,7 @@ from source_knowledge import lesson_prompt
 from production import PRODUCTION_INSTRUCTION, unpack_draft, validate_plan
 from platform_intelligence import LEGACY_FORMATS, get_profile
 from quality import Checked, check, split_owner_note
-from reviewer import review_weights, parse_review, reviewer_system
+from reviewer import review_weights, parse_review, reviewer_system, review_schema, ReviewResponseError
 
 HEADER = re.compile(r'(?m)^(?:([A-Z][A-Z ]*(?: \d+)?)\s*:[ \t]*|##[ \t]+([^\n]+)\n?)')
 
@@ -35,6 +35,7 @@ class Settings:
     writer_tokens: int = 4000
     review_tokens: int = 1800
     analyst: bool = True
+    structured_review: bool = True
 
     def __post_init__(self):
         limits = {
@@ -52,8 +53,8 @@ class Settings:
                     or not low <= value <= high
                     or (name in integer_fields and type(value) is not int)):
                 raise ValueError(f'invalid QUALITY_{name.upper()}')
-        if type(self.analyst) is not bool:
-            raise ValueError('analyst must be boolean')
+        if type(self.analyst) is not bool or type(self.structured_review) is not bool:
+            raise ValueError('analyst and structured_review must be boolean')
 
     @classmethod
     def from_env(cls):
@@ -120,29 +121,38 @@ class Session:
     reserved_output: int = 0
     timings: list[dict] = field(default_factory=list)
 
-    async def call(self, stage: str, system: str, user: str, *, model=None, max_tokens=4000):
+    async def call(self, stage: str, system: str, user: str, *, model=None, max_tokens=4000, output_schema=None):
         cfg = self.settings
+        input_chars = len(system) + len(user) + (len(json.dumps(output_schema)) if output_schema is not None else 0)
         remaining = cfg.timeout_seconds - (monotonic() - self.started)
         if (len(self.timings) >= cfg.max_calls or remaining <= 0
                 or sum(c.cost_usd for c in self.calls) >= cfg.max_cost_usd
                 or self.reserved_output + max_tokens > cfg.max_total_output_tokens
-                or len(system) + len(user) > cfg.max_input_chars):
+                or input_chars > cfg.max_input_chars):
             raise LimitReached('resource_limit')
         if any(not c.usage_known for c in self.calls):
             raise LimitReached('unknown_pricing')
         self.reserved_output += max_tokens
         timing = {'stage': stage, 'elapsed_ms': 0, 'status': 'error',
-                  'input_chars': len(system) + len(user), 'output_token_limit': max_tokens}
+                  'input_chars': input_chars, 'output_token_limit': max_tokens}
         self.timings.append(timing)
         start = monotonic()
+        options = {}
+        if output_schema is not None:
+            options['output_schema'] = output_schema
+        if stage in ('analyst', 'review') and model == 'claude-haiku-5-5':
+            options['effort'] = 'low'
         try:
             result = await asyncio.wait_for(
-                generate(system, user, model=model, max_tokens=max_tokens),
+                generate(system, user, model=model, max_tokens=max_tokens, **options),
                 timeout=min(remaining, cfg.call_timeout_seconds))
             self.calls.append(result)
             timing.update(status='ok', provider=result.provider, model=result.model,
                           output_chars=len(result.text), truncated=result.truncated,
-                          refused=result.refused, usage_known=result.usage_known)
+                          refused=result.refused, usage_known=result.usage_known,
+                          stop_reason=result.stop_reason, thinking_blocks=result.thinking_blocks,
+                          structured_output=result.structured_output, effort=result.effort,
+                          input_tokens=result.input_tokens, output_tokens=result.output_tokens)
             return result
         finally:
             timing['elapsed_ms'] = round((monotonic() - start) * 1000, 2)
@@ -263,7 +273,8 @@ async def execute(fmt: str, system: str, topic: str, angle: str,
                 topic=topic, angle=angle, verified_facts=verified_facts,
                 original_draft=original, current_draft=checked.text, section_names=list(parts),
                 brief=brief.data(), production_plan=checked.production_plan),
-                model=FAST_MODEL, max_tokens=cfg.review_tokens)
+                model=FAST_MODEL, max_tokens=cfg.review_tokens,
+                output_schema=review_schema() if cfg.structured_review else None)
             if response.refused or response.truncated or not response.text:
                 checked.failure_stage = phase
                 checked.failure_code = ('review_refused' if response.refused else
@@ -336,7 +347,8 @@ async def execute(fmt: str, system: str, topic: str, angle: str,
         checked.failure_code = ('provider_timeout' if isinstance(exc, TimeoutError) else
                                 'provider_error' if isinstance(exc, LLMError) else
                                 ('unknown_pricing' if str(exc) == 'unknown_pricing' else 'resource_limit')
-                                if isinstance(exc, LimitReached) else 'invalid_response')
+                                if isinstance(exc, LimitReached) else
+                                exc.code if isinstance(exc, ReviewResponseError) else 'invalid_response')
         checked.failures = ['quality assessment incomplete: ' + type(exc).__name__]
         checked.status = 'needs_review'
     finally:

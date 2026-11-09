@@ -230,3 +230,54 @@ See [framework configuration, clarification flow and validation](FRAMEWORKS.md).
 Frameworks are optional internal planning tools, never shared output templates.
 The analyst cap is now 600 tokens. A `needs_clarification` result asks one essential-fact
 question before drafting; its usage affects dollar quota but not post quota.
+
+## Reliable review responses (November 2026)
+
+The live attempt `20261109093637-f430fe9b` completed analyst, writer and review calls,
+passed native validation, then ended with no saved assessment. Its pre-diagnostics record
+cannot distinguish an empty, refused, truncated or malformed review; it does establish
+that no valid review was available. No creative or mandatory gate failure can be inferred.
+
+Anthropic documents [Haiku 5.5 adaptive thinking defaults](https://platform.claude.com/docs/en/models/haiku-5-5/migration-guide):
+thinking can consume a small output budget before text appears. The project's analyst and
+review budgets were small and had no explicit effort control. The provider also documents
+[structured JSON responses](https://platform.claude.com/docs/en/build-with-claude/structured-outputs),
+including exceptions for refusal and token limits. These support the implementation below;
+they do not prove which exception happened in the historical attempt.
+
+- Request `output_config.effort=low` for analyst/review calls using the documented Haiku 5.5
+  model. Writer/revision calls receive no new effort override.
+- Request a stable JSON schema for reviewer scores, every mandatory gate, and weak-section
+  feedback on this project's documented Claude Haiku/Sonnet 5.5 API models. The schema
+  travels through SDK `extra_body` for compatibility with older SDK argument signatures.
+  Unknown model overrides do not receive speculative provider options.
+- Keep all local validation: finite scores 0–10, every gate present with a valid value,
+  bounded issues and exact section names. Numeric/string bounds unsupported by the API's
+  schema subset remain local. Duplicate keys are rejected rather than allowing a later
+  `pass` to overwrite an earlier `fail`.
+- Keep review feedback compact and the schema stable across topics; this avoids generating
+  a new provider schema for every article heading or slide count. Schema characters are
+  included in the per-call input budget. API schema compilation can add first-use latency;
+  mocked tests do not measure this or prove real editorial quality.
+- Keep the configured 1,800-token review default, existing total/cost/time limits, call
+  count and revision bounds. No recovery call, hidden retry, fence-stripping acceptance,
+  missing-gate defaults or provider-error fallback without the schema was added.
+- `QUALITY_STRUCTURED_REVIEW=true` is the default. A deliberate compatibility override
+  to `false` changes only the provider request; strict local review validation stays on.
+- Store stop reason, thinking-block count, actual structured-output/effort flags and
+  per-stage token counts, without storing thinking content. Specific safe parser codes
+  identify invalid JSON, review fields, scores, gates, issues and duplicate keys.
+
+Validation includes schema and SDK request checks, synthetic thinking-only truncation,
+a real pipeline-to-SDK-boundary replay with three successful logical calls, explicit
+compatibility mode, refusal/budget regression cases and local mandatory-gate checks.
+Live verification remains necessary: after deploying, generate the same Story once and
+inspect the new `/diagnose ID` output if it fails. The older diagnostic record cannot gain
+new stop-reason fields retroactively.
+
+Verification for this update: **180 tests passed**, compile and whitespace checks passed,
+and 39/39 offline format fixtures passed. The mock orchestration benchmark (40 samples,
+10 ms synthetic transport per call) retained three calls: p50/p95 31.82/34.06 ms without a
+selected narrative, 31.64/33.74 ms with a selected Story narrative. Mean input characters
+across calls were 18,721 and 19,825 respectively, including the schema. These numbers do
+not measure live schema compilation, provider thinking, latency, tokens or writing quality.

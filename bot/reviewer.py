@@ -75,29 +75,68 @@ class Review:
                 and all(self.scores[k] >= floor for k, weight in weights.items() if weight))
 
 
+class ReviewResponseError(ValueError):
+    """Fixed local error code, never raw reviewer content."""
+    def __init__(self, code: str):
+        self.code = code
+        super().__init__(code)
+
+
+def review_schema() -> dict:
+    """Stable API-compatible schema; local parser still enforces ranges and sections.
+
+    Numeric/string bounds are intentionally local: the provider supports only a
+    subset of JSON Schema. Do not compile a new schema per draft/section list.
+    """
+    def object_schema(properties):
+        return {'type':'object', 'properties':properties, 'required':list(properties),
+                'additionalProperties':False}
+    return object_schema({
+        'scores': object_schema({key:{'type':'number'} for key in DIMENSIONS}),
+        'gates': object_schema({key:{'type':'string','enum':['pass','fail','uncertain']} for key in GATES}),
+        'issues': {'type':'array', 'description':'Only actionable weak sections; at most 3 concise issues.',
+                   'items':object_schema({
+                       'section':{'type':'string','description':'Exact section name from section_names.'},
+                       'reason':{'type':'string','description':'One concise defect, at most 20 words.'},
+                       'instruction':{'type':'string','description':'One concise fix, at most 25 words.'}})},
+    })
+
+
+def _unique_review_keys(pairs):
+    data = {}
+    for key, value in pairs:
+        if key in data:
+            raise ReviewResponseError('duplicate_review_key')
+        data[key] = value
+    return data
+
+
 def parse_review(text: str, section_names: set[str]) -> Review:
     """Strict, bounded contract: missing gates and malformed output fail closed."""
     if len(text) > 16000:
-        raise ValueError('oversized review')
-    data = json.loads(text)
+        raise ReviewResponseError('oversized_review')
+    try:
+        data = json.loads(text, object_pairs_hook=_unique_review_keys)
+    except json.JSONDecodeError as exc:
+        raise ReviewResponseError('invalid_review_json') from exc
     if not isinstance(data, dict) or set(data) != {'scores', 'gates', 'issues'}:
-        raise ValueError('review keys')
+        raise ReviewResponseError('invalid_review_keys')
     scores, gates, issues = data['scores'], data['gates'], data['issues']
     if not isinstance(scores, dict) or set(scores) != set(DIMENSIONS):
-        raise ValueError('score dimensions')
+        raise ReviewResponseError('invalid_review_dimensions')
     if any(type(v) not in (int, float) or not math.isfinite(v) or not 0 <= v <= 10
            for v in scores.values()):
-        raise ValueError('scores must be finite numbers from 0 to 10')
+        raise ReviewResponseError('invalid_review_scores')
     if (not isinstance(gates, dict) or set(gates) != set(GATES)
             or any(v not in ('pass', 'fail', 'uncertain') for v in gates.values())):
-        raise ValueError('mandatory gates')
+        raise ReviewResponseError('invalid_review_gates')
     if not isinstance(issues, list) or len(issues) > 12:
-        raise ValueError('issues')
+        raise ReviewResponseError('invalid_review_issues')
     for issue in issues:
         if (not isinstance(issue, dict) or set(issue) != {'section', 'reason', 'instruction'}
                 or any(not isinstance(v, str) or not v.strip() or len(v) > 600 for v in issue.values())
                 or issue['section'] not in section_names):
-            raise ValueError('invalid section issue')
+            raise ReviewResponseError('invalid_review_section_issue')
     return Review(scores, gates, tuple(issues))
 
 
@@ -160,6 +199,9 @@ Use pass/fail/uncertain for EVERY gate. Uncertainty blocks acceptance.
 Identify only weak sections with actionable reasons and instructions; use supplied exact
 section names. Even when a gate fails, include the relevant section issue where possible.
 Never assert official algorithm behavior from editorial heuristics.
+Keep the assessment compact: no prose outside JSON, no explanation per score or gate.
+Return issues=[] when there are no actionable defects. Otherwise at most 3 issues, each reason
+at most 20 words and instruction at most 25 words. Do not copy the draft or source text.
 Return ONLY JSON, no fences, exactly:
 {{"scores": {{{', '.join(f'"{d}": 8' for d in DIMENSIONS)}}},
 "gates": {{{', '.join(f'"{g}": "pass"' for g in GATES)}}},

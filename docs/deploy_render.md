@@ -91,7 +91,7 @@ After deploying the diagnostic-command update, the authorized chat can send:
 
 ```text
 /diagnose 20261109093608-589a503b
-/diagnose 20261109093637-f430ef9b
+/diagnose 20261109093637-f430fe9b
 ```
 
 These are the two review IDs from the November 9 report. They are looked up on the existing

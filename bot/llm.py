@@ -28,6 +28,9 @@ FAST_MODEL = os.getenv("ANTHROPIC_FAST_MODEL", "claude-haiku-5-5")
 NOUS_MODEL = os.getenv("NOUS_MODEL", "anthropic/claude-sonnet-5-5")
 NOUS_BASE_URL = os.getenv("NOUS_BASE_URL", "https://inference-api.nousresearch.com/v1")
 MAX_TOKENS = 4000
+# Documented Claude API structured-output models used by this project. Unknown
+# model overrides retain strict local validation without speculative API options.
+STRUCTURED_MODELS = frozenset(('claude-haiku-5-5', 'claude-sonnet-5-5'))
 
 # USD per million tokens, Anthropic list prices. Cache read = 0.1x input, cache write = 1.25x input.
 PRICES = {
@@ -53,6 +56,10 @@ class Result:
     cost_usd: float = 0.0
     truncated: bool = False
     usage_known: bool = True
+    stop_reason: str = ''
+    thinking_blocks: int = 0
+    structured_output: bool = False
+    effort: str = ''
 
 
 def estimate_cost(model: str, inp: int, out: int, cache_read: int, cache_write: int) -> float:
@@ -79,15 +86,26 @@ def _should_fallback(exc: Exception) -> bool:
 
 
 async def generate(system: str, user: str, model: str | None = None,
-                   max_tokens: int = MAX_TOKENS) -> Result:
+                   max_tokens: int = MAX_TOKENS, *, output_schema: dict | None = None,
+                   effort: str | None = None) -> Result:
     """Return the model's answer. Falls back to Nous Portal only on allowed errors."""
     model = model or WRITER_MODEL
+    if effort not in (None, 'low', 'medium', 'high'):
+        raise ValueError('invalid model effort')
+    output_config = {}
+    if output_schema is not None and model in STRUCTURED_MODELS:
+        output_config['format'] = {'type':'json_schema', 'schema':output_schema}
+    if effort is not None and model == 'claude-haiku-5-5':
+        output_config['effort'] = effort
+    # extra_body keeps compatibility with SDK versions predating output_config.
+    options = {'extra_body':{'output_config':output_config}} if output_config else {}
     try:
         resp = await _anthropic.messages.create(
             model=model,
             max_tokens=max_tokens,
             system=[{"type": "text", "text": system, "cache_control": {"type": "ephemeral"}}],
             messages=[{"role": "user", "content": user}],
+            **options,
         )
         u = resp.usage
         cache_read = u.cache_read_input_tokens or 0
@@ -95,7 +113,10 @@ async def generate(system: str, user: str, model: str | None = None,
         cost = estimate_cost(model, u.input_tokens, u.output_tokens, cache_read, cache_write)
         log.info("anthropic model=%s in=%s out=%s cache_read=%s cache_write=%s cost=$%.5f",
                  model, u.input_tokens, u.output_tokens, cache_read, cache_write, cost)
-        stats = dict(truncated=resp.stop_reason == "max_tokens", usage_known=model in PRICES, model=model, input_tokens=u.input_tokens, output_tokens=u.output_tokens,
+        stats = dict(stop_reason=resp.stop_reason,
+                     thinking_blocks=sum(b.type in ('thinking', 'redacted_thinking') for b in resp.content),
+                     structured_output='format' in output_config, effort=output_config.get('effort',''),
+                     truncated=resp.stop_reason == "max_tokens", usage_known=model in PRICES, model=model, input_tokens=u.input_tokens, output_tokens=u.output_tokens,
                      cache_read=cache_read, cache_write=cache_write, cost_usd=cost)
         if resp.stop_reason == "refusal":
             return Result("", "anthropic", refused=True, **stats)
@@ -118,7 +139,7 @@ async def generate(system: str, user: str, model: str | None = None,
         raise LLMError("Both providers unavailable") from exc
     text = (r.choices[0].message.content or "").strip()
     usage = r.usage
-    return Result(text, "nous", model=NOUS_MODEL,
+    return Result(text, "nous", model=NOUS_MODEL, stop_reason=r.choices[0].finish_reason,
                   truncated=r.choices[0].finish_reason == "length",
                   input_tokens=usage.prompt_tokens if usage else 0,
                   output_tokens=usage.completion_tokens if usage else 0,
