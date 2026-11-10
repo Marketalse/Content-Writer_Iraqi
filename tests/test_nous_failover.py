@@ -50,6 +50,26 @@ class NousFailoverTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(api.call_args_list[0].kwargs['reasoning_effort'], 'low')
         self.assertEqual(api.call_args_list[0].kwargs['model'], 'anthropic/claude-sonnet-5.5')
 
+    async def test_malformed_nous_tiktok_writer_is_repaired_with_native_schema(self):
+        from test_revision import draft
+        from draft_transport import writer_schema, writer_fields
+        from revision import sections
+        good = draft('tiktok_video')
+        for malformed in ('**hook:** بداية\n**cta:** شنو رأيك؟',
+                          'CTA: شنو رأيك؟\nHOOK: بداية\nSCRIPT: شرح\nVISUALS: لقطة',
+                          '{"HOOK": "بداية", "SCRIPT": 42}'):
+            api = AsyncMock(side_effect=[response(malformed),
+                response(json.dumps(sections(good), ensure_ascii=False)), response(REVIEW)])
+            with patch.object(llm._anthropic.messages, 'create', AsyncMock(side_effect=rejection())), \
+                 patch.object(llm, '_nous', NS(chat=NS(completions=NS(create=api)))):
+                run = await run_pipeline('tiktok_video', 'voice', 'التسويق', 'pov',
+                                         settings=Settings(analyst=False))
+            self.assertEqual(run.checked.status, 'accepted', run.checked.failures)
+            self.assertEqual([t['stage'] for t in run.timings], ['writer', 'revision', 'review'])
+            self.assertEqual(api.call_args_list[0].kwargs['response_format']['json_schema']['schema'],
+                             writer_schema(writer_fields('tiktok_video')))
+            self.assertEqual(run.checked.text, good)
+
     async def test_unknown_fallback_pricing_still_blocks_further_calls(self):
         primary = AsyncMock(side_effect=rejection())
         api = AsyncMock(return_value=response(routed('write').text))

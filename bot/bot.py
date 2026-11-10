@@ -589,6 +589,7 @@ async def on_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "attempts": checked.attempts, "failures": checked.failures,
         "quality_status": checked.status, "review_history": checked.review_history,
         "transport_normalized": checked.transport_normalized,
+        "structure_details": checked.structure_details,
         "failure_stage": checked.failure_stage, "failure_code": checked.failure_code,
         "manual_review_ready": manual_draft,
         "delivery_status": ("approved" if checked.status == "accepted" else
@@ -628,6 +629,7 @@ async def on_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     checked.failure_stage or 'unknown', checked.failure_code or 'unknown')
         await status.edit_text(failure_message({
             'failure_code': checked.failure_code, 'failures': checked.failures,
+            'structure_details': checked.structure_details,
             'review_history': checked.review_history, 'stage_timings': run.timings}, pid))
         return
 

@@ -135,7 +135,7 @@ class PipelineProtocolTests(unittest.IsolatedAsyncioTestCase):
                     return sdk_response(reason='max_tokens',thinking=True)
                 text=assessment()
             else:
-                self.assertNotIn('extra_body',kwargs)
+                self.assertIn('format', kwargs['extra_body']['output_config'])
                 text=STORY
             return sdk_response(text)
         api=AsyncMock(side_effect=provider)
