@@ -40,8 +40,48 @@ PRICES = {
 }
 
 
+PROVIDER_ERROR_CODES = frozenset({
+    'provider_error', 'provider_credit_exhausted', 'provider_billing_required',
+    'provider_authentication', 'provider_permission', 'provider_model_unavailable',
+    'provider_rate_limit', 'provider_request_rejected', 'provider_connection',
+    'provider_timeout', 'provider_unavailable',
+})
+
+
 class LLMError(Exception):
-    """Raised when no provider could produce an answer."""
+    """Fixed diagnostic metadata; never retain provider error bodies in user records."""
+    def __init__(self, message='Provider request failed', *, code='provider_error',
+                 provider='unknown', http_status=None):
+        super().__init__(message)
+        self.code = code if code in PROVIDER_ERROR_CODES else 'provider_error'
+        self.provider = provider if provider in ('anthropic', 'nous') else 'unknown'
+        self.http_status = http_status if type(http_status) is int and 100 <= http_status <= 599 else None
+
+
+def provider_failure(exc, provider):
+    """Recognize explicit billing signals privately; export only fixed safe codes."""
+    status = getattr(exc, 'status_code', None)
+    body = getattr(exc, 'body', None)
+    error = body.get('error', body) if isinstance(body, dict) else {}
+    error = error if isinstance(error, dict) else {}
+    message = error.get('message', '')
+    message = message.casefold()[:4000] if isinstance(message, str) else ''
+    reason = error.get('code') or error.get('type')
+    credit = reason in ('insufficient_quota', 'insufficient_credit', 'insufficient_credits', 'credit_balance_too_low') or message.startswith((
+        'your credit balance is too low', 'insufficient credits', 'insufficient credit',
+        'your account has insufficient credits'))
+    if status in (400, 402, 403, 429) and credit:
+        code = 'provider_credit_exhausted'
+    elif isinstance(exc, (anthropic.APITimeoutError, openai.APITimeoutError)):
+        code = 'provider_timeout'
+    elif status is None:
+        code = 'provider_connection'
+    else:
+        code = {400: 'provider_request_rejected', 401: 'provider_authentication',
+                402: 'provider_billing_required', 403: 'provider_permission',
+                404: 'provider_model_unavailable', 429: 'provider_rate_limit'}.get(
+                    status, 'provider_request_rejected' if status < 500 else 'provider_unavailable')
+    return LLMError(code=code, provider=provider, http_status=status)
 
 
 @dataclass
@@ -164,14 +204,13 @@ async def generate(system: str, user: str, model: str | None = None,
         text = "".join(b.text for b in resp.content if b.type == "text").strip()
         return Result(text, "anthropic", **stats)
     except (anthropic.APIConnectionError, anthropic.APIStatusError) as exc:
-        if not _should_fallback(exc):
-            raise LLMError("Anthropic request rejected") from exc
-        if web_search:
-            raise LLMError("Web research unavailable") from exc
+        failure = provider_failure(exc, 'anthropic')
+        if failure.code == 'provider_credit_exhausted' or not _should_fallback(exc) or web_search:
+            raise failure from exc
         log.warning("Anthropic unavailable; trying configured fallback")
 
     if _nous is None:
-        raise LLMError("Anthropic is unavailable and NOUS_API_KEY is not set")
+        raise failure
     try:
         r = await _nous.chat.completions.create(
             model=NOUS_MODEL,
@@ -179,7 +218,7 @@ async def generate(system: str, user: str, model: str | None = None,
             messages=[{"role": "system", "content": system}, {"role": "user", "content": user}],
         )
     except (openai.APIConnectionError, openai.APIStatusError) as exc:
-        raise LLMError("Both providers unavailable") from exc
+        raise provider_failure(exc, 'nous') from exc
     text = (r.choices[0].message.content or "").strip()
     usage = r.usage
     return Result(text, "nous", model=NOUS_MODEL, stop_reason=r.choices[0].finish_reason,

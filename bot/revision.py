@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 from dataclasses import dataclass, field
 from time import monotonic
 
-from llm import FAST_MODEL, LLMError, Result, generate
+from llm import FAST_MODEL, WRITER_MODEL, LLMError, Result, generate
 from frameworks import analyst_system, analyst_schema, load_library, parse_plan
 from delivery_policy import artifact_fingerprint, manual_review_eligible
 from briefs import Brief
@@ -171,6 +171,10 @@ class Session:
                 timing.update(search_requests=result.search_requests, source_count=len(result.sources),
                               search_failed=result.search_failed)
             return result
+        except LLMError as exc:
+            timing.update(error_code=exc.code, provider=exc.provider,
+                          model=model or WRITER_MODEL, http_status=exc.http_status)
+            raise
         finally:
             timing['elapsed_ms'] = round((monotonic() - start) * 1000, 2)
 
@@ -473,6 +477,9 @@ async def execute(fmt: str, system: str, topic: str, angle: str,
             checked.research['status'] = 'unavailable'
         if phase == 'facilitator' and not isinstance(exc, LimitReached):
             checked.failure_code = 'routing_unavailable'
+        # Provider-supplied billing/auth/request failures take precedence over stage wrappers.
+        if isinstance(exc, LLMError) and exc.code != 'provider_error':
+            checked.failure_code = exc.code
         checked.status = 'needs_review'
     finally:
         checked.calls = session.calls

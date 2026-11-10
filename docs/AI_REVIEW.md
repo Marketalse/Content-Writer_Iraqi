@@ -89,3 +89,22 @@ They are not an always-on production monitor and do not prove deployment.
 Live Anthropic/search/Telegram checks were not run. Changes remain local and uncommitted;
 no deployment, paid request or real Telegram message was performed. Batch reservations
 do not guarantee an exact provider bill beyond the configured observed spending stop.
+
+## Provider credit and error reporting — 10 November 2026
+
+The live record `20261110130105-adb94522` confirms deployment of `c8b69c0`, but
+records only a facilitator error. It does not preserve the underlying provider reason,
+so insufficient credit is a hypothesis for that historical attempt, not a confirmed cause.
+
+Provider errors now carry fixed, sanitized codes plus provider and HTTP status. Explicit
+low-credit / account-quota signals produce `provider_credit_exhausted`, survive stage
+wrappers, and explain the billing problem in the Telegram warning and `/diagnose`.
+Authentication, permission, model access, rate limits, connection failures and invalid
+requests have different messages. Raw SDK response text, credentials and prompts are
+not copied into diagnostic records. Confirmed credit failures do not retry or spend
+against a fallback provider. Generic 400/429 responses do not imply an empty balance.
+
+Validation uses synthetic SDK rejections and end-to-end pipeline error paths. No paid
+generation was invoked to diagnose balance. Free read-only model metadata requests using
+an existing Anthropic-scoped binding succeeded; that is not a balance check and does not
+establish the state of the different account/key configured on Render.
