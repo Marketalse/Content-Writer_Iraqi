@@ -40,7 +40,8 @@ from diagnostics import diagnostic_report, failure_message
 from delivery_policy import manual_review_eligible, manual_review_warning
 from pipeline import run_pipeline  # noqa: E402
 from build_info import build_info  # noqa: E402
-from quality import check, render_story_copy  # noqa: E402
+from output_layout import render_creator_copy
+from quality import check  # noqa: E402
 from briefs import Brief, parse_brief_input, render_brief  # noqa: E402
 from production import validate_plan, render_plan  # noqa: E402
 from editorial import feedback, record_result, report, approve_example, remove_example, register_experiment  # noqa: E402
@@ -634,7 +635,7 @@ async def on_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     await status.delete()
-    delivered = render_story_copy(checked.text) if is_story(fmt) and brief.story_mode == "moment" else checked.text
+    delivered = render_creator_copy(checked.text, fmt, brief.story_mode)
     warning = manual_review_warning(checked) + "\n\n" if manual_draft else ""
     chunk_size = TELEGRAM_LIMIT - len(warning.encode('utf-16-le')) // 2
     for part in _chunks(delivered, size=chunk_size):

@@ -267,7 +267,8 @@ class LearningTelegramTests(unittest.IsolatedAsyncioTestCase):
              patch.object(telegram_bot, 'log_post', return_value='id'):
             await telegram_bot.on_text(upd, ctx)
         sent = [call.args[0] for call in upd.message.reply_text.call_args_list]
-        self.assertIn(VIDEO, sent)
+        from output_layout import render_creator_copy
+        self.assertIn(render_creator_copy(VIDEO, "reel"), sent)
         self.assertTrue(any('خطة التصوير' in part for part in sent if part != VIDEO))
 
     async def test_new_commands_preserve_access_control(self):
