@@ -56,4 +56,5 @@ class TransportTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result.provider, 'nous')
         self.assertEqual(result.output_tokens, 30)
         self.assertTrue(result.truncated)
-        self.assertFalse(result.usage_known)
+        self.assertTrue(result.usage_known)
+        self.assertGreater(result.cost_usd, 0)

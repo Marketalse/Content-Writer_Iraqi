@@ -108,3 +108,27 @@ Validation uses synthetic SDK rejections and end-to-end pipeline error paths. No
 generation was invoked to diagnose balance. Free read-only model metadata requests using
 an existing Anthropic-scoped binding succeeded; that is not a balance check and does not
 establish the state of the different account/key configured on Render.
+
+## Nous fallback correction — 10 November 2026
+
+The prior credit-notification patch explicitly stopped on insufficient Anthropic credit,
+even when Nous was configured. That decision was too restrictive for the intended failover.
+Two existing gaps also prevented a complete fallback run: Nous responses were always marked
+as having unknown pricing, and structured prompts omitted the schema on the fallback route.
+
+Read-only requests to https://inference-api.nousresearch.com/v1/models verified that
+`anthropic/claude-sonnet-5-5` is not listed, while `anthropic/claude-sonnet-5.5` is listed.
+Its published rates are $2 per million prompt tokens and $10 per million completion tokens.
+The known-model pricing map is separate from Anthropic's; custom/unrecognized pricing
+still blocks subsequent calls. No paid generation or account-balance query was performed.
+
+Confirmed Anthropic credit exhaustion now permits one configured Nous fallback. After
+success, the same attempt stays on Nous for later stages. The corrected default/legacy ID,
+schema delivery and supported structured-output/low-effort settings are covered by tests.
+Telegram reports a credit-triggered switch once. A missing fallback key is reported without
+exposing its value. The historical failed record still cannot prove a balance-related cause.
+
+The current hosted search belongs to Anthropic and is not silently emulated by Nous.
+If research is required after failover, the request stops with `provider_search_unavailable`
+instead of inventing evidence. Local environment bindings did not include a Nous key;
+Render's actual Nous credentials and funded balance remain unverified here.

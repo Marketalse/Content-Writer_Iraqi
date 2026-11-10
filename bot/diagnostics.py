@@ -4,6 +4,9 @@ from reviewer import DIMENSIONS, GATES
 from platform_intelligence import PROFILES
 
 NEXT_ACTIONS = {
+    'provider_search_unavailable': '⚠️ ما گدرنا ننفّذ البحث الموثّق بهذا المسار. Nous يگدر يكتب ويراجع، '
+        'بس أداة البحث الحالية مرتبطة بـ Anthropic. صاحب البوت يحتاج يعالج وصول البحث؛ ما راح نخترع مصادر.',
+    'provider_fallback_unconfigured': '⚠️ المزوّد البديل Nous مو مربوط بهذا التشغيل. صاحب البوت يحتاج يراجع إعداد NOUS_API_KEY.',
     'provider_credit_exhausted': '⚠️ رصيد خدمة الذكاء الاصطناعي غير كافي أو حد الإنفاق مستنفد حسب رد المزوّد. '
         'هاي مشكلة فوترة، مو مشكلة بالموضوع أو صيغة المحتوى. صاحب البوت يحتاج يراجع الرصيد وحدود الصرف، وبعدها تگدر تعيد المحاولة.',
     'provider_billing_required': '⚠️ خدمة الذكاء الاصطناعي تطلب معالجة الفوترة. صاحب البوت يحتاج يراجع إعدادات الدفع قبل إعادة المحاولة.',
@@ -93,6 +96,8 @@ def failure_summary(record: dict) -> str:
     code = failure_code(record)
     message = NEXT_ACTIONS.get(code, 'المحاولة ما اكتملت. نحتاج نشوف التشخيص حتى نحدد السبب.')
     if code != 'critical_gate':
+        if any(t.get('fallback_status') == 'not_configured' for t in record.get('stage_timings', [])):
+            message += '\nالبديل Nous مو مربوط بهذا التشغيل. صاحب البوت يحتاج يراجع إعداد NOUS_API_KEY.'
         return message
     labels = {
         'factual_integrity': 'دقة المعلومات',
@@ -150,7 +155,7 @@ def diagnostic_report(pid: str, actor: int) -> dict:
     out['stages'] = [{key: timing[key] for key in (
         'stage', 'status', 'elapsed_ms', 'output_chars', 'truncated', 'refused', 'usage_known',
         'provider', 'model', 'stop_reason', 'thinking_blocks', 'structured_output', 'effort',
-        'input_tokens', 'output_tokens', 'error_code', 'http_status') if key in timing} for timing in record.get('stage_timings', [])]
+        'input_tokens', 'output_tokens', 'error_code', 'http_status', 'fallback_reason', 'fallback_status') if key in timing} for timing in record.get('stage_timings', [])]
     out['reviews'] = [{
         'attempt': review.get('attempt'), 'score': review.get('score'),
         'gates': {key: review.get('gates', {}).get(key, 'unknown') for key in GATES},

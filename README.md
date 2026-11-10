@@ -62,6 +62,13 @@ If sources are missing or the premise cannot be supported, it asks for clarifica
 withholds writing with a reason. Web search adds $0.01 per search plus model token costs.
 See [research and review policy](docs/AI_QUALITY_ENGINE.md#review-and-revision-policy).
 
+With `NOUS_API_KEY` configured, exhausted Anthropic credit can fail over to Nous for
+routing, writing and review. The default Nous ID is `anthropic/claude-sonnet-5.5`;
+the older repository spelling ending in `5-5` is normalized automatically. The attempt
+stays on Nous after failover, keeps all checks and uses separately verified token-price
+estimates. Unknown custom pricing stops further calls. Anthropic's hosted search tool
+is not available through this fallback; research-dependent requests stop with a clear reason.
+
 See [Phase 2 architecture, configuration, tests and rollout](docs/AI_QUALITY_ENGINE.md).
 The bot independently reviews native drafts and can revise weak sections once by default.
 Failed or incomplete reviews are withheld from Telegram delivery. Publication remains manual.

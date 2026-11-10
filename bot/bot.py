@@ -612,6 +612,11 @@ async def on_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await status.edit_text("تعذّر حفظ سجل المحاولة، لذلك ما عرضنا المحتوى. كلم صاحب البوت حتى يراجع التخزين.")
         return
 
+    if any(timing.get('fallback_reason') == 'provider_credit_exhausted' for timing in run.timings):
+        await update.message.reply_text(
+            '⚠️ رصيد Anthropic غير كافي أو حد الصرف مستنفد. انتقلت المحاولة إلى Nous البديل؛ '
+            'بعدها نطبق نفس فحوصات الجودة قبل عرض المحتوى.')
+
     if checked.clarification:
         context.chat_data["pending_clarification"] = {
             "topic": topic, "format": fmt, "angle": angle, "question": checked.clarification}
@@ -623,7 +628,7 @@ async def on_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     checked.failure_stage or 'unknown', checked.failure_code or 'unknown')
         await status.edit_text(failure_message({
             'failure_code': checked.failure_code, 'failures': checked.failures,
-            'review_history': checked.review_history}, pid))
+            'review_history': checked.review_history, 'stage_timings': run.timings}, pid))
         return
 
     await status.delete()
