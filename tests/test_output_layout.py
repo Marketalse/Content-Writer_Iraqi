@@ -10,6 +10,8 @@ VIDEO = ('HOOK: رسائلك هواية؟\nSCRIPT: السعر {{السعر}} و�
 
 class LayoutTests(unittest.TestCase):
     def test_video_aliases_have_clear_sections_and_numbered_blocks(self):
+        self.assertEqual(render_creator_copy(VIDEO.replace('HOOK:', 'HOOK :'), 'tiktok_video'),
+                         render_creator_copy(VIDEO, 'tiktok_video'))
         for fmt in ('tiktok_video','instagram_reel','reel'):
             output=render_creator_copy(VIDEO,fmt)
             for label in ('الافتتاحية','النص المنطوق','المشاهد المقترحة','دعوة التفاعل'):

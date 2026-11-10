@@ -5,7 +5,7 @@ from quality import render_story_copy
 from story_styles import is_story
 
 VIDEO_FIELDS = ('HOOK', 'SCRIPT', 'VISUALS', 'CTA')
-VIDEO_HEADER = re.compile(r'(?m)^(HOOK|SCRIPT|VISUALS|CTA):[ \t]*')
+VIDEO_HEADER = re.compile(r'(?m)^(HOOK|SCRIPT|VISUALS|CTA)[ \t]*:[ \t]*')
 
 
 def _numbered(body: str) -> str:
