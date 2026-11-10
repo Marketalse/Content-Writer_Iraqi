@@ -4,6 +4,16 @@ from reviewer import DIMENSIONS, GATES
 from platform_intelligence import PROFILES
 
 NEXT_ACTIONS = {
+    'provider_credit_exhausted': '⚠️ رصيد خدمة الذكاء الاصطناعي غير كافي أو حد الإنفاق مستنفد حسب رد المزوّد. '
+        'هاي مشكلة فوترة، مو مشكلة بالموضوع أو صيغة المحتوى. صاحب البوت يحتاج يراجع الرصيد وحدود الصرف، وبعدها تگدر تعيد المحاولة.',
+    'provider_billing_required': '⚠️ خدمة الذكاء الاصطناعي تطلب معالجة الفوترة. صاحب البوت يحتاج يراجع إعدادات الدفع قبل إعادة المحاولة.',
+    'provider_authentication': '⚠️ خدمة الذكاء الاصطناعي رفضت مفتاح الوصول. صاحب البوت يحتاج يراجع المفتاح بالإعدادات؛ تغيير الموضوع ما يحل المشكلة.',
+    'provider_permission': '⚠️ الحساب ما عنده صلاحية للطلب أو الموديل. صاحب البوت يحتاج يراجع صلاحيات خدمة الذكاء الاصطناعي.',
+    'provider_model_unavailable': '⚠️ الموديل المحدد مو متاح للحساب. صاحب البوت يحتاج يراجع اسم الموديل وإمكانية الوصول إله.',
+    'provider_rate_limit': '⚠️ وصلنا لحد الطلبات المؤقت بخدمة الذكاء الاصطناعي. جرّب بعد شوية؛ هذا مو تأكيد إن الرصيد خلص.',
+    'provider_request_rejected': '⚠️ خدمة الذكاء الاصطناعي رفضت إعدادات الطلب. صاحب البوت يحتاج يراجع التشخيص؛ ما عدنا تأكيد إن السبب هو الرصيد.',
+    'provider_connection': '⚠️ تعذّر الاتصال بخدمة الذكاء الاصطناعي. جرّب لاحقاً؛ هذا مو تأكيد إن الرصيد خلص.',
+    'provider_unavailable': '⚠️ خدمة الذكاء الاصطناعي مو متاحة حالياً. جرّب بعد شوية.',
     'routing_unavailable': 'تعذّر تحديد إذا الطلب يحتاج بحث أو إعادة صياغة. جرّب بعد شوية أو وضّح طلبك.',
     'research_unsupported': 'ما لگينا دليل موثوق وكافي يدعم الموضوع. دز مصدر رسمي أو وضّح الادعاء حتى نراجعه قبل الكتابة.',
     'research_unavailable': 'البحث ما اكتمل أو ما رجّع مصادر قابلة للتحقق، لذلك وقفنا قبل الكتابة. جرّب لاحقاً أو راجع إعدادات البحث.',
@@ -140,7 +150,7 @@ def diagnostic_report(pid: str, actor: int) -> dict:
     out['stages'] = [{key: timing[key] for key in (
         'stage', 'status', 'elapsed_ms', 'output_chars', 'truncated', 'refused', 'usage_known',
         'provider', 'model', 'stop_reason', 'thinking_blocks', 'structured_output', 'effort',
-        'input_tokens', 'output_tokens') if key in timing} for timing in record.get('stage_timings', [])]
+        'input_tokens', 'output_tokens', 'error_code', 'http_status') if key in timing} for timing in record.get('stage_timings', [])]
     out['reviews'] = [{
         'attempt': review.get('attempt'), 'score': review.get('score'),
         'gates': {key: review.get('gates', {}).get(key, 'unknown') for key in GATES},
