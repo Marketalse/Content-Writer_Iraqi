@@ -83,7 +83,7 @@ class NativeIdentityGateTests(unittest.IsolatedAsyncioTestCase):
         model = AsyncMock(side_effect=[Result(disguised, 'mock'), Result(response, 'mock')])
         with patch('revision.generate', model):
             run = await run_pipeline('story', prompts.build_system_prompt('story'),
-                                     'التسويق', 'tip', settings=Settings(analyst=False, max_revisions=0))
+                                     'التسويق', 'tip', settings=Settings(analyst=False, repair_format=False))
         self.assertEqual(run.checked.status, 'blocked')
         self.assertIn('format_identity: fail', run.checked.failures)
         self.assertEqual(model.await_count, 2)

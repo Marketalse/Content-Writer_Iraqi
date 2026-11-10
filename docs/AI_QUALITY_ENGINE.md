@@ -371,3 +371,13 @@ p50/p95 31.73/32.52 ms for default selection and 31.60/32.65 ms for selected Sto
 narrative. Mean input characters across calls: 19,847 / 20,951 including planner schema.
 This measures local orchestration only; live schema cold-start latency, thinking use and
 creative quality remain to be checked after deployment.
+
+## Isolated format repair
+
+An explicit `format_identity=fail` with every other gate passing and actionable section
+issues may use the existing bounded revision slot. The format gate remains mandatory for
+both approved and manual-review delivery; no candidate is shown before fresh all-gate
+reassessment. Uncertain format, failed/uncertain factual/safety/topic/voice gates, missing
+issues and exhausted budgets still withhold. Verified facts remain protected exactly.
+`QUALITY_REPAIR_FORMAT=false` preserves the previous immediate-stop behavior. See
+[the exact installment-topic test](INSTALLMENT_TOPIC_TEST.md) for evidence and limitations.
