@@ -87,8 +87,8 @@ remain internal. Retrieval time is recorded separately from publication/effectiv
 
 Each search costs $0.01 in addition to model tokens and is included in run cost. The research
 call reserves the two-search maximum fee against the existing spend stop. The default call
-allowance is seven, supporting facilitator, research, analyst, writer, review, one revision
-and re-review. A direct write normally uses four calls with planning; a style rewrite
+allowance is ten, supporting facilitator, research, analyst, writer, review and two
+editorial retries with independent re-review. A direct write normally uses four calls with planning; a style rewrite
 uses three. The same output, time and cost limits still bound the additional stage.
 Existing time, cost, input and output budgets still apply. Explicit lower limits are preserved.
 Offline/programmatic calls retain their previous behavior; pass `research=True` to
@@ -117,7 +117,9 @@ The revision prompt includes the exact original draft, current sections, origina
 angle, verified facts and feedback. A patch may only replace named weak sections; unlisted
 section bodies are copied deterministically. New headers, empty replacements, new sections
 and malformed patches are rejected. The resulting draft is structurally checked and independently
-reviewed again. No-op/non-improving reassessments do not trigger further revisions.
+reviewed again. If an edit remains below threshold, the next editorial retry generates
+a fresh complete draft. Missing section-specific advice also triggers full regeneration.
+Factual/safety/topic/voice failures still stop automatic recovery.
 
 Verified fact text must remain verbatim in every candidate. The reviewer also checks meaning
 and consistency. A provenance string is caller-supplied evidence metadata, not external
@@ -134,19 +136,19 @@ calls. Hard validation ceilings prevent accidental unlimited settings.
 | --- | --- | --- |
 | `QUALITY_THRESHOLD` | 7.5 | 0–10 |
 | `QUALITY_DIMENSION_FLOOR` | 6.0 | 0–10; every positively weighted dimension |
-| `QUALITY_MAX_REVISIONS` | 1 | 0–2 |
-| `QUALITY_MAX_CALLS` | 7 | 1–7 logical transport calls |
-| `QUALITY_TIMEOUT_SECONDS` | 120 | 1–300 total deadline |
+| `QUALITY_MAX_REVISIONS` | 2 | 0–2 |
+| `QUALITY_MAX_CALLS` | 10 | 1–10 logical transport calls |
+| `QUALITY_TIMEOUT_SECONDS` | 180 | 1–300 total deadline |
 | `QUALITY_CALL_TIMEOUT_SECONDS` | 45 | 1–120; also bounded by remaining total deadline |
 | `QUALITY_MAX_COST_USD` | 0.25 | 0.001–1; stop before next call at observed estimated spend |
 | `QUALITY_MAX_INPUT_CHARS` | 100000 | 1000–150000 per combined system/user request |
-| `QUALITY_MAX_TOTAL_OUTPUT_TOKENS` | 15000 | 100–30000; reserve requested maxima before calls |
+| `QUALITY_MAX_TOTAL_OUTPUT_TOKENS` | 24000 | 100–30000; reserve requested maxima before calls |
 | `QUALITY_WRITER_TOKENS` | 4000 | 100–8000; also applies to revision patches |
 | `QUALITY_REVIEW_TOKENS` | 1800 | 100–3000 |
 | `QUALITY_ANALYST` | true | true/false; false saves one call |
 
-Defaults: 3 logical calls for an accepted first draft; up to 5 with a revision. Without
-analyst: 2 or 4. A failing structural check skips the reviewer. A call may attempt the
+Defaults: 3 logical calls for an accepted first draft; up to 7 with two editorial retries. Without
+analyst: 2 to 6. A failing structural check skips the reviewer. A call may attempt the
 configured fallback once; therefore provider attempts can exceed logical calls. No SDK
 automatic retries occur. The session timeout covers primary and fallback together.
 
@@ -383,3 +385,21 @@ reassessment. Uncertain format, failed/uncertain factual/safety/topic/voice gate
 issues and exhausted budgets still withhold. Verified facts remain protected exactly.
 `QUALITY_REPAIR_FORMAT=false` preserves the previous immediate-stop behavior. See
 [the exact installment-topic test](INSTALLMENT_TOPIC_TEST.md) for evidence and limitations.
+
+
+## Editorial loop update — 2026-11-10
+
+Default flow: draft → independent score and quality gates → targeted edit (or fresh
+rewrite if no section advice) → revalidate and independently review → fresh draft if
+still below threshold → revalidate and independently review → deliver only on acceptance.
+The final scoring review checks all mandatory gates on the exact final artifact;
+there is no reuse of an earlier draft's approval. Two editorial retries are allowed,
+shared with structural repair. Lower explicit environment limits remain authoritative.
+The $0.25 observed-spend stop remains unchanged and is not an exact billing cap.
+
+QUALITY_SHOW_REVIEW_DRAFTS now defaults to false: exhausted subthreshold attempts
+are withheld. The prior manually enabled draft-preview policy remains available only
+through explicit configuration. On Render, remove old overrides or set
+QUALITY_MAX_REVISIONS=2, QUALITY_MAX_CALLS=10, QUALITY_TIMEOUT_SECONDS=180,
+QUALITY_MAX_TOTAL_OUTPUT_TOKENS=24000 and QUALITY_SHOW_REVIEW_DRAFTS=false.
+No amount of retries guarantees a passing draft; budgets prevent unbounded spend.

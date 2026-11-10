@@ -95,7 +95,7 @@ class FailureStageTests(unittest.IsolatedAsyncioTestCase):
     async def run_case(self,responses,settings=None):
         model=AsyncMock(side_effect=responses)
         with patch('revision.generate',model):
-            run=await run_pipeline('story','voice','موقع المحل','tip',settings=settings or Settings(analyst=False), brief=Brief(story_intent='educational'))
+            run=await run_pipeline('story','voice','موقع المحل','tip',settings=settings or Settings(analyst=False,max_revisions=0), brief=Brief(story_intent='educational'))
         return run,model
 
     async def test_writer_validation_review_parse_and_critical_gate_are_distinct(self):
@@ -108,7 +108,7 @@ class FailureStageTests(unittest.IsolatedAsyncioTestCase):
             ([Result(STORY,'mock'),Result('', 'mock', truncated=True)],'review','review_truncated'),
             ([Result(STORY,'mock'),review(score=5)],'review','creative_threshold')):
             with self.subTest(code=code):
-                run,model=await self.run_case(responses)
+                run,model=await self.run_case(responses, Settings(analyst=False,max_revisions=1 if code=='invalid_structure' else 0))
                 self.assertNotEqual(run.checked.status,'accepted')
                 self.assertEqual((run.checked.failure_stage,run.checked.failure_code),(stage,code))
                 self.assertNotIn('PRIVATE',json.dumps(run.checked.failures))
@@ -126,7 +126,7 @@ class FailureStageTests(unittest.IsolatedAsyncioTestCase):
     async def test_revision_response_failure_records_revision_phase(self):
         issues=[{'section':'STORY','reason':'generic','instruction':'clarify'}]
         run,model=await self.run_case([Result(STORY,'mock'),review(score=5,issues=issues),
-                                      Result('PRIVATE_INVALID_PATCH','mock')])
+                                      Result('PRIVATE_INVALID_PATCH','mock')],Settings(analyst=False,max_revisions=1))
         self.assertEqual((run.checked.failure_stage,run.checked.failure_code),('revision_parse','invalid_response'))
         self.assertEqual(model.await_count,3)
 

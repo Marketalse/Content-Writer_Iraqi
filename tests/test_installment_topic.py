@@ -57,7 +57,7 @@ class FormatRepairTests(unittest.IsolatedAsyncioTestCase):
         with patch('revision.generate',model):
             run=await run_pipeline('reel','voice',CASE['topic'],'educational illustration',
                 brief=Brief(structure_id='demo',source_material=CASE['source_material']),
-                settings=settings or Settings(analyst=False),verified_facts=verified_facts)
+                settings=settings or Settings(analyst=False,max_revisions=1,show_review_drafts=True),verified_facts=verified_facts)
         return run,model
 
     async def test_format_alone_is_repairable_and_all_original_context_reaches_patch_and_review(self):
@@ -84,8 +84,7 @@ class FormatRepairTests(unittest.IsolatedAsyncioTestCase):
                     self.assertEqual(model.await_count,2)
 
     async def test_no_issues_no_revision_or_disabled_policy_stays_blocked(self):
-        cases=[(Settings(analyst=False),[]),
-               (Settings(analyst=False,max_revisions=0),CASE['issues']),
+        cases=[(Settings(analyst=False,max_revisions=0),CASE['issues']),
                (Settings(analyst=False,repair_format=False),CASE['issues'])]
         for cfg,issues in cases:
             run,model=await self.run_case([Result(CASE['initial_draft'],'mock'),assessment(failed_format(),issues=issues)],cfg)
@@ -128,7 +127,7 @@ class FormatRepairTests(unittest.IsolatedAsyncioTestCase):
         second_patch={'replacements':{'CTA':'شنو أول خانة راح تضيفها لسجل أقساطك؟'}}
         run,model=await self.run_case([Result(CASE['initial_draft'],'mock'),assessment(failed_format(),score=9),
             Result(json.dumps(CASE['patch']),'mock'),assessment(score=6,issues=[{'section':'CTA','reason':'generic','instruction':'make it specific'}]),
-            Result(json.dumps(second_patch),'mock'),assessment(score=8,issues=[])],
+            Result(CASE['revised_draft'],'mock'),assessment(score=8,issues=[])],
             Settings(analyst=False,max_revisions=2,max_calls=6,max_total_output_tokens=20000))
         self.assertEqual(run.checked.status,'accepted')
         self.assertEqual(model.await_count,6)

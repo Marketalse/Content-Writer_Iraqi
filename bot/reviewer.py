@@ -78,8 +78,7 @@ class Review:
 def can_repair_format(review: Review) -> bool:
     """An explicit format failure alone can be revised, never accepted as-is."""
     return (review.gates.get('format_identity') == 'fail'
-            and all(review.gates.get(key) == 'pass' for key in GATES if key != 'format_identity')
-            and bool(review.issues))
+            and all(review.gates.get(key) == 'pass' for key in GATES if key != 'format_identity'))
 
 
 class ReviewResponseError(ValueError):

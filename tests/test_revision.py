@@ -202,7 +202,7 @@ class EngineTests(unittest.IsolatedAsyncioTestCase):
     async def test_high_score_cannot_bypass_gate_or_trigger_rewrite(self):
         for gate in GATES:
             gates = dict.fromkeys(GATES, 'pass'); gates[gate] = 'fail'
-            run, mock = await self.run_mock([result(STORY), result(assessment(10, gates))])
+            run, mock = await self.run_mock([result(STORY), result(assessment(10, gates))], Settings(analyst=False,repair_format=False))
             self.assertEqual(run.checked.status, 'blocked')
             self.assertEqual(mock.await_count, 2)
 
@@ -224,13 +224,14 @@ class EngineTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(mock.await_count, 2)
         self.assertEqual(run.checked.status, 'needs_review')
 
-    async def test_non_improvement_stops(self):
+    async def test_non_improvement_regenerates_then_reviews(self):
         issues = [{'section': 'STORY', 'reason': 'generic', 'instruction': 'fix'}]
         run, mock = await self.run_mock([result(STORY), result(assessment(4, issues=issues)),
-            result(json.dumps({'replacements': {'STORY': NEW_STORY}})), result(assessment(4, issues=issues))],
+            result(json.dumps({'replacements': {'STORY': NEW_STORY}})), result(assessment(4, issues=issues)),
+            result(STORY), result(assessment())],
             Settings(analyst=False, max_revisions=2, max_calls=7, max_total_output_tokens=30000))
-        self.assertEqual(mock.await_count, 4)
-        self.assertIn('revision did not improve score', run.checked.failures)
+        self.assertEqual(mock.await_count, 6)
+        self.assertEqual(run.checked.status, 'accepted')
 
     async def test_fact_preservation(self):
         run, mock = await self.run_mock([result(STORY)], verified_facts=(('20%', 'owner sales ledger'),))

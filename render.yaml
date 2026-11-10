@@ -26,6 +26,16 @@ services:
         value: claude-sonnet-5-5
       - key: ANTHROPIC_FAST_MODEL
         value: claude-haiku-5-5
+      - key: QUALITY_MAX_REVISIONS
+        value: "2"
+      - key: QUALITY_MAX_CALLS
+        value: "10"
+      - key: QUALITY_TIMEOUT_SECONDS
+        value: "180"
+      - key: QUALITY_MAX_TOTAL_OUTPUT_TOKENS
+        value: "24000"
+      - key: QUALITY_SHOW_REVIEW_DRAFTS
+        value: "false"
       # Secrets: entered in the Render dashboard only. Never commit them.
       - key: TELEGRAM_BOT_TOKEN
         sync: false

@@ -58,12 +58,12 @@ class TransportTests(unittest.TestCase):
 
 
 class TransportEngineTests(unittest.IsolatedAsyncioTestCase):
-    async def execute(self, text, assessment=None, **kwargs):
+    async def execute(self, text, assessment=None, policy=None, **kwargs):
         model=AsyncMock(side_effect=[Result(text,'mock',**kwargs),assessment or review()])
         with patch('revision.generate',model):
             run=await run_pipeline('story','voice','اختيار موقع المحل','one insight',
                                   brief=Brief(story_intent='educational',structure_id='insight'),
-                                  settings=Settings(analyst=False))
+                                  settings=policy or Settings(analyst=False))
         return run,model
 
     async def test_plain_story_reaches_independent_review_without_extra_call(self):
@@ -88,7 +88,7 @@ class TransportEngineTests(unittest.IsolatedAsyncioTestCase):
             for state in ('fail','uncertain'):
                 gates=dict.fromkeys(GATES,'pass');gates[gate]=state
                 with self.subTest(gate=gate,state=state):
-                    run,model=await self.execute(COPY,review(gates=gates,score=10))
+                    run,model=await self.execute(COPY,review(gates=gates,score=10),policy=Settings(analyst=False,repair_format=False))
                     self.assertEqual(run.checked.status,'blocked')
                     self.assertEqual(model.await_count,2)
 
