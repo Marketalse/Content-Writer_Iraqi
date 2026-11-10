@@ -16,7 +16,8 @@ Environment:
 
 import logging
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from urllib.parse import urlsplit
 
 import anthropic
 import openai
@@ -60,6 +61,9 @@ class Result:
     thinking_blocks: int = 0
     structured_output: bool = False
     effort: str = ''
+    sources: list[dict] = field(default_factory=list)
+    search_requests: int = 0
+    search_failed: bool = False
 
 
 def estimate_cost(model: str, inp: int, out: int, cache_read: int, cache_write: int) -> float:
@@ -87,7 +91,7 @@ def _should_fallback(exc: Exception) -> bool:
 
 async def generate(system: str, user: str, model: str | None = None,
                    max_tokens: int = MAX_TOKENS, *, output_schema: dict | None = None,
-                   effort: str | None = None) -> Result:
+                   effort: str | None = None, web_search: bool = False) -> Result:
     """Return the model's answer. Falls back to Nous Portal only on allowed errors."""
     model = model or WRITER_MODEL
     if effort not in (None, 'low', 'medium', 'high'):
@@ -99,6 +103,8 @@ async def generate(system: str, user: str, model: str | None = None,
         output_config['effort'] = effort
     # extra_body keeps compatibility with SDK versions predating output_config.
     options = {'extra_body':{'output_config':output_config}} if output_config else {}
+    if web_search:
+        options['tools'] = [{'type': 'web_search_20250305', 'name': 'web_search', 'max_uses': 2}]
     try:
         resp = await _anthropic.messages.create(
             model=model,
@@ -111,11 +117,46 @@ async def generate(system: str, user: str, model: str | None = None,
         cache_read = u.cache_read_input_tokens or 0
         cache_write = u.cache_creation_input_tokens or 0
         cost = estimate_cost(model, u.input_tokens, u.output_tokens, cache_read, cache_write)
+        searches = 0
+        sources = []
+        search_failed = False
+        if web_search:
+            tool_usage = getattr(u, 'server_tool_use', None)
+            searches = getattr(tool_usage, 'web_search_requests', 0) or 0
+            search_failed = type(searches) is not int or not 0 <= searches <= 2
+            searches = searches if type(searches) is int and searches >= 0 else 0
+            cost += searches * 0.01  # Anthropic web search: $10 per 1,000 searches.
+            result_urls = set()
+            for block in resp.content:
+                if block.type == 'web_search_tool_result':
+                    content = getattr(block, 'content', None)
+                    if not isinstance(content, list):
+                        search_failed = True
+                    else:
+                        result_urls.update(item.url for item in content
+                                           if getattr(item, 'type', '') == 'web_search_result')
+            for block in resp.content:
+                if block.type != 'text':
+                    continue
+                for citation in getattr(block, 'citations', None) or []:
+                    if getattr(citation, 'type', '') != 'web_search_result_location':
+                        continue
+                    url = citation.url
+                    parsed = urlsplit(url)
+                    quote = getattr(citation, 'cited_text', '')
+                    if (url in result_urls and parsed.scheme == 'https' and parsed.hostname
+                            and not parsed.username and not parsed.password
+                            and isinstance(quote, str) and quote.strip() and len(url) <= 2000):
+                        source = {'url': url, 'title': str(getattr(citation, 'title', ''))[:300],
+                                  'excerpt': quote[:2000]}
+                        if source not in sources and len(sources) < 6:
+                            sources.append(source)
         log.info("anthropic model=%s in=%s out=%s cache_read=%s cache_write=%s cost=$%.5f",
                  model, u.input_tokens, u.output_tokens, cache_read, cache_write, cost)
         stats = dict(stop_reason=resp.stop_reason,
                      thinking_blocks=sum(b.type in ('thinking', 'redacted_thinking') for b in resp.content),
                      structured_output='format' in output_config, effort=output_config.get('effort',''),
+                     sources=sources, search_requests=searches, search_failed=search_failed,
                      truncated=resp.stop_reason == "max_tokens", usage_known=model in PRICES, model=model, input_tokens=u.input_tokens, output_tokens=u.output_tokens,
                      cache_read=cache_read, cache_write=cache_write, cost_usd=cost)
         if resp.stop_reason == "refusal":
@@ -125,6 +166,8 @@ async def generate(system: str, user: str, model: str | None = None,
     except (anthropic.APIConnectionError, anthropic.APIStatusError) as exc:
         if not _should_fallback(exc):
             raise LLMError("Anthropic request rejected") from exc
+        if web_search:
+            raise LLMError("Web research unavailable") from exc
         log.warning("Anthropic unavailable; trying configured fallback")
 
     if _nous is None:

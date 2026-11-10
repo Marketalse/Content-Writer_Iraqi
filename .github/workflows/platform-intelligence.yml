@@ -1,15 +1,9 @@
 name: Platform intelligence checks
 on:
   push:
-    branches: [feature/platform-intelligence-growth-engine, feature/ai-quality-review-and-revision]
+    branches: [main, feature/platform-intelligence-growth-engine, feature/ai-quality-review-and-revision]
   pull_request:
-    paths:
-      - "bot/**"
-      - "knowledge/**"
-      - "guidelines/**"
-      - "tests/**"
-      - "render.yaml"
-      - ".github/workflows/platform-intelligence.yml"
+  workflow_dispatch:
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -21,5 +15,11 @@ jobs:
       - run: pip install -r bot/requirements.txt
       - name: Compile edited modules
         run: python -m compileall -q bot tests
-      - name: Run no-network unit tests
-        run: python -m unittest discover -s tests -v
+      - name: Verify audit fixes and full no-network suite
+        run: python scripts/verify_fixes.py
+      - name: Save verification report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: audit-fix-report
+          path: test_reports/fixes/

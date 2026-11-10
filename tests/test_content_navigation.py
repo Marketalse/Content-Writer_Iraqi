@@ -16,6 +16,7 @@ from revision import Settings
 from pipeline import run_pipeline
 from reviewer import DIMENSIONS, GATES
 from llm import Result
+from research_fixtures import researched, routed
 
 
 def update(data='', text='الفرق بين التسويق والمبيعات'):
@@ -128,6 +129,8 @@ class NavigationTests(unittest.IsolatedAsyncioTestCase):
         # Reset advanced brief settings must not silently erase the selected narrative.
         upd=update()
         model=AsyncMock(side_effect=[
+            routed(),
+            researched(),
             Result(json.dumps({'audience_need':'one insight','objection':'','purpose':'education','framework':'none',
                                'logic_chain':[],'missing_information':'','clarification_question':''}), 'mock'),
             Result('STORY: قبل لا تختار عرضك، شوف شنو يحتاج زبونك فعلاً.', 'mock'),
@@ -135,11 +138,11 @@ class NavigationTests(unittest.IsolatedAsyncioTestCase):
         with patch.object(app,'_allowed_chat',return_value=True), patch.object(app,'pilot_check',return_value=(True,'')), \
              patch.object(app,'log_post',return_value='id') as log, patch('revision.generate',model):
             await app.on_text(upd,ctx)
-        self.assertEqual(model.await_count,3)
+        self.assertEqual(model.await_count,5)
         for call in model.call_args_list:
             self.assertEqual(json.loads(call.args[1])['brief']['structure_id'],'checkin')
-        self.assertIn(structure_prompt('tiktok_story','checkin'),model.call_args_list[1].args[0])
-        self.assertIn(structure_prompt('tiktok_story','checkin'),model.call_args_list[2].args[0])
+        self.assertIn(structure_prompt('tiktok_story','checkin'),model.call_args_list[3].args[0])
+        self.assertIn(structure_prompt('tiktok_story','checkin'),model.call_args_list[4].args[0])
         self.assertEqual(log.call_args.args[0]['structure_id'],'checkin')
         self.assertEqual(log.call_args.args[0]['quality_status'],'accepted')
 

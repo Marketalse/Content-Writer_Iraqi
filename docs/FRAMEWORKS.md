@@ -75,9 +75,13 @@ apply mandatory gates. Invalid TOML configuration fails before model calls.
 
 The analyst output cap increases from 400 to 600 tokens to accommodate structured planning.
 All existing per-call/total deadlines, input limits, output reservation limits and cost
-stops still apply. Normal acceptance uses three logical calls; a surgical revision uses
-up to five; a clarification uses one. `QUALITY_ANALYST=false` disables analyst planning
-and retains the two-call writer/reviewer path. More input/output tokens can increase cost
+stops still apply. Without research, normal acceptance uses three logical calls; a surgical
+revision uses up to five; a clarification uses one. Telegram adds a facilitator call,
+and a search call only if evidence is needed: four calls for a direct write, five for
+researched content, up to seven for researched content with revision. Style-only rewrites
+skip planning and use three calls. Programmatic
+callers enable the same step with `research=True`. `QUALITY_ANALYST=false` disables analyst
+planning while preserving research in Telegram. More input/output tokens can increase cost
 within the same call count; no efficiency or growth improvement is claimed without a pilot.
 
 The selected framework, purpose and fallback flag are logged with the generation metadata.

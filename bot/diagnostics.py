@@ -4,6 +4,9 @@ from reviewer import DIMENSIONS, GATES
 from platform_intelligence import PROFILES
 
 NEXT_ACTIONS = {
+    'routing_unavailable': 'تعذّر تحديد إذا الطلب يحتاج بحث أو إعادة صياغة. جرّب بعد شوية أو وضّح طلبك.',
+    'research_unsupported': 'ما لگينا دليل موثوق وكافي يدعم الموضوع. دز مصدر رسمي أو وضّح الادعاء حتى نراجعه قبل الكتابة.',
+    'research_unavailable': 'البحث ما اكتمل أو ما رجّع مصادر قابلة للتحقق، لذلك وقفنا قبل الكتابة. جرّب لاحقاً أو راجع إعدادات البحث.',
     'accepted': 'المحاولة اجتازت المراجعة.',
     'invalid_structure': 'تعذّر ترتيب النص بالصيغة المطلوبة. تگدر تغيّر البنية أو تعيد المحاولة.',
     'verified_fact_missing': 'المسودة ما حافظت على المعلومات المطلوبة. نحتاج مراجعتها قبل عرضها.',
@@ -76,8 +79,38 @@ def failure_code(record: dict) -> str:
     return 'unknown'
 
 
+def failure_summary(record: dict) -> str:
+    code = failure_code(record)
+    message = NEXT_ACTIONS.get(code, 'المحاولة ما اكتملت. نحتاج نشوف التشخيص حتى نحدد السبب.')
+    if code != 'critical_gate':
+        return message
+    labels = {
+        'factual_integrity': 'دقة المعلومات',
+        'safety': 'سلامة المحتوى',
+        'topic_preservation': 'الحفاظ على الموضوع',
+        'voice_preservation': 'الحفاظ على النبرة',
+        'format_identity': 'مطابقة نوع المحتوى',
+    }
+    history = record.get('review_history') or []
+    gates = history[-1].get('gates', {}) if history else {}
+    if not gates:
+        gates = dict(item.split(': ', 1) for item in record.get('failures', [])
+                     if isinstance(item, str) and item in {
+                         f'{gate}: {state}' for gate in GATES for state in ('fail', 'uncertain')})
+    reasons = [labels[gate] + (': المراجع ما گدر يتأكد منها' if state == 'uncertain'
+                             else ': ما اجتازت الفحص')
+               for gate, state in gates.items()
+               if gate in labels and state in ('fail', 'uncertain')]
+    if not reasons:
+        return message
+    message += '\nسبب الحجب: ' + '؛ '.join(reasons) + '.'
+    if gates.get('factual_integrity') == 'uncertain':
+        message += '\nهذا مو إثبات إن المعلومات غلط؛ نحتاج مصدر موثوق أو توضيح للادعاءات قبل عرضها.'
+    return message
+
+
 def failure_message(record: dict, pid: str) -> str:
-    message = NEXT_ACTIONS.get(failure_code(record), 'المحاولة ما اكتملت. نحتاج نشوف التشخيص حتى نحدد السبب.')
+    message = failure_summary(record)
     return message + '\nرقم المراجعة: ' + pid + '\nللتشخيص: /diagnose ' + pid + '\nلتغيير الاختيارات: /format'
 
 
@@ -90,9 +123,18 @@ def diagnostic_report(pid: str, actor: int) -> dict:
     out['planning'] = {key: record.get('planning', {}).get(key)
                        for key in ('purpose','framework','fallback','fallback_reason')
                        if key in record.get('planning', {})}
+    research = record.get('research') or {}
+    out['routing'] = {key: record.get('routing', {}).get(key) for key in (
+        'action', 'reason', 'factual_claims', 'needs_numbers', 'official_sources_required', 'fallback')
+        if key in record.get('routing', {})}
+    out['research'] = {'status': research.get('status', 'not_run'),
+                       'retrieved_at': research.get('retrieved_at'),
+                       'search_requests': research.get('search_requests', 0),
+                       'source_count': len(research.get('sources') or []),
+                       'source_urls': [source['url'] for source in research.get('sources', [])]}
     out['failure_code'] = failure_code(record)
     out['validation_checks'] = validation_checks(record)
-    out['next_action'] = NEXT_ACTIONS.get(out['failure_code'], 'راجع مراحل المحاولة؛ السجل القديم ما يحدد السبب بدقة.')
+    out['next_action'] = failure_summary(record)
     out['build'] = {key: record.get('build', {}).get(key, 'unknown')
                     for key in ('commit', 'source', 'workflow')}
     out['stages'] = [{key: timing[key] for key in (

@@ -15,6 +15,7 @@ from prompts import FORMATS, build_system_prompt
 from quality import check, generate_checked
 from reviewer import DIMENSIONS, GATES, FOCUS, WEIGHTS, parse_review, reviewer_system
 from revision import Settings, apply_patch, render, sections
+from briefs import Brief
 
 STORY = 'STORY: هسه خل نحچي عن التسويق وشلون تقيس شغلك.\nINTERACTION: شنو رأيك بالتسويق؟'
 NEW_STORY = 'هسه شوف شنو يحتاج زبونك قبل لا تختار عرضك.'
@@ -126,6 +127,44 @@ class ContractTests(unittest.TestCase):
 
 
 class EngineTests(unittest.IsolatedAsyncioTestCase):
+    async def test_overlong_story_is_rewritten_and_independently_reviewed(self):
+        long_story = 'STORY: ' + 'هسه ' * 80
+        short_story = 'STORY: هسه شوف شنو يحتاج زبونك قبل لا تختار عرضك.'
+        model = AsyncMock(side_effect=[result(long_story), result(short_story), result(assessment())])
+        with patch('revision.generate', model):
+            run = await run_pipeline('story', 'voice', 'التسويق', 'tip',
+                                     settings=Settings(analyst=False), brief=Brief(story_intent='everyday'))
+        self.assertEqual(run.checked.status, 'accepted')
+        self.assertEqual(run.checked.attempts, 2)
+        self.assertEqual(run.checked.text, short_story)
+        self.assertEqual([t['stage'] for t in run.timings], ['writer', 'revision', 'review'])
+        self.assertIn('75 words', model.call_args_list[1].args[0])
+
+    async def test_overlong_rewrite_stops_at_revision_limit(self):
+        long_story = 'STORY: ' + 'هسه ' * 80
+        model = AsyncMock(side_effect=[result(long_story), result(long_story)])
+        with patch('revision.generate', model):
+            run = await run_pipeline('story', 'voice', 'التسويق', 'tip',
+                                     settings=Settings(analyst=False), brief=Brief(story_intent='everyday'))
+        self.assertEqual(run.checked.status, 'blocked')
+        self.assertEqual(run.checked.failure_code, 'invalid_structure')
+        self.assertEqual(model.await_count, 2)
+
+    async def test_length_rewrite_preserves_fact_and_review_gates(self):
+        long_story = 'STORY: ' + 'هسه ' * 80 + 'حقيقة موثقة'
+        for candidate, review_response, expected in (
+            ('STORY: نص قصير بدون المعلومة.', [], 'verified_fact_missing'),
+            ('STORY: حقيقة موثقة', [result(assessment(gates={
+                **dict.fromkeys(GATES, 'pass'), 'factual_integrity': 'uncertain'}))], 'critical_gate'),
+        ):
+            model = AsyncMock(side_effect=[result(long_story), result(candidate), *review_response])
+            with patch('revision.generate', model):
+                run = await run_pipeline('story', 'voice', 'التسويق', 'tip',
+                    settings=Settings(analyst=False), verified_facts=(('حقيقة موثقة', 'source'),),
+                    brief=Brief(story_intent='everyday'))
+            self.assertEqual(run.checked.status, 'blocked')
+            self.assertEqual(run.checked.failure_code, expected)
+
     async def run_mock(self, responses, settings=None, **kwargs):
         mock = AsyncMock(side_effect=responses)
         with patch('revision.generate', mock):

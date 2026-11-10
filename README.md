@@ -52,6 +52,16 @@ bot/bot.py                                بوت تلگرام + استدعاء C
 
 ## AI quality review
 
+Telegram first decides whether your request needs research, direct writing, a style-only
+rewrite, or clarification. Neutral audience questions and subjective rewrites can skip
+search while retaining independent review. Factual research uses up to two Anthropic searches.
+Enable web search for the Anthropic organization associated with `ANTHROPIC_API_KEY`.
+For Iraqi exchange rates and regulatory topics, the bot requires an official primary source,
+checks dates and rate applicability, and sends source links separately from the script.
+If sources are missing or the premise cannot be supported, it asks for clarification or
+withholds writing with a reason. Web search adds $0.01 per search plus model token costs.
+See [research and review policy](docs/AI_QUALITY_ENGINE.md#review-and-revision-policy).
+
 See [Phase 2 architecture, configuration, tests and rollout](docs/AI_QUALITY_ENGINE.md).
 The bot independently reviews native drafts and can revise weak sections once by default.
 Failed or incomplete reviews are withheld from Telegram delivery. Publication remains manual.
@@ -63,3 +73,13 @@ Optional [copywriting frameworks and brief clarification](docs/FRAMEWORKS.md) us
 See the [source-learning roadmap](docs/LEARNING_ROADMAP.md) and [workflow/commands/testing guide](docs/SOURCE_LEARNING_GUIDE.md) for optional briefs, Story treatments, video production, human-reviewed examples and outcome tracking.
 
 The [short Story flow](docs/STORY_FLOW.md) offers entertaining, educational, everyday-life, audience-question and question-answer styles before asking for a topic.
+
+## Audit fixes and verification
+
+See the [execution plan](docs/FIX_EXECUTION_PLAN.md). Run
+`python scripts/verify_fixes.py` to regenerate the issue-by-issue report and full test results,
+or add `--watch` to automatically recheck after code, test or deployment-config changes.
+Open `test_reports/fixes/index.html` for a page that refreshes every five seconds.
+Generated reports are ignored by Git; CI uploads them as the `audit-fix-report` artifact.
+Watch mode only runs while its process is alive. Offline success is separate from live
+credentials, actual GitHub/Render settings and deployment.
