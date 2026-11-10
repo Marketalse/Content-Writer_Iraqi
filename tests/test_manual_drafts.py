@@ -138,7 +138,7 @@ class ManualTelegramTests(unittest.IsolatedAsyncioTestCase):
     async def test_labelled_copy_is_delivered_and_keeps_needs_review_status(self):
         update,status,record=await self.deliver(ready())
         texts=[call.args[0] for call in update.message.reply_text.call_args_list]
-        draft=next(text for text in texts if 'HOOK:' in text)
+        draft=next(text for text in texts if '🎯 الافتتاحية' in text)
         self.assertTrue(draft.startswith('⚠️ مسودة للمراجعة اليدوية'))
         self.assertIn('غير معتمدة',draft)
         self.assertIn('7.13/10',draft)

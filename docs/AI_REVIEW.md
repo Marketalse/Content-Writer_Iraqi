@@ -185,3 +185,20 @@ Verification: 288 offline regression tests passed through the no-network audit v
 dependency consistency and whitespace checks passed, as did 39/39 offline format
 examples (semantic quality unverified). Render Blueprint and
 example environment settings include the expanded loop and strict delivery defaults.
+
+
+## Organized video delivery rule — 2026-11-10
+
+TikTok video and Instagram Reel delivery previously exposed raw native transport
+headings and long unformatted section bodies. Added a deterministic delivery renderer:
+Arabic headings separate opening, spoken copy, filming directions and closing ask;
+spoken paragraphs and shot suggestions are independently numbered with whitespace
+and separators. No scene-to-speech correspondence is inferred. Reviewed wording,
+placeholders and section order are preserved; no extra model call or score changes.
+Native reviewed artifacts remain stored for validation, scoring and publication records.
+Short Stories and other formats retain their delivery contracts. Optional detailed
+production plans remain separate. Regression coverage checks video aliases, body
+preservation, placeholders and existing Telegram delivery with production/manual previews.
+Validation uses offline synthetic responses; no live Telegram or provider calls.
+
+Local validation: 291 offline tests passed; pip check and git diff --check passed.

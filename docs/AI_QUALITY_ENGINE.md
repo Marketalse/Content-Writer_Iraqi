@@ -403,3 +403,12 @@ through explicit configuration. On Render, remove old overrides or set
 QUALITY_MAX_REVISIONS=2, QUALITY_MAX_CALLS=10, QUALITY_TIMEOUT_SECONDS=180,
 QUALITY_MAX_TOTAL_OUTPUT_TOKENS=24000 and QUALITY_SHOW_REVIEW_DRAFTS=false.
 No amount of retries guarantees a passing draft; budgets prevent unbounded spend.
+
+
+## Creator-facing video layout rule
+
+TikTok videos and Instagram Reels must be rendered for Telegram using Arabic section
+headings, separated spoken text and filming instructions, and numbered text blocks
+and shot suggestions. Raw HOOK/SCRIPT/VISUALS/CTA transport layouts are internal.
+The renderer preserves reviewed copy and placeholders; it does not infer matching
+scene pairs or alter scoring. Detailed production plans remain a separate message.
