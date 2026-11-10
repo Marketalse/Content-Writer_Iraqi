@@ -25,18 +25,27 @@ def rejection(status=400, message='Your credit balance is too low to access the 
 
 
 class ProviderClassificationTests(unittest.IsolatedAsyncioTestCase):
-    async def test_confirmed_credit_failure_never_retries_or_falls_back(self):
-        fallback = NS(chat=NS(completions=NS(create=AsyncMock())))
+    async def test_confirmed_credit_failure_uses_funded_configured_fallback_once(self):
+        response = NS(choices=[NS(message=NS(content='fallback'), finish_reason='stop')],
+                      usage=NS(prompt_tokens=20, completion_tokens=10))
+        fallback = NS(chat=NS(completions=NS(create=AsyncMock(return_value=response))))
         api = AsyncMock(side_effect=rejection())
         with patch.object(llm._anthropic.messages, 'create', api), patch.object(llm, '_nous', fallback):
+            result = await llm.generate('system', 'data')
+        self.assertEqual(result.provider, 'nous')
+        self.assertEqual(result.fallback_reason, 'provider_credit_exhausted')
+        self.assertTrue(result.usage_known)
+        self.assertEqual(api.await_count, 1)
+        fallback.chat.completions.create.assert_awaited_once()
+
+    async def test_credit_failure_without_fallback_keeps_billing_reason(self):
+        with patch.object(llm._anthropic.messages, 'create', AsyncMock(side_effect=rejection())), \
+             patch.object(llm, '_nous', None):
             with self.assertRaises(llm.LLMError) as caught:
                 await llm.generate('system', 'data')
         self.assertEqual(caught.exception.code, 'provider_credit_exhausted')
-        self.assertEqual(caught.exception.http_status, 400)
-        self.assertEqual(caught.exception.provider, 'anthropic')
+        self.assertEqual(caught.exception.fallback_status, 'not_configured')
         self.assertNotIn('PRIVATE', str(caught.exception))
-        self.assertEqual(api.await_count, 1)
-        fallback.chat.completions.create.assert_not_awaited()
 
     def test_other_http_errors_are_not_mislabeled_as_credit(self):
         cases = {400: 'provider_request_rejected', 401: 'provider_authentication',
@@ -71,7 +80,7 @@ class ProviderClassificationTests(unittest.IsolatedAsyncioTestCase):
 
 class ProviderFailurePipelineTests(unittest.IsolatedAsyncioTestCase):
     async def test_facilitator_billing_error_reaches_user_and_safe_diagnostics(self):
-        with patch.object(llm._anthropic.messages, 'create', AsyncMock(side_effect=rejection())):
+        with patch.object(llm._anthropic.messages, 'create', AsyncMock(side_effect=rejection())), patch.object(llm, '_nous', None):
             run = await run_pipeline('story', 'voice', 'فكرة', 'tip', research=True,
                 brief=Brief(story_intent='educational'), settings=Settings(analyst=False))
         self.assertEqual(run.checked.failure_stage, 'facilitator')
@@ -81,9 +90,10 @@ class ProviderFailurePipelineTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(run.timings[0]['error_code'], 'provider_credit_exhausted')
         self.assertEqual(run.timings[0]['provider'], 'anthropic')
         self.assertFalse(run.checked.manual_review_ready)
-        message = failure_message({'failure_code': run.checked.failure_code}, 'fixture')
+        message = failure_message({'failure_code': run.checked.failure_code, 'stage_timings': run.timings}, 'fixture')
         self.assertIn('رصيد', message)
         self.assertIn('مشكلة فوترة', message)
+        self.assertIn('NOUS_API_KEY', message)
         record = {'quality_status': run.checked.status, 'failure_code': run.checked.failure_code,
                   'stage_timings': run.timings}
         with patch('diagnostics.authorized_post', return_value=record):
@@ -99,6 +109,7 @@ class ProviderFailurePipelineTests(unittest.IsolatedAsyncioTestCase):
                 return routed('research')
             return await real_generate(system, user, **kwargs)
         with patch('revision.generate', transport), \
+             patch.object(llm, '_nous', None), \
              patch.object(llm._anthropic.messages, 'create', AsyncMock(side_effect=rejection())):
             run = await run_pipeline('story', 'voice', 'سعر الصرف', 'tip', research=True,
                 brief=Brief(story_intent='educational'), settings=Settings(analyst=False))

@@ -35,7 +35,8 @@ Before this change:
 - `quality.py`: retains `check`, `split_owner_note`, `Checked` and `generate_checked`.
   The latter delegates to the same bounded engine, without a separate analyst call.
 - `llm.py`: remains the only provider transport. SDK automatic retries are disabled;
-  existing fallback eligibility (connection errors, 429, 5xx) is retained. Truncation,
+  fallback eligibility includes connection errors, 429, 5xx and confirmed exhausted
+  Anthropic credit. Truncation,
   refusal, cache usage and known/unknown pricing are explicit.
 - Telegram: existing commands and callbacks remain. Accepted drafts are delivered in
   plain-text chunks bounded to 4,000 UTF-16 units. Owner notes remain separate.
@@ -153,7 +154,8 @@ The dollar threshold is an **observed-cost stop**, not a prepaid billing cap: th
 request may cross it, and cancellation cannot guarantee that a provider did not bill a
 request. Input size, requested output tokens, call count and timeouts provide separate
 bounds. Existing model prices are estimates and must be checked against actual billing.
-Unknown model/fallback pricing stops subsequent calls. Tokens from fallback responses are
+Unknown model/fallback pricing stops subsequent calls. The default Nous model has a
+separate verified catalog rate; tokens from fallback responses are
 retained when available; unknown cost is never represented as a known free call.
 
 Pilot preflight retains the $0.25 reservation. Usage includes all completed generation

@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 from dataclasses import dataclass, field
 from time import monotonic
 
-from llm import FAST_MODEL, WRITER_MODEL, LLMError, Result, generate
+from llm import FAST_MODEL, WRITER_MODEL, NOUS_MODEL, LLMError, Result, generate
 from frameworks import analyst_system, analyst_schema, load_library, parse_plan
 from delivery_policy import artifact_fingerprint, manual_review_eligible
 from briefs import Brief
@@ -130,6 +130,7 @@ class Session:
     started: float = field(default_factory=monotonic)
     reserved_output: int = 0
     timings: list[dict] = field(default_factory=list)
+    provider_override: str | None = None
 
     async def call(self, stage: str, system: str, user: str, *, model=None, max_tokens=4000, output_schema=None):
         cfg = self.settings
@@ -150,6 +151,8 @@ class Session:
         self.timings.append(timing)
         start = monotonic()
         options = {}
+        if self.provider_override:
+            options['provider'] = self.provider_override
         if output_schema is not None:
             options['output_schema'] = output_schema
         if stage == 'research':
@@ -161,19 +164,24 @@ class Session:
                 generate(system, user, model=model, max_tokens=max_tokens, **options),
                 timeout=min(remaining, cfg.call_timeout_seconds))
             self.calls.append(result)
+            if result.provider == 'nous':
+                self.provider_override = 'nous'
             timing.update(status='ok', provider=result.provider, model=result.model,
                           output_chars=len(result.text), truncated=result.truncated,
                           refused=result.refused, usage_known=result.usage_known,
                           stop_reason=result.stop_reason, thinking_blocks=result.thinking_blocks,
                           structured_output=result.structured_output, effort=result.effort,
                           input_tokens=result.input_tokens, output_tokens=result.output_tokens)
+            if result.fallback_reason:
+                timing['fallback_reason'] = result.fallback_reason
             if stage == 'research':
                 timing.update(search_requests=result.search_requests, source_count=len(result.sources),
                               search_failed=result.search_failed)
             return result
         except LLMError as exc:
             timing.update(error_code=exc.code, provider=exc.provider,
-                          model=model or WRITER_MODEL, http_status=exc.http_status)
+                          model=NOUS_MODEL if exc.provider == 'nous' else model or WRITER_MODEL,
+                          http_status=exc.http_status, fallback_status=exc.fallback_status)
             raise
         finally:
             timing['elapsed_ms'] = round((monotonic() - start) * 1000, 2)
