@@ -207,7 +207,7 @@ class EngineTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(mock.await_count, 2)
 
     async def test_structural_failure_skips_reviewer(self):
-        run, mock = await self.run_mock([result('HOOK: wrong native format')])
+        run, mock = await self.run_mock([result('HOOK: wrong native format')], Settings(analyst=False, max_revisions=0))
         self.assertEqual(run.checked.status, 'blocked')
         self.assertEqual(mock.await_count, 1)
 
@@ -271,7 +271,7 @@ class EngineTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(mock.await_count, 1)
             self.assertNotEqual(run.checked.status, 'accepted')
         run, mock = await self.run_mock([result(STORY)], Settings(analyst=False, max_input_chars=1000))
-        self.assertEqual(mock.await_count, 1)
+        self.assertEqual(mock.await_count, 0)
         self.assertNotEqual(run.checked.status, "accepted")
 
     async def test_timeout_retains_accounting(self):

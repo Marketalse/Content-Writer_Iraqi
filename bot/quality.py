@@ -200,6 +200,7 @@ class Checked:
     story_intent: str = "auto"
     production_plan: dict = field(default_factory=dict)
     transport_normalized: bool = False
+    structure_details: dict = field(default_factory=dict)
     failure_stage: str = ""
     failure_code: str = ""
     reviewed_artifact_hash: str = ""

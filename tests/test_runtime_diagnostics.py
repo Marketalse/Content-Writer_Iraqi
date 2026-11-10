@@ -62,7 +62,7 @@ class RuntimeIntegrationTests(unittest.IsolatedAsyncioTestCase):
         model = AsyncMock(return_value=Result(LEGACY, 'mock'))
         with patch('revision.generate', model):
             run = await run_pipeline('story', build_system_prompt('story'), 'ميزانية التسويق',
-                                     'tip', settings=Settings(analyst=False))
+                                     'tip', settings=Settings(analyst=False, repair_format=False))
         self.assertEqual(run.checked.status, 'blocked')
         self.assertEqual(model.await_count, 1)
 

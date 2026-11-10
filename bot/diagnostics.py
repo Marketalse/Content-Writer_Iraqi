@@ -92,9 +92,31 @@ def failure_code(record: dict) -> str:
     return 'unknown'
 
 
+def safe_structure(record):
+    from quality import FIELDS
+    allowed = {name for names in FIELDS.values() for name in names}
+    data = record.get('structure_details') or {}
+    if not isinstance(data, dict):
+        return {}
+    out = {key: [name for name in data[key] if isinstance(name, str) and name in allowed][:20]
+           for key in ('expected', 'present', 'missing', 'empty', 'duplicates')
+           if isinstance(data.get(key), list)}
+    out.update({key: data[key] for key in ('order_valid', 'unexpected_fields')
+                if type(data.get(key)) is bool})
+    return out
+
+
 def failure_summary(record: dict) -> str:
     code = failure_code(record)
     message = NEXT_ACTIONS.get(code, 'المحاولة ما اكتملت. نحتاج نشوف التشخيص حتى نحدد السبب.')
+    if code == 'invalid_structure':
+        details = safe_structure(record)
+        for key, label in (('missing', 'حقول ناقصة'), ('empty', 'حقول فارغة'),
+                           ('duplicates', 'حقول مكررة')):
+            if details.get(key):
+                message += '\n' + label + ': ' + ', '.join(details[key])
+        if details.get('order_valid') is False:
+            message += '\nترتيب الحقول غير مطابق. المطلوب: ' + ' → '.join(details.get('expected', []))
     if code != 'critical_gate':
         if any(t.get('fallback_status') == 'not_configured' for t in record.get('stage_timings', [])):
             message += '\nالبديل Nous مو مربوط بهذا التشغيل. صاحب البوت يحتاج يراجع إعداد NOUS_API_KEY.'
@@ -149,6 +171,7 @@ def diagnostic_report(pid: str, actor: int) -> dict:
                        'source_urls': [source['url'] for source in research.get('sources', [])]}
     out['failure_code'] = failure_code(record)
     out['validation_checks'] = validation_checks(record)
+    out['structure_details'] = safe_structure(record)
     out['next_action'] = failure_summary(record)
     out['build'] = {key: record.get('build', {}).get(key, 'unknown')
                     for key in ('commit', 'source', 'workflow')}

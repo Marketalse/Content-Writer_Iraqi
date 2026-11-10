@@ -102,7 +102,7 @@ class FailureStageTests(unittest.IsolatedAsyncioTestCase):
         gates=dict.fromkeys(GATES,'pass');gates['factual_integrity']='uncertain'
         for responses,stage,code in (
             ([LLMError('PRIVATE_SDK_ERROR')],'writer','provider_error'),
-            ([Result('HOOK: خاطئ','mock')],'validation','invalid_structure'),
+            ([Result('HOOK: خاطئ','mock'), Result('HOOK: خاطئ','mock')],'validation','invalid_structure'),
             ([Result(STORY,'mock'),Result('PRIVATE_INVALID_RESPONSE','mock')],'review_parse','invalid_review_json'),
             ([Result(STORY,'mock'),review(gates=gates)],'review','critical_gate'),
             ([Result(STORY,'mock'),Result('', 'mock', truncated=True)],'review','review_truncated'),

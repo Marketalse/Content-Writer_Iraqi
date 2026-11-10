@@ -132,3 +132,32 @@ The current hosted search belongs to Anthropic and is not silently emulated by N
 If research is required after failover, the request stops with `provider_search_unavailable`
 instead of inventing evidence. Local environment bindings did not include a Nous key;
 Render's actual Nous credentials and funded balance remain unverified here.
+
+
+## Native writer transport and bounded structural repair — 2026-11-10
+
+Confirmed defect: TikTok writers returned free-form text; missing native labels or
+incorrect ordering stopped before any repair or independent review. Implemented
+JSON field schemas for fixed-field formats (including TikTok video), canonical
+rendering in contract order, and allowlisted heading case/balanced bold-wrapper
+normalization. Section bodies are not rewritten by normalization. Dynamic carousel,
+article, Story sequence and production envelopes keep their existing native contracts.
+
+Fixed-field structural failures now receive at most one complete-script repair,
+sharing the configured revision, call, token, time and observed-cost budgets. The
+repair prompt receives exact expected/present/missing/empty/duplicate/order metadata.
+Every repaired draft returns through deterministic validation, verified-fact checks
+and independent review. Truncation, refusal and critical factual/safety gates remain
+blocking. Setting repair_format=false disables structural repair; existing Story
+length repair remains supported. Empty responses are withheld without a repair call.
+
+Creator warnings and authorized diagnostics expose only allowlisted field names and
+boolean ordering information. No unknown headings, draft bodies or provider errors
+are copied into diagnostic field metadata. Regression fixtures cover both providers,
+including malformed Nous JSON, decorated headings, wrong order, repeated failure,
+exhausted budgets and factual uncertainty after repair. All provider responses used
+for verification are synthetic; no paid API or Telegram calls were made.
+
+Validation: 282 offline unittest tests passed; pip check and git diff --check passed.
+All 39 offline format contract examples passed (semantic quality unverified).
+Release CI results are recorded separately.

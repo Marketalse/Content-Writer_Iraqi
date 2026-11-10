@@ -97,7 +97,8 @@ class TransportEngineTests(unittest.IsolatedAsyncioTestCase):
                      'HOOK: بداية\nCONTENT: شرح\nCTA: تابعني'):
             run,model=await self.execute(text)
             self.assertEqual(run.checked.status,'blocked')
-            self.assertEqual(model.await_count,1)
+            self.assertEqual(model.await_count, 1 if text.startswith('اختار') else 2)
+            self.assertFalse(run.checked.review_history)
 
     async def test_truncation_and_refusal_are_never_adapted_or_reviewed(self):
         for flag in ('truncated','refused'):
