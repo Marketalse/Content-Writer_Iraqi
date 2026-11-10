@@ -17,6 +17,7 @@ from reviewer import DIMENSIONS, GATES, parse_review, reviewer_system
 from revision import Settings
 from pipeline import Run, run_pipeline
 from llm import Result
+from research_fixtures import researched, routed
 from story_styles import STORY_STYLES, STORY_ANGLE_KEYS
 
 COPIES = {
@@ -197,7 +198,7 @@ class FullStoryFlowTests(unittest.IsolatedAsyncioTestCase):
         ctx = SimpleNamespace(chat_data={})
         analyst = Result(json.dumps({'audience_need':'one useful insight', 'objection':'', 'purpose':'education',
             'framework':'none', 'logic_chain':['explain one idea'], 'missing_information':'', 'clarification_question':''}), 'mock')
-        model = AsyncMock(side_effect=[analyst, Result('STORY: ' + COPIES['educational'], 'mock'), assessment(cta=0)])
+        model = AsyncMock(side_effect=[routed(), researched(), analyst, Result('STORY: ' + COPIES['educational'], 'mock'), assessment(cta=0)])
         with patch.object(app, '_allowed_chat', return_value=True), patch.object(app, 'pilot_check', return_value=(True,'')), \
              patch.object(app, 'log_post', return_value='id'), patch('revision.generate', model):
             await app.on_format_chosen(upd, ctx)  # old format button migrates to platform
@@ -207,10 +208,10 @@ class FullStoryFlowTests(unittest.IsolatedAsyncioTestCase):
             upd.callback_query.data='str:story:insight'
             await app.on_structure_chosen(upd,ctx)
             await app.on_text(upd, ctx)
-        self.assertEqual(model.await_count, 3)
+        self.assertEqual(model.await_count, 5)
         self.assertIn(COPIES['educational'], [c.args[0] for c in upd.message.reply_text.call_args_list])
-        self.assertIn('Deliver one useful fact', model.call_args_list[0].args[0])
-        self.assertIn('Deliver one useful fact', model.call_args_list[1].args[0])
+        self.assertIn('Deliver one useful fact', model.call_args_list[2].args[0])
+        self.assertIn('Deliver one useful fact', model.call_args_list[3].args[0])
         status.delete.assert_awaited_once()
 
 

@@ -549,10 +549,10 @@ async def on_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("إعدادات البريف ما تناسب الفورمات. عدل /brief أو استخدم /brief reset.")
         return
     system = build_system_prompt(fmt, brief=brief) if "content_brief" in context.chat_data or brief.story_intent != "auto" or brief.structure_id else SYSTEM_PROMPTS[fmt]
-    status = await update.message.reply_text("عاد أكتبلك… ⏳")
+    status = await update.message.reply_text("أراجع طلبك وأحدد إذا يحتاج بحث أو كتابة مباشرة… ⏳")
     try:
         run = await run_pipeline(fmt, system, topic, selected_angle,
-                                 clarification_allowed=not resuming, brief=brief)
+                                 clarification_allowed=not resuming, brief=brief, research=True)
     except Exception:
         log.error("pipeline failed (%s)", type(sys.exc_info()[1]).__name__)
         await status.edit_text("صار خطأ بالاتصال بالموديل. جرب مرة ثانية بعد شوية.")
@@ -584,7 +584,7 @@ async def on_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     usage_known = (all(c.usage_known for c in run.calls)
                    and all(t["status"] == "ok" for t in run.timings))
-    pid = log_post({
+    record = {
         "chat_id": cid, "format": fmt, "angle": angle, "topic": topic, "provider": checked.provider,
         "attempts": checked.attempts, "failures": checked.failures,
         "quality_status": checked.status, "review_history": checked.review_history,
@@ -593,7 +593,8 @@ async def on_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "manual_review_ready": manual_draft,
         "delivery_status": ("approved" if checked.status == "accepted" else
                             "manual_review" if manual_draft else "withheld"),
-        "build": runtime, "planning": checked.planning,
+        "build": runtime, "planning": checked.planning, "research": checked.research,
+        "routing": checked.routing,
         "objective": brief.purpose, "story_mode": brief.story_mode, "story_intent": brief.story_intent,
         "structure_id": brief.structure_id,
         "journey_stage": brief.journey_stage, "distribution": brief.distribution,
@@ -603,7 +604,13 @@ async def on_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "quota_cost_usd": round(run.cost_usd if usage_known else max(run.cost_usd, 0.25), 6),
         "calls": len(run.calls), "input_tokens": run.input_tokens,
         "output_tokens": run.output_tokens, "cost_usd": round(run.cost_usd, 6),
-    }, event="clarification" if checked.clarification else "generated")
+    }
+    try:
+        pid = log_post(record, event="clarification" if checked.clarification else "generated")
+    except OSError:
+        log.error("generation_withheld: persistent record could not be saved")
+        await status.edit_text("تعذّر حفظ سجل المحاولة، لذلك ما عرضنا المحتوى. كلم صاحب البوت حتى يراجع التخزين.")
+        return
 
     if checked.clarification:
         context.chat_data["pending_clarification"] = {
@@ -615,7 +622,8 @@ async def on_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         log.warning("generation_not_delivered review=%s stage=%s code=%s", pid,
                     checked.failure_stage or 'unknown', checked.failure_code or 'unknown')
         await status.edit_text(failure_message({
-            'failure_code': checked.failure_code, 'failures': checked.failures}, pid))
+            'failure_code': checked.failure_code, 'failures': checked.failures,
+            'review_history': checked.review_history}, pid))
         return
 
     await status.delete()
@@ -631,6 +639,11 @@ async def on_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text(warning + part)
     if checked.owner_note:
         await update.message.reply_text("📝 ملاحظة لك (لا تنشرها):\n" + checked.owner_note)
+    if checked.research.get('sources'):
+        sources = '📚 مصادر البحث (راجع تاريخ القرار ونطاق تطبيقه):\n' + '\n'.join(
+            source['url'] for source in checked.research['sources'])
+        for part in _chunks(sources):
+            await update.message.reply_text(part, disable_web_page_preview=True)
     if manual_draft:
         await update.message.reply_text(
             f"رقم المسودة: {pid}\nهاي مسودة غير معتمدة وتحتاج مراجعتك وتعديلك. "
@@ -649,12 +662,22 @@ async def log_runtime_identity(application):
              runtime['source'], application.bot.username)
 
 
+async def on_handler_error(update, context):
+    """Give storage failures an operational message without logging private payloads."""
+    log.error('bot_handler_failed type=%s', type(context.error).__name__)
+    if isinstance(context.error, OSError):
+        message = getattr(update, 'effective_message', None) or getattr(update, 'message', None)
+        if message is not None:
+            await message.reply_text('تعذّر قراءة أو حفظ البيانات. كلم صاحب البوت حتى يراجع التخزين.')
+
+
 def create_application(token: str, *, request=None):
     """Construct production handlers without starting a polling consumer."""
     builder = Application.builder().token(token).post_init(log_runtime_identity)
     if request is not None:
         builder = builder.request(request).get_updates_request(request)
     app = builder.build()
+    app.add_error_handler(on_handler_error)
     app.add_handler(CommandHandler("start", cmd_start))
     app.add_handler(CommandHandler("format", cmd_format))
     app.add_handler(CommandHandler("cancel", cmd_cancel))

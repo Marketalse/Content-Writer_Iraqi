@@ -193,6 +193,8 @@ class Checked:
     status: str = "needs_review"
     review_history: list[dict] = field(default_factory=list)
     planning: dict = field(default_factory=dict)
+    research: dict = field(default_factory=dict)
+    routing: dict = field(default_factory=dict)
     clarification: str = ""
     story_mode: str = "moment"
     story_intent: str = "auto"

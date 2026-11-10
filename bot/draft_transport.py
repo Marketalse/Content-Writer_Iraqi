@@ -23,7 +23,7 @@ def normalize_short_story(text: str, fmt: str, *, story_mode: str = 'moment',
     label = STORY_LABEL.match(source)
     body = source[label.end():] if label else source
     # A second/other section cannot be flattened into the spoken script.
-    if (not body.strip() or SECTION.search(body) or len(body) > 800
-            or len(body.split()) > 75):
+    # Labeling is not acceptance: length validation and bounded shortening run next.
+    if not body.strip() or SECTION.search(body):
         return text
     return 'STORY: ' + body

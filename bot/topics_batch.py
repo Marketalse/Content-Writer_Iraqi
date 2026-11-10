@@ -13,7 +13,9 @@ Steps (run on your own computer or server, where ANTHROPIC_API_KEY is set in .en
   3. Write (Sonnet, about 3 to 4 calls per topic):
        python3 bot/topics_batch.py write --max-usd 40
      Writes output/scripts/<id>-<format>.md and output/scripts_index.csv.
-     Stops when the spend reaches --max-usd. Run it again to continue: topics that
+     Reserves each pipeline's configured spending allowance before starting work.
+     --max-usd controls observed spend plus in-flight reservations; provider billing
+     can exceed a per-run observed stop on a final call. Run again to continue: topics that
      already have a file are skipped.
 
 Formats:
@@ -27,6 +29,7 @@ import asyncio
 import csv
 import json
 import logging
+import math
 import os
 import sys
 from pathlib import Path
@@ -40,6 +43,7 @@ load_dotenv(ROOT / ".env")
 
 from llm import FAST_MODEL, generate  # noqa: E402
 from pipeline import run_pipeline  # noqa: E402
+from revision import Settings  # noqa: E402
 from prompts import ANGLES, build_system_prompt  # noqa: E402
 
 logging.basicConfig(format="%(asctime)s %(levelname)s %(message)s", level=logging.INFO)
@@ -166,9 +170,17 @@ def append_index(record: dict) -> None:
 
 
 async def write_all(rows: list[dict], budget: float, concurrency: int) -> None:
+    if type(concurrency) is not int or not 1 <= concurrency <= 16:
+        raise ValueError('concurrency must be an integer from 1 to 16')
+    if type(budget) not in (int, float) or not math.isfinite(budget) or budget <= 0:
+        raise ValueError('budget must be finite and positive')
+    settings = Settings.from_env()
+    reservation = settings.max_cost_usd
     systems = {fmt: build_system_prompt(fmt) for fmt in WRITE_FORMATS}
     sem = asyncio.Semaphore(concurrency)
-    state = {"cost": 0.0, "done": 0, "stopped": False}
+    available = asyncio.Condition()
+    state = {"cost": 0.0, "reserved": 0.0, "active": 0, "done": 0,
+             "stopped": False, "uncertain": False}
 
     async def one(idx: int, row: dict) -> None:
         fmt = row["format"].strip()
@@ -177,53 +189,80 @@ async def write_all(rows: list[dict], budget: float, concurrency: int) -> None:
         if path.exists():  # a file means this topic and format were already written
             return
         async with sem:
-            if state["cost"] >= budget:
-                state["stopped"] = True
-                return
+            async with available:
+                while not state['stopped'] and state['cost'] + state['reserved'] + reservation > budget + 1e-12:
+                    if state['active'] == 0:
+                        state['stopped'] = True
+                        available.notify_all()
+                        return
+                    await available.wait()
+                if state['stopped']:
+                    return
+                state['reserved'] += reservation
+                state['active'] += 1
             angle = ANGLE_KEYS[idx % len(ANGLE_KEYS)]
             base = {"id": row["id"], "name": row["name"], "pillar": row.get("pillar", ""),
                     "format": fmt, "angle": angle}
             try:
-                run = await run_pipeline(fmt, systems[fmt], row["name"], ANGLES[angle])
-            except Exception as e:  # keep going; the index shows what failed
-                log.error("topic %s failed: %s", row["id"], e)
-                append_index({**base, "status": "error", "failures": str(e)[:200]})
-                return
-
-            checked = run.checked
-            state["cost"] += run.cost_usd
-            state["done"] += 1
-            if checked.clarification:
-                status = "needs_clarification"
-            elif checked.refused:
-                status = "refused"
-            elif not checked.text:
-                status = "empty"
-            elif checked.failures:
-                status = "check_failed"
-            else:
-                status = "ok"
-
-            file_rel = ""
-            if checked.text:
-                SCRIPTS.mkdir(parents=True, exist_ok=True)
-                body = f"# {row['name']}\n\nID: {row['id']} | {fmt} | زاوية: {angle}\n\n{checked.text}\n"
-                if checked.owner_note:
-                    body += f"\n---\nملاحظة لك (لا تنشرها):\n{checked.owner_note}\n"
-                path.write_text(body, encoding="utf-8")
-                file_rel = str(path.relative_to(ROOT))
-
-            append_index({**base, "status": status, "attempts": checked.attempts,
-                          "failures": " | ".join(checked.failures + ([checked.clarification] if checked.clarification else []))[:500],
-                          "provider": checked.provider, "cost_usd": round(run.cost_usd, 5),
-                          "file": file_rel})
-            if state["done"] % 25 == 0:
-                log.info("%d written, spend $%.2f", state["done"], state["cost"])
+                run = await run_pipeline(fmt, systems[fmt], row["name"], ANGLES[angle], settings=settings)
+                usage_known = (all(call.usage_known for call in run.calls)
+                               and all(timing['status'] == 'ok' for timing in run.timings))
+                state['cost'] += run.cost_usd
+                state['done'] += 1
+                if not usage_known or run.cost_usd > reservation + 1e-12:
+                    state['stopped'] = True
+                    state['uncertain'] = not usage_known
+                    log.warning('Batch stopped: unknown usage or per-run spending allowance exceeded')
+                save_result(row, base, run, path)
+            except asyncio.CancelledError:
+                state['stopped'] = state['uncertain'] = True
+                raise
+            except Exception as exc:
+                # Failed attempts may already have been billed: do not start more work.
+                state['stopped'] = state['uncertain'] = True
+                log.error('Batch stopped after incomplete attempt; type=%s', type(exc).__name__)
+                append_index({**base, 'status': 'error', 'failures': 'incomplete attempt; usage may be unknown'})
+            finally:
+                async with available:
+                    state['reserved'] -= reservation
+                    state['active'] -= 1
+                    available.notify_all()
+            if state['done'] and state['done'] % 25 == 0:
+                log.info('%d written, observed spend $%.2f', state['done'], state['cost'])
 
     await asyncio.gather(*(one(i, r) for i, r in enumerate(rows)))
-    if state["stopped"]:
-        log.warning("stopped at the $%.2f budget; run again to continue", budget)
-    log.info("finished: %d written this run, spend $%.2f", state["done"], state["cost"])
+    if state['stopped']:
+        log.warning('Batch stopped: no safe reservation remains or an attempt needs review; budget $%.2f', budget)
+    log.info('finished: %d written this run, observed spend %s$%.2f', state['done'],
+             'at least ' if state['uncertain'] else '', state['cost'])
+
+
+def save_result(row: dict, base: dict, run, path: Path) -> None:
+    checked = run.checked
+    if checked.clarification:
+        status = "needs_clarification"
+    elif checked.refused:
+        status = "refused"
+    elif not checked.text:
+        status = "empty"
+    elif checked.failures:
+        status = "check_failed"
+    else:
+        status = "ok"
+
+    file_rel = ""
+    if checked.text:
+        SCRIPTS.mkdir(parents=True, exist_ok=True)
+        body = f"# {row['name']}\n\nID: {row['id']} | {base['format']} | زاوية: {base['angle']}\n\n{checked.text}\n"
+        if checked.owner_note:
+            body += f"\n---\nملاحظة لك (لا تنشرها):\n{checked.owner_note}\n"
+        path.write_text(body, encoding="utf-8")
+        file_rel = str(path.relative_to(ROOT))
+
+    append_index({**base, "status": status, "attempts": checked.attempts,
+                  "failures": " | ".join(checked.failures + ([checked.clarification] if checked.clarification else []))[:500],
+                  "provider": checked.provider, "cost_usd": round(run.cost_usd, 5),
+                  "file": file_rel})
 
 
 def cmd_write(args) -> None:
@@ -235,7 +274,10 @@ def cmd_write(args) -> None:
     if args.limit:
         rows = rows[:args.limit]
     print(f"{len(rows)} topics to write (budget ${args.max_usd:.2f})")
-    asyncio.run(write_all(rows, args.max_usd, args.concurrency))
+    try:
+        asyncio.run(write_all(rows, args.max_usd, args.concurrency))
+    except ValueError as exc:
+        raise SystemExit(str(exc)) from exc
 
 
 def main() -> None:

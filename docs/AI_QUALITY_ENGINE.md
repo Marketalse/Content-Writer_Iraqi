@@ -56,6 +56,49 @@ in JSONL. This release does not introduce an approval queue or a Telegram fact-v
 
 ## Review and revision policy
 
+Telegram first uses a bounded facilitator call to select research, direct writing,
+style-only rewriting or clarification. Neutral preferences and subjective writing do
+not require sources; they still undergo all independent content checks. Style-only
+rewrites skip optional planning. Any factual or numeric-evidence requirement selects
+research. Explicit numeric rate/policy guards distinguish claims from formatting counts
+and preference options. Invalid routing falls back to research; duplicate JSON keys are
+rejected locally. For the research route, a brief live search precedes planning/writing.
+The research stage uses Anthropic's hosted `web_search_20250305` tool with at most two
+searches, using the existing Anthropic key; web search must be enabled for the provider
+organization and supported by the configured fast model. No new package or search-provider
+key is needed. Search is performed by the provider, so the bot connects to api.anthropic.com,
+not arbitrary user-provided URLs. Missing access, incomplete research, missing citations or
+unsupported premises stop writing; they never fall back to an unsourced model response.
+
+`research.py` requests clarification for ambiguous topics and essential private/product details.
+For currency, tax and regulatory topics, readiness additionally requires a cited Iraqi official
+source, such as cbi.iq or the competent government authority. Research instructions require
+exact figures, units, relevant dates and applicability, distinguish official/customer/market
+rates, and check the user's premise instead of assuming it is true. Official-domain presence
+alone does not prove a claim: the independent reviewer still compares claims with source
+excerpts. Search cannot guarantee that a current official announcement will be available.
+
+Only citations attached to actual provider search results become evidence; generated URLs
+and uncited summaries do not qualify. The same bounded evidence packet reaches the analyst,
+writer, reviser and independent reviewer. Source links are delivered separately from the
+script and research status/source URLs are available in `/diagnose`; excerpts and summaries
+remain internal. Retrieval time is recorded separately from publication/effective dates.
+
+Each search costs $0.01 in addition to model tokens and is included in run cost. The research
+call reserves the two-search maximum fee against the existing spend stop. The default call
+allowance is seven, supporting facilitator, research, analyst, writer, review, one revision
+and re-review. A direct write normally uses four calls with planning; a style rewrite
+uses three. The same output, time and cost limits still bound the additional stage.
+Existing time, cost, input and output budgets still apply. Explicit lower limits are preserved.
+Offline/programmatic calls retain their previous behavior; pass `research=True` to
+`run_pipeline` or `execute` to use the same live research stage outside Telegram.
+
+An isolated `format_identity: fail` with actionable feedback may use the existing revision
+allowance and must pass a fresh review. Any additional failed gate, or any uncertain gate,
+still stops automatic revision. An overlong short Story can similarly use the revision
+allowance to regenerate within 75 spoken words / 800 characters, followed by validation
+and independent review. Neither path lowers the acceptance threshold.
+
 Scores: hook, storytelling value, platform fit, audience relevance, Iraqi dialect,
 CTA effectiveness, originality. Instants do not require an artificial CTA. Articles
 emphasize evidence and useful analysis; videos emphasize an honest opening and payoff;
@@ -64,7 +107,7 @@ replacement are allowed. Natural voice matters more than artificially inserting 
 
 Factual integrity, safety, topic preservation, voice preservation and format identity are mandatory
 `pass` / `fail` / `uncertain` gates. No creative score overrides a failed or uncertain gate.
-Uncertain or failed critical gates go to human review, rather than asking a model to
+Uncertain gates and failed factual/safety/topic/voice gates go to human review, rather than asking a model to
 cosmetically erase a factual/safety objection. Invalid native structures also stop early,
 saving reviewer calls. A caller can correct the brief and generate again.
 
@@ -91,7 +134,7 @@ calls. Hard validation ceilings prevent accidental unlimited settings.
 | `QUALITY_THRESHOLD` | 7.5 | 0–10 |
 | `QUALITY_DIMENSION_FLOOR` | 6.0 | 0–10; every positively weighted dimension |
 | `QUALITY_MAX_REVISIONS` | 1 | 0–2 |
-| `QUALITY_MAX_CALLS` | 5 | 1–7 logical transport calls |
+| `QUALITY_MAX_CALLS` | 7 | 1–7 logical transport calls |
 | `QUALITY_TIMEOUT_SECONDS` | 120 | 1–300 total deadline |
 | `QUALITY_CALL_TIMEOUT_SECONDS` | 45 | 1–120; also bounded by remaining total deadline |
 | `QUALITY_MAX_COST_USD` | 0.25 | 0.001–1; stop before next call at observed estimated spend |

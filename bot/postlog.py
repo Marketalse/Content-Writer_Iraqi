@@ -7,10 +7,16 @@ Nothing is changed in the content from these numbers until you compare them agai
 
 import csv
 import json
+import logging
 import os
+from threading import RLock
 from datetime import datetime
 from pathlib import Path
 from uuid import uuid4
+from storage import StorageError, atomic_write_bytes
+
+log = logging.getLogger('postlog')
+_LOCK = RLock()
 
 ROOT = Path(__file__).resolve().parent.parent
 STATE_DIR = Path(os.getenv("STATE_DIR") or ROOT)  # persistent disk on Render, see pilot.py
@@ -25,9 +31,44 @@ def _now() -> str:
 
 
 def _read() -> list[dict]:
-    if not LOG.exists():
-        return []
-    return [json.loads(l) for l in LOG.read_text(encoding="utf-8").splitlines() if l.strip()]
+    with _LOCK:
+        if not LOG.exists():
+            return []
+        data = LOG.read_bytes()
+        lines = data.splitlines(keepends=True)
+        rows = []
+        offset = 0
+        for index, line in enumerate(lines):
+            if line.strip():
+                try:
+                    row = json.loads(line)
+                except (ValueError, UnicodeError) as exc:
+                    if index == len(lines) - 1 and not line.endswith((b'\n', b'\r')):
+                        # Preserve the exact bytes before repairing only a torn final append.
+                        quarantine = LOG.with_name(LOG.name + '.torn-' + uuid4().hex)
+                        atomic_write_bytes(quarantine, line)
+                        atomic_write_bytes(LOG, data[:offset])
+                        log.warning('Incomplete journal tail quarantined and repaired; bytes=%d', len(line))
+                        return rows
+                    raise StorageError('Journal contains a malformed complete record') from exc
+                if not isinstance(row, dict):
+                    raise StorageError('Journal record is not an object')
+                rows.append(row)
+            offset += len(line)
+        return rows
+
+
+def _append(row: dict) -> None:
+    LOG.parent.mkdir(parents=True, exist_ok=True)
+    separator = ''
+    if LOG.exists() and LOG.stat().st_size:
+        with LOG.open('rb') as file:
+            file.seek(-1, os.SEEK_END)
+            separator = '' if file.read(1) == b'\n' else '\n'
+    with LOG.open('a', encoding='utf-8') as file:
+        file.write(separator + json.dumps(row, ensure_ascii=False) + '\n')
+        file.flush()
+        os.fsync(file.fileno())
 
 
 def read_all() -> list[dict]:
@@ -37,21 +78,23 @@ def read_all() -> list[dict]:
 def log_post(record: dict, *, event: str = 'generated') -> str:
     if event not in ('generated', 'clarification'):
         raise ValueError('unsupported generation event')
-    LOG.parent.mkdir(parents=True, exist_ok=True)
     pid = datetime.now().strftime("%Y%m%d%H%M%S") + "-" + uuid4().hex[:8]
     row = {**record, "event": event, "id": pid, "date": _now()}
-    with LOG.open("a", encoding="utf-8") as f:
-        f.write(json.dumps(row, ensure_ascii=False) + "\n")
+    with _LOCK:
+        _read()
+        _append(row)
     return pid
 
 
 def mark_published(pid: str) -> bool:
-    if not any(r.get("event") == "generated" and r["id"] == pid
-               and r.get("quality_status", "accepted") == "accepted" for r in _read()):
-        return False
-    with LOG.open("a", encoding="utf-8") as f:
-        f.write(json.dumps({"event": "published", "id": pid, "date": _now()}, ensure_ascii=False) + "\n")
-    return True
+    with _LOCK:
+        rows = _read()
+        if not any(r.get('event') == 'generated' and r.get('id') == pid
+                   and r.get('quality_status', 'accepted') == 'accepted' for r in rows):
+            return False
+        if not any(r.get('event') == 'published' and r.get('id') == pid for r in rows):
+            _append({'event': 'published', 'id': pid, 'date': _now()})
+        return True
 
 
 def export_reach_sheet() -> Path:

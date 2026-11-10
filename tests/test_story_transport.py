@@ -14,6 +14,7 @@ from pipeline import Run, run_pipeline
 from quality import Checked, check
 from reviewer import DIMENSIONS, GATES
 from revision import Settings
+from research_fixtures import researched, routed
 
 COPY='الشارع المزدحم مو ضمان للمبيعات. راقب إذا الناس اللي تمر تحتاج منتجك وتگدر تدخل لمحلك بسهولة.'
 
@@ -38,10 +39,17 @@ class TransportTests(unittest.TestCase):
         cases=('', 'STORY:', 'HOOK: بداية\nCONTENT: شرح\nCTA: تابع',
                '**HOOK**: بداية\n**SCRIPT**: شرح', 'STORY: فكرة\nINTERACTION: سؤال؟',
                'STORY: فكرة\nSTORY: ثانية', '```\n'+COPY+'\n```',
-               '{"STORY":"فكرة"}', '<b>STORY:</b> فكرة', 'كلمة '*76, 'ك'*801)
+               '{"STORY":"فكرة"}', '<b>STORY:</b> فكرة')
         for text in cases:
             with self.subTest(text=text[:30]):
                 self.assertEqual(normalize_short_story(text,'story',story_intent='educational'),text)
+
+    def test_overlong_unambiguous_bodies_are_labeled_but_still_fail_length_validation(self):
+        for text in ('كلمة ' * 76, 'ك' * 801):
+            normalized = normalize_short_story(text, 'story', story_intent='educational')
+            self.assertTrue(normalized.startswith('STORY: '))
+            self.assertTrue(any('short Story exceeds' in issue
+                                for issue in check('story', normalized, story_intent='educational')))
 
     def test_no_inference_for_other_formats_auto_intent_or_story_sequences(self):
         for fmt,mode,intent in [('reel','moment','educational'),('linkedin','moment','auto'),
@@ -126,11 +134,11 @@ class TransportTelegramTests(unittest.IsolatedAsyncioTestCase):
         update,context,status=self.setup_update()
         analyst=Result(json.dumps({'audience_need':'direct insight','objection':'','purpose':'education',
             'framework':'none','logic_chain':[],'missing_information':'','clarification_question':''}), 'mock')
-        model=AsyncMock(side_effect=[analyst,Result(COPY,'mock'),review()])
+        model=AsyncMock(side_effect=[routed(),researched(),analyst,Result(COPY,'mock'),review()])
         with patch.object(app,'_allowed_chat',return_value=True),patch.object(app,'pilot_check',return_value=(True,'')), \
              patch.object(app,'log_post',return_value='id') as record,patch('revision.generate',model):
             await app.on_text(update,context)
-        self.assertEqual(model.await_count,3)
+        self.assertEqual(model.await_count,5)
         self.assertTrue(record.call_args.args[0]['transport_normalized'])
         self.assertIn(COPY,[call.args[0] for call in update.message.reply_text.call_args_list])
         self.assertFalse(any('STORY:' in call.args[0] for call in update.message.reply_text.call_args_list))

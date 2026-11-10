@@ -9,11 +9,16 @@ Both live under STATE_DIR. Set STATE_DIR to a persistent disk path on Render (fo
 so pilot limits survive redeploys. Without it, they are stored inside the project folder."""
 
 import json
+import logging
+import math
 import os
 from datetime import date
 from pathlib import Path
 
 from postlog import read_all
+from storage import StorageError, atomic_write_bytes
+
+log = logging.getLogger('pilot')
 
 ROOT = Path(__file__).resolve().parent.parent
 STATE_DIR = Path(os.getenv("STATE_DIR") or ROOT)
@@ -26,12 +31,32 @@ PER_POST_CAP_USD = 0.25   # worst-case cost of one post; checked before each cal
 def _load() -> dict:
     if not CONFIG.exists():
         return {"pilots": {}}
-    return json.loads(CONFIG.read_text(encoding="utf-8"))
+    try:
+        data = json.loads(CONFIG.read_text(encoding='utf-8'))
+        _validate(data)
+        return data
+    except (ValueError, TypeError, KeyError, UnicodeError) as exc:
+        raise StorageError('Pilot configuration is invalid; operator review required') from exc
+
+
+def _validate(data: dict) -> None:
+    if not isinstance(data, dict) or not isinstance(data.get('pilots'), dict):
+        raise ValueError('invalid pilot configuration')
+    for item in data['pilots'].values():
+        if (not isinstance(item, dict) or type(item.get('active')) is not bool
+                or type(item.get('max_posts')) is not int or item['max_posts'] < 0
+                or type(item.get('max_usd')) not in (int, float)
+                or not math.isfinite(item['max_usd']) or item['max_usd'] < 0):
+            raise ValueError('invalid pilot record')
 
 
 def _save(data: dict) -> None:
-    CONFIG.parent.mkdir(parents=True, exist_ok=True)
-    CONFIG.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+    _validate(data)
+    contents = json.dumps(data, ensure_ascii=False, indent=2, allow_nan=False).encode('utf-8')
+    if CONFIG.exists():
+        _load()  # Never overwrite a corrupt settings file or silently restore old permissions.
+        atomic_write_bytes(CONFIG.with_suffix(CONFIG.suffix + '.bak'), CONFIG.read_bytes())
+    atomic_write_bytes(CONFIG, contents)
 
 
 def owner_id() -> int:
@@ -58,10 +83,14 @@ def check(chat_id: int) -> tuple[bool, str]:
     allowed = {int(x) for x in os.getenv("ALLOWED_CHAT_IDS", "").split(",") if x.strip()}
     if is_owner(chat_id) or chat_id in allowed:
         return True, ""
-    p = get_pilot(chat_id)
+    try:
+        p = get_pilot(chat_id)
+        posts, cost = usage(chat_id) if p and p.get('active') else (0, 0)
+    except OSError:
+        log.error('Pilot admission denied: persistent account data unavailable')
+        return False, 'تعذّر قراءة بيانات الحساب أو سجل الاستخدام. كلم صاحب البوت حتى يراجع التخزين.'
     if not p or not p.get("active"):
         return False, "الحساب مو مفعّل للتجربة. ارسل /id لصاحب البوت حتى يفعّله."
-    posts, cost = usage(chat_id)
     if posts >= p["max_posts"]:
         return False, f"خلصت التجربة ({posts} من {p['max_posts']} منشور). شكراً! كلم صاحب البوت لتكملة."
     if cost + PER_POST_CAP_USD > p["max_usd"]:

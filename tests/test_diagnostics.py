@@ -72,6 +72,24 @@ class StoredDiagnosisTests(unittest.TestCase):
         self.assertNotIn('أعد إرسال',message)
         self.assertNotIn('unknown_pricing',message)
 
+    def test_block_warning_explains_uncertainty_without_exposing_reviewer_payload(self):
+        record = {'failure_code': 'critical_gate', 'review_history': [{
+            'gates': {**dict.fromkeys(GATES, 'pass'), 'factual_integrity': 'uncertain'},
+            'issues': [{'reason': 'PRIVATE_ISSUE'}]}]}
+        message = failure_message(record, self.pid)
+        self.assertIn('دقة المعلومات', message)
+        self.assertIn('مو إثبات إن المعلومات غلط', message)
+        self.assertNotIn('PRIVATE_ISSUE', message)
+        self.assertNotIn('سلامة المحتوى', message)
+        with patch('diagnostics.authorized_post', return_value=record):
+            report = diagnostic_report(self.pid, 123)
+        self.assertIn('دقة المعلومات', report['next_action'])
+        self.assertNotIn('PRIVATE_ISSUE', json.dumps(report))
+
+    def test_legacy_block_warning_names_failed_gate(self):
+        message = failure_message({'failures': ['safety: fail']}, self.pid)
+        self.assertIn('سلامة المحتوى: ما اجتازت الفحص', message)
+
 
 class FailureStageTests(unittest.IsolatedAsyncioTestCase):
     async def run_case(self,responses,settings=None):

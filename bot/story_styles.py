@@ -17,7 +17,7 @@ STORY_STYLES = {
     },
     'ask_audience': {
         'label': '❓ سؤال للجمهور', 'purpose': 'conversation',
-        'instruction': 'Ask one specific, easy-to-answer question addressed to the audience. Include only the minimum context needed. It may suit a question sticker or a meaningful poll. Do not answer it yourself or add a lesson or second ask.',
+        'instruction': 'Ask one specific, easy-to-answer question addressed to the audience. Include only the minimum context needed. It may suit a question sticker or a meaningful poll. Do not answer it yourself or add a lesson or second ask. Prefer a neutral question about the audience\'s own choice or experience; never invent shared experience, statistics or a universal factual premise. A short question is complete without an explanation, story arc or added CTA.',
         'topic_prompt': 'عن شنو تريد تسأل الجمهور؟',
     },
     'answer_question': {
