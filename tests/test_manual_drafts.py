@@ -84,7 +84,7 @@ class ManualEngineTests(unittest.IsolatedAsyncioTestCase):
         model=AsyncMock(side_effect=[Result(PLAN,'mock'),Result(REEL,'mock'),review(issues=[issue]),
                                      Result(patch_text,'mock'),review(scores=scores)])
         with patch('revision.generate',model):
-            run=await run_pipeline('reel','voice','موقع المحل','myth',brief=Brief(structure_id='reversal'))
+            run=await run_pipeline('reel','voice','موقع المحل','myth',brief=Brief(structure_id='reversal'), settings=Settings(max_revisions=1,show_review_drafts=True))
         self.assertEqual(model.await_count,5)
         self.assertEqual(run.checked.status,'needs_review')
         self.assertEqual(run.checked.review_history[0]['score'],7.0)
@@ -96,7 +96,7 @@ class ManualEngineTests(unittest.IsolatedAsyncioTestCase):
     async def test_explicit_strict_mode_withholds_the_same_draft(self):
         model=AsyncMock(side_effect=[Result(REEL,'mock'),review()])
         with patch('revision.generate',model):
-            run=await run_pipeline('reel','voice','الموقع','myth',settings=Settings(analyst=False,show_review_drafts=False))
+            run=await run_pipeline('reel','voice','الموقع','myth',settings=Settings(analyst=False,max_revisions=0,show_review_drafts=False))
         self.assertEqual(run.checked.status,'needs_review')
         self.assertFalse(run.checked.manual_review_ready)
         self.assertEqual(model.await_count,2)

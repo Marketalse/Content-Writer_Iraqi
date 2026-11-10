@@ -161,3 +161,27 @@ for verification are synthetic; no paid API or Telegram calls were made.
 Validation: 282 offline unittest tests passed; pip check and git diff --check passed.
 All 39 offline format contract examples passed (semantic quality unverified).
 Release CI results are recorded separately.
+
+
+## Editorial score recovery — 2026-11-10
+
+Confirmed: the engine stopped after one default edit, missing review issues, or a
+non-improving reassessment. It now defaults to two editorial retries: a targeted edit
+when actionable sections exist, followed by a fresh draft if quality still fails.
+Without section feedback it regenerates directly. Every candidate passes native
+validation, supplied-fact preservation and independent scoring plus all quality gates.
+Only isolated format-identity failures can be recovered; factual, safety, topic and
+voice failures still stop. Threshold 7.5 and dimension floor 6 remain unchanged.
+Default manual-preview delivery is disabled. Explicit environment overrides are
+preserved; Render must update older limits to enable the expanded loop.
+
+Defaults increased to ten logical calls, 24,000 reserved output tokens and 180 seconds;
+observed-spend stop remains $0.25. No infinite retries and no guaranteed acceptance.
+Offline regressions cover score progression, a stalled edit followed by regeneration,
+retry exhaustion, safety rejection on the final draft, and budget exhaustion before
+final review. Live provider and Telegram calls were not exercised.
+
+Verification: 288 offline regression tests passed through the no-network audit verifier;
+dependency consistency and whitespace checks passed, as did 39/39 offline format
+examples (semantic quality unverified). Render Blueprint and
+example environment settings include the expanded loop and strict delivery defaults.
