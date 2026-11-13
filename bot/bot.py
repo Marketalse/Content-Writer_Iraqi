@@ -1,7 +1,7 @@
 """Telegram bot that writes Iraqi-dialect content.
 
 Flow:
-  /start -> content family -> platform/subtype -> style -> narrative -> topic (text)
+  /start -> feature -> platform/subtype -> content strategy -> script structure -> topic
   The bot replies with the caption and logs the post. /published <id> marks it as published.
   /format changes the format, /cancel resets.
 
@@ -77,6 +77,11 @@ def _allowed_chat(update: Update) -> bool:
 
 
 def _format_keyboard() -> InlineKeyboardMarkup:
+    from layer_navigation import root_keyboard
+    return root_keyboard()
+
+
+def _legacy_family_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
         [InlineKeyboardButton(label, callback_data=f"fam:{key}")]
         for key, (label, _) in FAMILIES.items()
@@ -98,7 +103,7 @@ def _structure_keyboard(fmt: str) -> InlineKeyboardMarkup:
 
 
 def _clear_selection(data: dict) -> None:
-    for key in ('family', 'menu_stage', 'format', 'angle', 'structure_id',
+    for key in ('feature_id', 'strategy_id', 'family', 'menu_stage', 'format', 'angle', 'structure_id',
                 'pending_clarification', 'content_brief'):
         data.pop(key, None)
 
@@ -142,7 +147,7 @@ async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     _clear_selection(context.chat_data)
     await update.message.reply_text(
-        "الخطوة 1/5 — نوع المحتوى\nهلا بيك! 👋 اختار النوع، بعدها المنصة والستايل والبنية، وبعدين الموضوع.",
+        "الطبقة 1/3 — نوع المحتوى\nهلا بيك! 👋 اختار النوع والمنصة، بعدها استراتيجية المحتوى وبنية السكربت، وبعدين الموضوع.",
         reply_markup=_format_keyboard(),
     )
 
@@ -151,7 +156,7 @@ async def cmd_format(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not _allowed_chat(update):
         return
     _clear_selection(context.chat_data)
-    await update.message.reply_text("الخطوة 1/5 — شنو نوع المحتوى؟", reply_markup=_format_keyboard())
+    await update.message.reply_text("الطبقة 1/3 — شنو نوع المحتوى؟", reply_markup=_format_keyboard())
 
 
 async def cmd_cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -177,8 +182,14 @@ async def cmd_brief(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return
         if raw[1].strip() == "reset":
             context.chat_data.pop("content_brief", None)
+            if context.chat_data.get("feature_id") and context.chat_data.get("strategy_id"):
+                from layer_navigation import selected_brief
+                context.chat_data["content_brief"] = selected_brief(context.chat_data)
         else:
             brief = parse_brief_input(raw[1])
+            if context.chat_data.get('feature_id'):
+                from layer_navigation import selected_brief
+                brief = selected_brief(context.chat_data, brief)
             if not brief.structure_id and context.chat_data.get('structure_id'):
                 brief = replace(brief, structure_id=context.chat_data['structure_id'])
             if context.chat_data.get("format"):
@@ -290,6 +301,8 @@ async def cmd_version(update: Update, context: ContextTypes.DEFAULT_TYPE):
     info["story_mode"] = brief.story_mode
     info["story_intent"] = brief.story_intent
     info["structure_id"] = context.chat_data.get("structure_id", brief.structure_id)
+    info["feature_id"] = context.chat_data.get("feature_id", brief.feature_id)
+    info["strategy_id"] = context.chat_data.get("strategy_id", brief.strategy_id)
     info["production_mode"] = str(brief.production).lower()
     await update.message.reply_text(
         "نسخة البوت اللي تجاوبك:\n" + "\n".join(f"{k}={v}" for k, v in info.items())
@@ -356,6 +369,15 @@ async def _show_platform(query, data: dict, family: str):
                                  reply_markup=_platform_keyboard(family))
 
 
+async def on_layer_chosen(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    if not _allowed_chat(update):
+        return
+    from layer_navigation import handle
+    await handle(query, context.chat_data, FORMATS, _clear_selection, _legacy_family_keyboard)
+
+
 async def on_back(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -396,7 +418,7 @@ async def on_family_chosen(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     _clear_selection(context.chat_data)
     if family == 'root':
-        await query.edit_message_text("الخطوة 1/5 — اختار نوع المحتوى:", reply_markup=_format_keyboard())
+        await query.edit_message_text("الطبقة 1/3 — اختار نوع المحتوى:", reply_markup=_format_keyboard())
         return
     await _show_platform(query, context.chat_data, family)
 
@@ -475,7 +497,7 @@ async def on_angle_chosen(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if fmt not in FORMATS:
         if query.data.startswith('ang:') and key in {*ANGLES, *STORY_ANGLE_KEYS}:
             _clear_selection(context.chat_data)
-            await query.edit_message_text("الخطوة 1/5 — حدّثنا الاختيارات، اختار نوع المحتوى:",
+            await query.edit_message_text("الطبقة 1/3 — حدّثنا الاختيارات، اختار نوع المحتوى:",
                                          reply_markup=_format_keyboard())
         return
     if key not in ANGLES and not (is_story(fmt) and key in STORY_ANGLE_KEYS):
@@ -502,6 +524,19 @@ async def on_angle_chosen(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def on_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not _allowed_chat(update):
         return
+    if context.chat_data.get('feature_id'):
+        from layer_navigation import show_current
+        from content_layers import validate_selection
+        if context.chat_data.get('menu_stage') != 'topic':
+            await show_current(update.message, context.chat_data, FORMATS)
+            return
+        try:
+            validate_selection(context.chat_data.get('format'), context.chat_data['feature_id'],
+                               context.chat_data.get('strategy_id'), context.chat_data.get('structure_id'))
+        except (ValueError, KeyError):
+            _clear_selection(context.chat_data)
+            await update.message.reply_text('اختار نوع المحتوى من جديد.', reply_markup=_format_keyboard())
+            return
     fmt = context.chat_data.get("format")
     angle = context.chat_data.get("angle")
     if not fmt:
@@ -519,7 +554,11 @@ async def on_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     try:
-        selected_angle = angle_description(fmt, angle)
+        if context.chat_data.get('feature_id'):
+            from content_layers import get_strategy
+            selected_angle = get_strategy(context.chat_data['feature_id'], context.chat_data['strategy_id']).instruction
+        else:
+            selected_angle = angle_description(fmt, angle)
     except KeyError:
         context.chat_data.pop("angle", None)
         await update.message.reply_text("اختار الستايل من جديد.", reply_markup=_angle_keyboard(fmt, scoped=bool(context.chat_data.get("family"))))
@@ -537,6 +576,9 @@ async def on_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         topic = (pending["topic"] + "\nسؤال التوضيح: " + pending["question"]
                  + "\nإجابة المستخدم: " + topic)
     brief = context.chat_data.get("content_brief", Brief())
+    if context.chat_data.get('feature_id'):
+        from layer_navigation import selected_brief
+        brief = selected_brief(context.chat_data, brief)
     if context.chat_data.get('structure_id'):
         brief = replace(brief, structure_id=context.chat_data['structure_id'])
     if is_story(fmt) and angle in STORY_ANGLE_KEYS and brief.story_mode == 'moment':
@@ -598,7 +640,7 @@ async def on_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "build": runtime, "planning": checked.planning, "research": checked.research,
         "routing": checked.routing,
         "objective": brief.purpose, "story_mode": brief.story_mode, "story_intent": brief.story_intent,
-        "structure_id": brief.structure_id,
+        "structure_id": brief.structure_id, "feature_id": brief.feature_id, "strategy_id": brief.strategy_id,
         "journey_stage": brief.journey_stage, "distribution": brief.distribution,
         "production_mode": brief.production,
         "elapsed_ms": run.elapsed_ms, "stage_timings": run.timings,
@@ -701,6 +743,7 @@ def create_application(token: str, *, request=None):
     app.add_handler(CommandHandler("experiment", cmd_experiment))
     app.add_handler(CommandHandler("example", cmd_example))
     app.add_handler(CommandHandler("pilot", cmd_pilot))
+    app.add_handler(CallbackQueryHandler(on_layer_chosen, pattern=r"^ly:"))
     app.add_handler(CallbackQueryHandler(on_back, pattern=r"^back:"))
     app.add_handler(CallbackQueryHandler(on_family_chosen, pattern=r"^fam:"))
     app.add_handler(CallbackQueryHandler(on_structure_chosen, pattern=r"^str:"))

@@ -204,7 +204,9 @@ async def execute(fmt: str, system: str, topic: str, angle: str,
     brief = brief or Brief()
     brief.validate_format(fmt)
     from content_choices import structure_prompt
-    narrative = structure_prompt(fmt, brief.structure_id)
+    from content_layers import selection_prompt
+    narrative = (selection_prompt(fmt, brief.feature_id, brief.strategy_id, brief.structure_id)
+                 if brief.feature_id else structure_prompt(fmt, brief.structure_id))
     system = adapt_contract(system, fmt, brief.story_mode, brief.story_intent)
     if narrative and narrative not in system:
         system += "\n" + narrative
@@ -406,7 +408,7 @@ async def execute(fmt: str, system: str, topic: str, angle: str,
                 checked.status = 'blocked'
                 break
             phase = 'review'
-            response = await session.call('review', reviewer_system(fmt, story_mode=brief.story_mode, story_intent=brief.story_intent, structure_id=brief.structure_id), payload(
+            response = await session.call('review', reviewer_system(fmt, story_mode=brief.story_mode, story_intent=brief.story_intent, structure_id=brief.structure_id, feature_id=brief.feature_id, strategy_id=brief.strategy_id), payload(
                 topic=topic, angle=angle, verified_facts=verified_facts,
                 original_draft=original, current_draft=checked.text, section_names=list(parts),
                 brief=brief.data(), production_plan=checked.production_plan, research=evidence),

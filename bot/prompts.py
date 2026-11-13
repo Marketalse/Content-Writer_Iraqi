@@ -128,6 +128,8 @@ def build_system_prompt(fmt: str, *, brief: Brief | None = None) -> str:
     examples = _examples(fmt, brief.story_mode, brief.story_intent)
     if examples:
         sections.append("# أمثلة من كلامي الحقيقي (فيديوهات ومنشورات)\n\n" + examples)
-    sections.append(structure_prompt(profile_key, brief.structure_id))
+    from content_layers import selection_prompt
+    sections.append(selection_prompt(fmt, brief.feature_id, brief.strategy_id, brief.structure_id)
+                    if brief.feature_id else structure_prompt(profile_key, brief.structure_id))
     sections.append(format_contract(profile_key, brief.story_mode, brief.story_intent))
     return "\n\n".join(s for s in sections if s.strip())

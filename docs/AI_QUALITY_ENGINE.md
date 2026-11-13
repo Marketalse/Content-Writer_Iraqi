@@ -412,3 +412,15 @@ headings, separated spoken text and filming instructions, and numbered text bloc
 and shot suggestions. Raw HOOK/SCRIPT/VISUALS/CTA transport layouts are internal.
 The renderer preserves reviewed copy and placeholders; it does not infer matching
 scene pairs or alter scoring. Detailed production plans remain a separate message.
+
+
+## Three content layers (content-layers-v3)
+
+The main menu is feature (Post / Story / Reel / Live Topic), destination platform,
+content strategy, then its script progression. The platform screen is routing,
+not an extra editorial layer. The spreadsheet mapping is documented in
+CONTENT_STRUCTURE_PROPOSAL.md. Live retains audience Q&A, workshop and guest
+conversation. Legacy formats are reachable through the additional-formats menu.
+Brief fields feature_id, strategy_id and structure_id carry the selection through
+all AI stages. Invalid combinations stop before calls; guidance examples such as
+3–6 points and two-second hooks do not become universal rejection gates.
