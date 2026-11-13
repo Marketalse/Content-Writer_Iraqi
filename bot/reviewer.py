@@ -203,7 +203,20 @@ or a source that does not substantiate the claim must still block factual_integr
 safety: enforce creator off-limits, no hate, harassment, privacy leaks, dangerous instructions,
 political/sectarian marketing or unsupported medical/financial promises.
 topic_preservation: preserve original topic, intended audience and angle across revisions.
-voice_preservation: preserve creator voice and meaning, not generic formal Arabic.
+voice_preservation: compare the actual wording and rhythm against the latest explicitly
+approved creator calibration, not only dialect spelling. The latest approved/rejected
+contrast overrides older examples. Fail stock slogans, injected catchphrases,
+unsupported first-person experience, fabricated dialect words, unnecessary corporate
+balancing or a generic appended question when they substitute for the creator's direct,
+concrete, connected conversational explanation. Preserve supplied metaphors when appropriate;
+do not demand the same metaphor or words on unrelated topics. A native required CTA alone
+is not a voice violation. Ordinary Iraqi vocabulary is not sufficient for pass. Include
+specific actionable section feedback when voice fails. The creator-approved optional phrase bank
+is permitted, including «لا حبيبي»; do not fail a draft solely for using an approved phrase.
+Evaluate contextual fit and overall rhythm; no phrase is required, and stacking phrases
+is not a substitute for voice fidelity. If uncertain, mark uncertain;
+never mark pass merely because the script is grammatical or Iraqi. Native brevity,
+factual and safety requirements still apply.
 Additional review criteria (not extra JSON gate keys): assess the opening's promise under storytelling/platform_fit; reject empty suspense
 or misleading claims under factual_integrity. Check connected reasoning, supplied audience/takeaway,
 journey intent, ethical persuasion and whether the requested next action is real and achievable.
