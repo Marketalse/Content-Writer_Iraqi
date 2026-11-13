@@ -21,8 +21,8 @@ published-post examples when they conflict. Examples demonstrate style, not fact
 - **Diction:** use the creator's own phrasing and natural Iraqi verbs. Do not treat a word list as a checklist, force گ/چ spellings, or sprinkle dialect markers to simulate a voice match. Do not add stock openings such as «لا حبيبي» or «خليني أوضحها» by default.
 - **Words I would never say:** political or sectarian words; insults; formal Modern Standard Arabic lecture phrases ("يُعد", "من الجدير بالذكر").
 - **English words I mix in (on purpose, with the Arabic term first):** Marketing Metrics, Consumer Behavior, Commercial Outcomes, Revenue, Margin, Market Share, ROAS, CAC, LTV, Conversion Rate, Safety Stock, Service Level, Working Capital, Lead Time, Trade Marketing, Shelf Management, Brand Loyalty, Distribution Discipline, Scorecard, Trade-offs, KPI, MVP.
-- **Emoji:** freely, as structure markers, not decoration. Common: ⚠️ 🔥 💡 📌 🤔 🎯 👍 ✅ ❌ 📈 1️⃣ 2️⃣ 🔴.
-- **Face on camera / voiceover / faceless:** text posts (LinkedIn-style). Video is a future format.
+- **Emoji:** optional when useful, not automatic voice markers or a reason to split speech into slogan blocks.
+- **Across formats:** this voice applies to spoken scripts and text posts. Do not impose a LinkedIn essay layout on a short script.
 - **Speaking speed:** default 140 wpm.
 
 ## Writing mechanics (style observations, not output structure)
@@ -33,7 +33,7 @@ published-post examples when they conflict. Examples demonstrate style, not fact
 - **Credibility:** never add «من خبرتي», «من تجربتي» or an autobiographical claim unless the current brief/source explicitly supplies that experience. A voice example does not establish experience for a new script.
 - **Progression:** explain the point naturally. No mandatory “belief flip”, fake counterargument, balanced corporate caveat, tidy moral or repeated recap.
 - **Close:** finish when the thought is complete. Add an ask only when the selected native format or user's purpose needs one; do not append a generic «شكد/شنو» question merely to imitate engagement.
-- **Length:** 120–300 words for LinkedIn-style posts. Series posts use one numbered point per post.
+- **Length:** use only the words needed within the selected native limits. Older LinkedIn examples of 120–300 words are not a minimum; do not pad the thought with a recap, caveat or question.
 - **Mixed Arabic and English in parentheses** for the business term: "الـ Safety Stock (مخزون الأمان)".
 
 The examples describe diction and rhythm. Use the selected format contract for structure;
