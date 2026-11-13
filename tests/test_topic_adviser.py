@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, patch
 from test_revision import result, assessment, STORY
 from pipeline import run_pipeline, Run
 from revision import Settings
-from llm import WRITER_MODEL
+from llm import WRITER_MODEL, ADVISER_MODEL
 from reviewer import GATES
 from quality import Checked
 from topic_adviser import parse, render
@@ -32,7 +32,7 @@ class AdviserTests(unittest.IsolatedAsyncioTestCase):
     async def test_voice_rejection_calls_senior_model_without_approving_draft(self):
         run,model=await self.execute([result(ADVICE)])
         self.assertEqual([t['stage'] for t in run.timings],['writer','review','adviser'])
-        self.assertEqual(model.call_args_list[-1].kwargs['model'],WRITER_MODEL)
+        self.assertEqual(model.call_args_list[-1].kwargs['model'],ADVISER_MODEL)
         payload=json.loads(model.call_args_list[-1].args[1])
         self.assertEqual(payload['topic'],'التواصل الفردي ويا الزبائن')
         self.assertEqual(payload['reviews'][-1]['gates']['voice_preservation'],'fail')
@@ -42,7 +42,8 @@ class AdviserTests(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(run.checked.manual_review_ready)
         self.assertEqual(len(run.calls),3)
         self.assertAlmostEqual(run.cost_usd,.003)
-        self.assertIn('تغيير الزاوية وحده ما يحلها',render(run.checked.topic_advice))
+        self.assertNotIn('ضعف كتابة',render(run.checked.topic_advice))
+        self.assertNotIn('ليش هالزاوية',render(run.checked.topic_advice))
 
     async def test_budget_stop_explained_without_hiding_original_failure(self):
         run,model=await self.execute([],max_calls=2)
@@ -143,3 +144,49 @@ class AdviceButtonTests(unittest.IsolatedAsyncioTestCase):
         sent=[call.args[0] for call in message.reply_text.call_args_list]
         self.assertTrue(any(SUGGESTION['topic'] in text for text in sent))
         self.assertIn('topic_advice',ctx.chat_data)
+
+    async def test_numeric_replies_resume_selected_topic_instead_of_writing_number(self):
+        for number in ('1','١','الاقتراح 1'):
+            ctx,_=await self.setup_choice()
+            status=NS(edit_text=AsyncMock(),delete=AsyncMock())
+            message=NS(text=number,reply_text=AsyncMock(return_value=status))
+            upd=NS(message=message,effective_chat=NS(id=123))
+            checked=Checked('STORY: شنو يحتاج زبونك حتى تكتبله رد واضح؟','mock',status='accepted',story_intent='educational')
+            model=AsyncMock(return_value=Run(checked))
+            with patch.object(app,'_allowed_chat',return_value=True),patch.object(app,'pilot_check',return_value=(True,'')),patch.object(app,'log_post',return_value='id'),patch.object(app,'run_pipeline',model):
+                await app.on_text(upd,ctx)
+            self.assertEqual(model.call_args.args[2],SUGGESTION['topic'])
+            self.assertNotIn('topic_advice',ctx.chat_data)
+
+    async def test_number_outside_actual_options_does_not_spend_or_erase_choices(self):
+        ctx,_=await self.setup_choice()
+        message=NS(text='3',reply_text=AsyncMock())
+        with patch.object(app,'_allowed_chat',return_value=True),patch.object(app,'run_pipeline',AsyncMock()) as model:
+            await app.on_text(NS(message=message,effective_chat=NS(id=123)),ctx)
+        model.assert_not_awaited()
+        self.assertIn('topic_advice',ctx.chat_data)
+
+class OpusIsolationTests(unittest.IsolatedAsyncioTestCase):
+    async def test_opus_is_rejected_for_normal_stages_before_spending(self):
+        from revision import Session
+        for stage in ('writer','revision','review','analyst','facilitator','research'):
+            model=AsyncMock()
+            with patch('revision.generate',model):
+                with self.assertRaises(ValueError):
+                    await Session(Settings()).call(stage,'system','topic',model=ADVISER_MODEL)
+            model.assert_not_awaited()
+
+    async def test_native_opus_schema_adaptive_thinking_and_known_pricing(self):
+        import llm
+        from test_review_protocol import sdk_response
+        from topic_adviser import schema
+        api=AsyncMock(return_value=sdk_response(ADVICE))
+        with patch.object(llm._anthropic.messages,'create',api):
+            response=await llm.generate('adviser','topic',model=ADVISER_MODEL,
+                                        output_schema=schema(),effort='medium')
+        self.assertEqual(api.call_args.kwargs['model'],ADVISER_MODEL)
+        self.assertEqual(api.call_args.kwargs['thinking'],{'type':'adaptive'})
+        self.assertEqual(api.call_args.kwargs['extra_body']['output_config']['effort'],'medium')
+        self.assertTrue(response.usage_known)
+        self.assertTrue(response.structured_output)
+        self.assertAlmostEqual(llm.estimate_cost(ADVISER_MODEL,1000,1000,1000,1000),.0292)

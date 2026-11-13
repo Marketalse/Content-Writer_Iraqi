@@ -569,6 +569,20 @@ async def on_text(update: Update, context: ContextTypes.DEFAULT_TYPE, *, topic_o
     message = getattr(update, 'message', None) or getattr(getattr(update, 'callback_query', None), 'message', None)
     if message is None:
         return
+    pending_advice=context.chat_data.get('topic_advice')
+    if topic_override is None and pending_advice:
+        choice=re.fullmatch(r'(?:الاقتراح\s*)?([0-9٠-٩])',message.text.strip())
+        if choice:
+            index=int(choice[1])-1
+            if pending_advice.get('selection')!=_advice_selection(context.chat_data):
+                context.chat_data.pop('topic_advice',None)
+                await message.reply_text('تغيّرت الاختيارات. دز موضوعك من جديد.')
+                return
+            if index<0 or index>=len(pending_advice.get('suggestions',[])):
+                await message.reply_text('اختار رقم من الاقتراحات المعروضة.')
+                return
+            topic_override=pending_advice['suggestions'][index]['topic']
+            context.chat_data.pop('pending_clarification',None)
     context.chat_data.pop('topic_advice', None)
     if context.chat_data.get('feature_id'):
         from layer_navigation import show_current

@@ -1,0 +1,58 @@
+{
+  "installed_on": "2026-11-13",
+  "claude_cli_version": "2.1.323",
+  "claude_config_dir": "/workspace/coding-tools/claude-config",
+  "claude_plugins": [
+    {
+      "id": "agent-skills@addy-agent-skills",
+      "version": "0.6.15",
+      "scope": "project",
+      "enabled": true
+    },
+    {
+      "id": "andrej-karpathy-skills@karpathy-skills",
+      "version": "1.0.0",
+      "scope": "project",
+      "enabled": true
+    },
+    {
+      "id": "ecc@ecc",
+      "version": "2.2.3",
+      "scope": "project",
+      "enabled": true
+    },
+    {
+      "id": "ponytail@ponytail",
+      "version": "5.3.3",
+      "scope": "project",
+      "enabled": true
+    },
+    {
+      "id": "superpowers@claude-plugins-official",
+      "version": "7.0.2",
+      "scope": "project",
+      "enabled": true
+    }
+  ],
+  "mattpocock_skills": {
+    "installer": "skills@1.8.1",
+    "source": "mattpocock/skills",
+    "count": 38,
+    "agents": [
+      "codex",
+      "claude-code"
+    ]
+  },
+  "ecc_setup": {
+    "cli": "ecc-universal@2.2.3",
+    "scope": "project",
+    "hooks": "minimal",
+    "production_dependencies": "installed manually with npm ci --omit=dev --ignore-scripts"
+  },
+  "activation": "restart coding-agent session; no model session or bundled browser MCP started",
+  "ponytail_options": {
+    "ledger": false,
+    "sendNames": false,
+    "webhook": "not configured"
+  }
+}
