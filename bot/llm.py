@@ -32,19 +32,24 @@ NOUS_MODEL = os.getenv("NOUS_MODEL", "anthropic/claude-sonnet-5.5")
 if NOUS_MODEL == 'anthropic/claude-sonnet-5-5':
     NOUS_MODEL = 'anthropic/claude-sonnet-5.5'
 NOUS_BASE_URL = os.getenv("NOUS_BASE_URL", "https://inference-api.nousresearch.com/v1")
+ADVISER_MODEL = 'claude-opus-5-5'
+NOUS_ADVISER_MODEL = 'anthropic/claude-opus-5.5'
 MAX_TOKENS = 4000
 # Documented Claude API structured-output models used by this project. Unknown
 # model overrides retain strict local validation without speculative API options.
-STRUCTURED_MODELS = frozenset(('claude-haiku-5-5', 'claude-sonnet-5-5'))
+STRUCTURED_MODELS = frozenset(('claude-haiku-5-5', 'claude-sonnet-5-5', ADVISER_MODEL))
 
 # USD per million tokens, Anthropic list prices. Cache read = 0.1x input, cache write = 1.25x input.
 PRICES = {
     "claude-sonnet-5-5": (2.00, 10.00),
+    ADVISER_MODEL: (4.00, 20.00),
     "claude-haiku-5-5": (0.10, 0.50),
 }
-# Nous's public /v1/models catalog, verified 2026-11-10. USD per million tokens;
+# Nous public /v1/models: Sonnet verified 2026-11-10, Opus verified 2026-11-13.
+# USD per million tokens;
 # no cache options are requested below. Unknown models still fail the budget guard.
-NOUS_PRICES = {'anthropic/claude-sonnet-5.5': (2.00, 10.00)}
+NOUS_PRICES = {'anthropic/claude-sonnet-5.5': (2.00, 10.00),
+               NOUS_ADVISER_MODEL: (4.00, 20.00)}
 
 
 PROVIDER_ERROR_CODES = frozenset({
@@ -120,7 +125,7 @@ def estimate_cost(model: str, inp: int, out: int, cache_read: int, cache_write: 
     if model not in PRICES:
         return 0.0
     pin, pout = PRICES[model]
-    return (inp * pin + out * pout + cache_read * pin * 0.1 + cache_write * pin * 1.25) / 1_000_000
+    return (inp * pin + out * pout + cache_read * (0.20 if model == ADVISER_MODEL else pin * 0.1) + cache_write * pin * 1.25) / 1_000_000
 
 
 _anthropic = anthropic.AsyncAnthropic(api_key=os.getenv("ANTHROPIC_API_KEY") or "not-configured", max_retries=0, timeout=40.0)
@@ -143,7 +148,7 @@ def _should_fallback(exc: Exception) -> bool:
 async def generate(system: str, user: str, model: str | None = None,
                    max_tokens: int = MAX_TOKENS, *, output_schema: dict | None = None,
                    effort: str | None = None, web_search: bool = False,
-                   provider: str | None = None) -> Result:
+                   provider: str | None = None, nous_model: str | None = None) -> Result:
     """Return the model's answer. Falls back to Nous Portal only on allowed errors."""
     model = model or WRITER_MODEL
     if effort not in (None, 'low', 'medium', 'high'):
@@ -153,14 +158,16 @@ async def generate(system: str, user: str, model: str | None = None,
     if provider == 'nous':
         if web_search:
             raise LLMError(code='provider_search_unavailable', provider='nous', fallback_status='unsupported_search')
-        return await _generate_nous(system, user, max_tokens, output_schema, effort)
+        return await _generate_nous(system, user, max_tokens, output_schema, effort, model=nous_model)
     output_config = {}
     if output_schema is not None and model in STRUCTURED_MODELS:
         output_config['format'] = {'type':'json_schema', 'schema':output_schema}
-    if effort is not None and model == 'claude-haiku-5-5':
+    if effort is not None and model in ('claude-haiku-5-5', ADVISER_MODEL):
         output_config['effort'] = effort
     # extra_body keeps compatibility with SDK versions predating output_config.
     options = {'extra_body':{'output_config':output_config}} if output_config else {}
+    if model == ADVISER_MODEL:
+        options['thinking'] = {'type': 'adaptive'}
     if web_search:
         options['tools'] = [{'type': 'web_search_20250305', 'name': 'web_search', 'max_uses': 2}]
     try:
@@ -237,23 +244,24 @@ async def generate(system: str, user: str, model: str | None = None,
         failure.fallback_status = 'not_configured'
         raise failure
     return await _generate_nous(system, user, max_tokens, output_schema, effort,
-                                fallback_reason=failure.code)
+                                fallback_reason=failure.code, model=nous_model)
 
 
-async def _generate_nous(system, user, max_tokens, output_schema, effort, fallback_reason=''):
+async def _generate_nous(system, user, max_tokens, output_schema, effort, fallback_reason='', model=None):
+    model = model or NOUS_MODEL
     if _nous is None:
         raise LLMError(code='provider_fallback_unconfigured', provider='nous', fallback_status='not_configured')
     options = {}
     if output_schema is not None:
         system += '\nReturn ONLY JSON matching this schema:\n' + json.dumps(output_schema)
-        if NOUS_MODEL in NOUS_PRICES:
+        if model in NOUS_PRICES:
             options['response_format'] = {'type': 'json_schema', 'json_schema': {
                 'name': 'content_workflow', 'strict': True, 'schema': output_schema}}
-    if effort is not None and NOUS_MODEL in NOUS_PRICES:
+    if effort is not None and model in NOUS_PRICES:
         options['reasoning_effort'] = effort
     try:
         r = await _nous.chat.completions.create(
-            model=NOUS_MODEL,
+            model=model,
             max_tokens=max_tokens,
             messages=[{"role": "system", "content": system}, {"role": "user", "content": user}],
             **options,
@@ -266,12 +274,12 @@ async def _generate_nous(system, user, max_tokens, output_schema, effort, fallba
     raw_out = usage.completion_tokens if usage else None
     inp = raw_inp if type(raw_inp) is int and raw_inp >= 0 else 0
     out = raw_out if type(raw_out) is int and raw_out >= 0 else 0
-    known = (usage is not None and NOUS_MODEL in NOUS_PRICES
+    known = (usage is not None and model in NOUS_PRICES
              and urlsplit(NOUS_BASE_URL).hostname == 'inference-api.nousresearch.com'
              and type(raw_inp) is int and raw_inp >= 0 and type(raw_out) is int and raw_out >= 0)
-    price = NOUS_PRICES.get(NOUS_MODEL, (0, 0))
+    price = NOUS_PRICES.get(model, (0, 0))
     cost = (inp * price[0] + out * price[1]) / 1_000_000 if known else 0
-    return Result(text, "nous", model=NOUS_MODEL, stop_reason=r.choices[0].finish_reason,
+    return Result(text, "nous", model=model, stop_reason=r.choices[0].finish_reason,
                   truncated=r.choices[0].finish_reason == "length",
                   refused=r.choices[0].finish_reason == 'content_filter',
                   input_tokens=inp, output_tokens=out, cost_usd=cost, usage_known=known,

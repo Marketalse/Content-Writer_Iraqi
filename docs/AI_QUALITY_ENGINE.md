@@ -429,15 +429,23 @@ all AI stages. Invalid combinations stop before calls; guidance examples such as
 ## Senior topic adviser for withheld drafts
 
 Telegram opts into one adviser call after eligible content rejections, using the
-configured WRITER_MODEL tier (default Sonnet) and existing Nous failover. It proposes
+Opus 5.5 for this failure-only stage, with Opus 5.5 retained on Nous failover.
+Normal pipeline models are unchanged. It proposes
 up to three related angles, why they address the review and whether research is
 needed. A voice rejection is explained as a wording problem; suggestions do not
 certify a topic or script. Safety/topic-preservation failures do not trigger advice.
 
 The call shares existing resource limits and usage accounting. If it cannot run,
 the creator sees that explanation in addition to the original failure. No automatic
-topic switch occurs. A creator's single-use selection restarts quota checks and the
+topic switch occurs. A creator's single-use button or numbered reply restarts quota checks and the
 full research/writing/review flow with the current brief. /diagnose exposes adviser
 status and model metadata without the private suggestion bodies. Programmatic
 run_pipeline callers can opt in using suggest_topics=True; the default stays false
 for offline evaluation and batch compatibility. No new Render setting is required.
+
+
+Creator topic suggestions are short voice-matched openings. Reasons and research
+flags stay in the stored adviser record, not in the visible option list. A pending
+choice accepts 1/2/3 or ١/٢/٣; the selected topic, not the numeral, enters writing.
+Current pricing sources: https://platform.claude.com/docs/en/about-claude/pricing
+and https://inference-api.nousresearch.com/v1/models (verified 2026-11-13).

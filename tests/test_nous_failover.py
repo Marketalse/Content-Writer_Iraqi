@@ -84,7 +84,11 @@ class NousFailoverTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(run.checked.failure_code,'critical_gate')
         self.assertEqual(run.checked.topic_advice['status'],'ready')
         self.assertEqual(run.checked.topic_advice['provider'],'nous')
-        self.assertEqual(run.checked.topic_advice['model'],'anthropic/claude-sonnet-5.5')
+        self.assertEqual(run.checked.topic_advice['model'],'anthropic/claude-opus-5.5')
+        self.assertEqual(api.call_args_list[-1].kwargs['model'],'anthropic/claude-opus-5.5')
+        self.assertEqual(api.call_args_list[-1].kwargs['reasoning_effort'],'medium')
+        self.assertEqual(api.call_args_list[0].kwargs['model'],'anthropic/claude-sonnet-5.5')
+        self.assertEqual(api.call_args_list[1].kwargs['model'],'anthropic/claude-sonnet-5.5')
         self.assertEqual(api.call_args_list[-1].kwargs['response_format']['json_schema']['schema'],schema())
         self.assertEqual(api.await_count,3)
 

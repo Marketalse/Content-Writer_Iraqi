@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 from dataclasses import dataclass, field
 from time import monotonic
 
-from llm import FAST_MODEL, WRITER_MODEL, NOUS_MODEL, LLMError, Result, generate
+from llm import FAST_MODEL, WRITER_MODEL, ADVISER_MODEL, NOUS_ADVISER_MODEL, NOUS_MODEL, LLMError, Result, generate
 from frameworks import analyst_system, analyst_schema, load_library, parse_plan
 from delivery_policy import artifact_fingerprint, manual_review_eligible
 from briefs import Brief
@@ -134,6 +134,8 @@ class Session:
     provider_override: str | None = None
 
     async def call(self, stage: str, system: str, user: str, *, model=None, max_tokens=4000, output_schema=None):
+        if (model or WRITER_MODEL) == ADVISER_MODEL and stage != 'adviser':
+            raise ValueError('Opus is restricted to failure advice')
         cfg = self.settings
         input_chars = len(system) + len(user) + (len(json.dumps(output_schema)) if output_schema is not None else 0)
         remaining = cfg.timeout_seconds - (monotonic() - self.started)
@@ -154,6 +156,9 @@ class Session:
         options = {}
         if self.provider_override:
             options['provider'] = self.provider_override
+        if stage == 'adviser':
+            options['nous_model'] = NOUS_ADVISER_MODEL
+            options['effort'] = 'medium'
         if output_schema is not None:
             options['output_schema'] = output_schema
         if stage == 'research':
@@ -550,7 +555,7 @@ async def execute(fmt: str, system: str, topic: str, angle: str,
                     + (ADVISER_ROOT / 'knowledge/voice/voice.md').read_text(encoding='utf-8'),
                     payload(topic=topic, angle=angle, brief=brief.data(), current_draft=checked.text,
                             failure_code=checked.failure_code, reviews=history, research=checked.research,
-                            verified_facts=verified_facts), model=WRITER_MODEL,
+                            verified_facts=verified_facts), model=ADVISER_MODEL,
                     max_tokens=1800, output_schema=adviser_schema())
                 if not advice.usage_known:
                     raise LimitReached('unknown_pricing')
