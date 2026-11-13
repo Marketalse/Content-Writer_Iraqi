@@ -87,9 +87,10 @@ class RegisteredWorkflowTests(unittest.IsolatedAsyncioTestCase):
     async def test_recording_start_now_reaches_five_family_menu_and_all_platform_routes(self):
         for family,(_,formats) in FAMILIES.items():
             menu = await self.send(text='/start')
-            self.assertIn('1/5',menu['text'])
+            self.assertIn('1/3',menu['text'])
             self.assertEqual([row[0]['callback_data'] for row in menu['reply_markup']['inline_keyboard']],
-                             ['fam:'+key for key in FAMILIES])
+                             ['ly:f:'+key for key in ('post','story','reel','live')]+['ly:legacy'])
+            await self.send(callback='ly:legacy')
             menu = await self.send(callback='fam:'+family)
             self.assertIn('2/5',menu['text'])
             callbacks=[row[0]['callback_data'] for row in menu['reply_markup']['inline_keyboard']]
@@ -110,6 +111,22 @@ class RegisteredWorkflowTests(unittest.IsolatedAsyncioTestCase):
                 self.assertEqual(self.state['format'],fmt)
         self.pipeline.assert_not_awaited()
 
+    async def test_registered_three_layer_route_and_back_navigation(self):
+        menu=await self.send(text='/start')
+        await self.send(callback='ly:f:live')
+        menu=await self.send(callback='ly:p:live:instagram_live')
+        self.assertIn('2/3',menu['text'])
+        for strategy in ('clinic','workshop','guest'):
+            await self.send(callback=f'ly:s:instagram_live:{strategy}')
+            flow=self.state['content_brief'].strategy_id
+            self.assertEqual(flow,strategy)
+            menu=await self.send(callback=f'ly:n:instagram_live:{strategy}:{strategy}')
+            self.assertEqual(self.state['menu_stage'],'topic')
+            self.assertIn('تم الاختيار',menu['text'])
+            await self.send(callback='ly:b:structure')
+            await self.send(callback='ly:b:strategy')
+        self.pipeline.assert_not_awaited()
+
     async def test_old_inline_buttons_enter_platform_chooser_instead_of_old_angle_flow(self):
         menu=await self.send(callback='fmt:story')
         self.assertEqual(self.state['menu_stage'],'platform')
@@ -118,7 +135,7 @@ class RegisteredWorkflowTests(unittest.IsolatedAsyncioTestCase):
         await self.send(text='/cancel')
         self.assertFalse(self.state)
         menu=await self.send(callback='ang:tip')
-        self.assertIn('1/5',menu['text'])
+        self.assertIn('1/3',menu['text'])
         self.assertFalse(self.state)
         # A saved angle callback can also be received after losing in-memory state.
         self.application.chat_data[123].update(format='story',angle='tip')

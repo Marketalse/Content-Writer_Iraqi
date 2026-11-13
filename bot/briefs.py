@@ -24,9 +24,11 @@ class Brief:
     source_material: str = ''
     evidence: tuple[dict, ...] = ()
     structure_id: str = ''
+    feature_id: str = ''
+    strategy_id: str = ''
 
     def __post_init__(self):
-        for name in ('structure_id', 'audience', 'takeaway', 'desired_action', 'filming_constraints'):
+        for name in ('feature_id', 'strategy_id', 'structure_id', 'audience', 'takeaway', 'desired_action', 'filming_constraints'):
             value = getattr(self, name)
             if not isinstance(value, str) or len(value) > 1000:
                 raise ValueError(f'invalid brief {name}')
@@ -54,7 +56,10 @@ class Brief:
     def validate_format(self, fmt: str):
         key = LEGACY_FORMATS.get(fmt, fmt)
         get_profile(key)
-        if self.structure_id:
+        if self.feature_id or self.strategy_id:
+            from content_layers import validate_selection
+            validate_selection(key, self.feature_id, self.strategy_id, self.structure_id)
+        elif self.structure_id:
             from content_choices import get_structure
             get_structure(key, self.structure_id)
         if self.story_intent != 'auto' and key not in ('instagram_story', 'tiktok_story'):
@@ -80,7 +85,7 @@ def parse_brief(raw: str) -> Brief:
         data['evidence'] = tuple(data['evidence'])
     return Brief(**data)
 
-FIELD_LABELS = {'البنية': 'structure_id', 'الجمهور': 'audience', 'الهدف': 'purpose', 'الخلاصة': 'takeaway',
+FIELD_LABELS = {'نوع المحتوى': 'feature_id', 'استراتيجية المحتوى': 'strategy_id', 'البنية': 'structure_id', 'الجمهور': 'audience', 'الهدف': 'purpose', 'الخلاصة': 'takeaway',
     'التفاعل': 'desired_action', 'المرحلة': 'journey_stage', 'التوزيع': 'distribution',
     'الستوري': 'story_mode', 'ستايل الستوري': 'story_intent', 'خطة تصوير': 'production', 'المدة': 'duration_seconds',
     'الإمكانيات': 'filming_constraints', 'المصدر': 'source_material', 'الدليل': 'evidence'}

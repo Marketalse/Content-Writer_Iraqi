@@ -218,3 +218,33 @@ Storage and unexpected handler errors now return a simple technical message with
 exposing exception text. This changes messages only; scoring, retry and delivery
 approval policies remain unchanged. Local verification: 296 offline tests passed;
 pip check and git diff --check passed. No live provider or Telegram calls were made.
+
+
+## Spreadsheet content layers — 2026-11-13
+
+Implemented the user-provided feature → strategy → script-structure taxonomy:
+Post (6 strategies), Story (8), Reel (6), Live Topic (3 current Live treatments,
+explicitly selected by the user). The destination platform/native subtype remains
+an independent routing screen. Repeated explanatory rows in the workbook are not
+extra options. Spreadsheet example timings/point counts are adapted to medium and
+brevity rather than becoming automatic rejection rules. Selected strategies take
+precedence over default creative examples; factual, safety and native-format gates
+remain mandatory.
+
+Feature/strategy/structure are validated before spending and passed consistently
+to facilitator, analyst, writer, editor and independent reviewer via the brief.
+They are persisted in records and available in scoped diagnostics and /version.
+Back navigation clears dependent choices; stale cross-platform/strategy callbacks
+are rejected. /brief reset retains menu selections for generation. Existing format
+families, saved callbacks, long-form and other advanced formats remain accessible
+through a separate compatibility menu. Workflow is content-layers-v3.
+
+Offline coverage exercises all 61 feature/platform/strategy paths, all 23 strategy
+placements through routing, writing and review, actual registered Telegram callback
+handlers, callback payload sizes, stale clicks, authorization and selection resets.
+No live provider, web-search or Telegram calls were exercised. Tests validate
+contracts and wiring, not the creative quality of actual generated scripts.
+
+Local verification: 303 offline tests passed, including the registered Telegram
+Application boundary. pip check and git diff --check passed. No live deployment
+claim is made; release CI and Render status are tracked separately.

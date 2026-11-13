@@ -146,11 +146,16 @@ def parse_review(text: str, section_names: set[str]) -> Review:
     return Review(scores, gates, tuple(issues))
 
 
-def reviewer_system(fmt: str, *, story_mode: str = 'moment', story_intent: str = 'auto', structure_id: str = '') -> str:
+def reviewer_system(fmt: str, *, story_mode: str = 'moment', story_intent: str = 'auto', structure_id: str = '', feature_id: str = '', strategy_id: str = '') -> str:
     key = LEGACY_FORMATS.get(fmt, fmt)
     p = get_profile(key)
     from content_choices import structure_prompt
-    narrative = structure_prompt(key, structure_id)
+    from content_layers import selection_prompt
+    narrative = (selection_prompt(fmt, feature_id, strategy_id, structure_id) if feature_id
+                 else structure_prompt(key, structure_id))
+    narrative_rule = ('Assess the selected strategy and progression under storytelling/platform_fit. '
+                      'Do not turn example point counts or optional CTAs into mandatory gates.'
+                      if feature_id else 'The selected narrative is part of format_identity; fail a draft that ignores it.')
     voice = (ROOT / 'knowledge/voice/voice.md').read_text(encoding='utf-8')
     dialect = (ROOT / 'knowledge/dialect/iraqi_words.csv').read_text(encoding='utf-8')
     other = (ROOT / 'knowledge/dialect/other_dialects.yaml').read_text(encoding='utf-8')
@@ -162,7 +167,7 @@ Editorial focus: {short_story_policy(story_intent) if story_intent != 'auto' els
 The following contract describes the DRAFT to evaluate. Do not write a draft; return the review JSON below.
 {format_contract(key, story_mode, story_intent)}
 {narrative}
-The selected narrative is part of format_identity; fail a draft that ignores it.
+{narrative_rule}
 Score each dimension 0-10: hook (specific honest opening), storytelling (useful progression
 and payoff appropriate to format, not mandatory fiction), platform_fit (native structure
 and tone), audience_relevance (Iraqi audience intent), iraqi_dialect (natural Baghdadi,

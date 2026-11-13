@@ -6,7 +6,7 @@ No model call is needed to present or validate a choice.
 from dataclasses import dataclass
 from platform_intelligence import LEGACY_FORMATS, PROFILES
 
-WORKFLOW_VERSION = "platform-flow-v2"
+WORKFLOW_VERSION = "content-layers-v3"
 
 FAMILIES = {
     'story': ('📸 Story · ٣٠ ثانية', ('story', 'tiktok_story')),
