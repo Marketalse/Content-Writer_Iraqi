@@ -69,6 +69,7 @@ def angle_description(fmt: str, key: str) -> str:
 
 
 BASE_INSTRUCTIONS = """أنت كاتب محتوى محترف متخصص باللهجة العراقية (البغدادية المفهومة بكل العراق).
+تلتزم بمعايرة صاحب الحساب الصريحة في voice.md قبل أمثلة المنشورات القديمة. لا تضيف لازمة كلام أو خبرة شخصية أو سؤال ختامي تلقائي حتى تقلّد صوته.
 تكتب حصراً باللهجة العراقية. استخدم گ و چ بشكل طبيعي (مثل: گدر، أگلكم، چيبس، أحچي) كما في أسلوب صاحب الحساب.
 تلتزم بقواعد الفورمة المطلوبة من حيث الطول والهيكل والنبرة والإخراج.
 استخدم كلمات قاموس العراقي بدل الفصحى كلما توفر مقابل، وتجنب كلمات اللهجات الأخرى.
@@ -132,4 +133,9 @@ def build_system_prompt(fmt: str, *, brief: Brief | None = None) -> str:
     sections.append(selection_prompt(fmt, brief.feature_id, brief.strategy_id, brief.structure_id)
                     if brief.feature_id else structure_prompt(profile_key, brief.structure_id))
     sections.append(format_contract(profile_key, brief.story_mode, brief.story_intent))
+    sections.append("# Final voice check\n"
+        "Use the latest explicitly approved/rejected creator calibration in voice.md over older examples. "
+        "Compare your actual phrasing and rhythm before returning; revise generic slogans, forced "
+        "catchphrases, invented experience and unnecessary closing questions. Preserve the native "
+        "format and factual/safety requirements. Do not print check notes or claim a voice-match percentage.")
     return "\n\n".join(s for s in sections if s.strip())

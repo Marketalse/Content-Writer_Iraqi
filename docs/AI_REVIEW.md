@@ -248,3 +248,27 @@ contracts and wiring, not the creative quality of actual generated scripts.
 Local verification: 303 offline tests passed, including the registered Telegram
 Application boundary. pip check and git diff --check passed. No live deployment
 claim is made; release CI and Render status are tracked separately.
+
+
+## Creator voice correction — 2026-11-13
+
+Confirmed conflicting guidance: voice.md recommended stock openings such as
+«لا حبيبي», experience framing and default closing questions. The user explicitly
+rejected a generated example with those features and supplied an approved direct,
+metaphor-led, connected Iraqi version. The profile now treats that approved/rejected
+contrast as authoritative over older inferred samples. It removes forced catchphrases,
+unearned experience, slogan-by-slogan rhythm, mandatory belief flips, corporate caveats
+and automatic engagement questions. It preserves concrete comparisons and natural
+colloquial verbs without requiring the same metaphors or exact words on every topic.
+
+Writer guidance prioritizes explicit calibration over historical examples. Independent
+voice review compares wording and rhythm, not simply dialect markers, and asks for
+specific section feedback when voice fails. The existing voice gate remains mandatory:
+fail or uncertain prevents acceptance and manual-preview delivery. Factual and safety
+rules remain in force; style examples are not evidence for new personal claims.
+
+Validation: 305 offline tests passed, including calibration visibility for all 13
+formats and fail/uncertain gate enforcement at high scores with manual previews enabled.
+pip check and git diff --check passed. These checks establish prompt wiring and strict
+delivery policy, not 100% subjective style accuracy. No live model or Telegram calls
+were made. Render must load the new profile through redeployment.
