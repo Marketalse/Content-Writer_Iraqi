@@ -36,7 +36,7 @@ from telegram.ext import (
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
-from diagnostics import diagnostic_report, failure_message
+from diagnostics import diagnostic_report, failure_message, failure_summary
 from delivery_policy import manual_review_eligible, manual_review_warning
 from pipeline import run_pipeline  # noqa: E402
 from build_info import build_info  # noqa: E402
@@ -611,7 +611,7 @@ async def on_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         pid = log_post(record, event="clarification" if checked.clarification else "generated")
     except OSError:
         log.error("generation_withheld: persistent record could not be saved")
-        await status.edit_text("تعذّر حفظ سجل المحاولة، لذلك ما عرضنا المحتوى. كلم صاحب البوت حتى يراجع التخزين.")
+        await status.edit_text(failure_summary({'failure_code': 'storage_error'}))
         return
 
     if any(timing.get('fallback_reason') == 'provider_credit_exhausted' for timing in run.timings):
@@ -671,12 +671,12 @@ async def log_runtime_identity(application):
 
 
 async def on_handler_error(update, context):
-    """Give storage failures an operational message without logging private payloads."""
+    """Give handler failures a safe operational message without private payloads."""
     log.error('bot_handler_failed type=%s', type(context.error).__name__)
-    if isinstance(context.error, OSError):
-        message = getattr(update, 'effective_message', None) or getattr(update, 'message', None)
-        if message is not None:
-            await message.reply_text('تعذّر قراءة أو حفظ البيانات. كلم صاحب البوت حتى يراجع التخزين.')
+    message = getattr(update, 'effective_message', None) or getattr(update, 'message', None)
+    if message is not None:
+        code = 'storage_error' if isinstance(context.error, OSError) else 'application_error'
+        await message.reply_text(failure_summary({'failure_code': code}))
 
 
 def create_application(token: str, *, request=None):

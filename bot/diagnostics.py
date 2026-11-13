@@ -4,6 +4,8 @@ from reviewer import DIMENSIONS, GATES
 from platform_intelligence import PROFILES
 
 NEXT_ACTIONS = {
+    'storage_error': 'تعذّر قراءة أو حفظ البيانات. كلم صاحب البوت حتى يراجع التخزين.',
+    'application_error': 'تعذّر إكمال المعالجة داخل البوت. يحتاج صاحب البوت يراجع التشخيص؛ السبب الدقيق بعده مو مؤكد.',
     'provider_search_unavailable': '⚠️ ما گدرنا ننفّذ البحث الموثّق بهذا المسار. Nous يگدر يكتب ويراجع، '
         'بس أداة البحث الحالية مرتبطة بـ Anthropic. صاحب البوت يحتاج يعالج وصول البحث؛ ما راح نخترع مصادر.',
     'provider_fallback_unconfigured': '⚠️ المزوّد البديل Nous مو مربوط بهذا التشغيل. صاحب البوت يحتاج يراجع إعداد NOUS_API_KEY.',
@@ -92,6 +94,37 @@ def failure_code(record: dict) -> str:
     return 'unknown'
 
 
+CATEGORY_LABELS = {
+    'content': '📝 المحتوى المقترح لهالموضوع ما اجتاز المراجعة.',
+    'model': '🤖 مشكلة بخدمة الذكاء الاصطناعي أو جواب النموذج.',
+    'application': '⚙️ مشكلة تقنية بالتطبيق أو إعداداته.',
+    'limit': '⏳ توقفت المحاولة لأن وصلت للحد المسموح.',
+    'unknown': '❓ المحاولة ما اكتملت؛ السبب يحتاج تشخيص.',
+}
+
+
+def failure_category(record: dict) -> str:
+    """Describe the observed failure area, never infer a coding defect from a rejection."""
+    code = failure_code(record)
+    if code == 'accepted':
+        return 'accepted'
+    if code in {'creative_threshold', 'critical_gate', 'revision_no_improvement',
+                'verified_fact_missing', 'research_unsupported', 'missing_information'}:
+        return 'content'
+    if code in {'storage_error', 'application_error', 'unknown_pricing',
+                'provider_fallback_unconfigured'}:
+        return 'application'
+    if code == 'resource_limit':
+        return 'limit'
+    if (code.startswith('provider_') or code.startswith('review_')
+            or code.startswith(('writer_', 'revision_'))
+            or code in {'invalid_structure', 'invalid_review_json', 'duplicate_review_key',
+                        'oversized_review'} or code.startswith('invalid_review_')):
+        return 'model'
+    # Routing, research and generic parsing failures have multiple possible causes.
+    return 'unknown'
+
+
 def safe_structure(record):
     from quality import FIELDS
     allowed = {name for names in FIELDS.values() for name in names}
@@ -109,6 +142,9 @@ def safe_structure(record):
 def failure_summary(record: dict) -> str:
     code = failure_code(record)
     message = NEXT_ACTIONS.get(code, 'المحاولة ما اكتملت. نحتاج نشوف التشخيص حتى نحدد السبب.')
+    category = failure_category(record)
+    if category in CATEGORY_LABELS:
+        message = CATEGORY_LABELS[category] + '\n' + message
     if code == 'invalid_structure':
         details = safe_structure(record)
         for key, label in (('missing', 'حقول ناقصة'), ('empty', 'حقول فارغة'),
@@ -170,6 +206,7 @@ def diagnostic_report(pid: str, actor: int) -> dict:
                        'source_count': len(research.get('sources') or []),
                        'source_urls': [source['url'] for source in research.get('sources', [])]}
     out['failure_code'] = failure_code(record)
+    out['failure_category'] = failure_category(record)
     out['validation_checks'] = validation_checks(record)
     out['structure_details'] = safe_structure(record)
     out['next_action'] = failure_summary(record)
