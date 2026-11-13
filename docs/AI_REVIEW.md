@@ -311,3 +311,49 @@ Telegram Application boundary, not live provider or Telegram access.
 Local verification: 317 offline tests passed; dependency consistency and whitespace
 checks passed. Adviser output is capped at 1,800 reserved tokens and uses the same
 Session limits as generation. Live model/Telegram behavior remains unverified.
+
+
+## Opus-only failure adviser and numbered selection — 2026-11-13
+
+Reproduced bug: a typed “1” after suggestions was treated as a fresh topic and
+cleared the pending suggestions. Numbered replies (Western/Arabic digits and
+“الاقتراح 1”) now select the stored topic, validate the current selection snapshot,
+and resume the ordinary pipeline. Invalid option numbers preserve the choices
+without spending. The existing nonce-scoped buttons remain supported and single-use.
+
+Visible suggestions now contain natural short topic openings and a concise selection
+prompt. Editorial reasons/research flags remain internal; the creator no longer sees
+scoring jargon or “weakness of writing” commentary in the option list. The adviser
+is instructed to preserve the creator's direct voice and original stance rather
+than adding balanced corporate counterarguments or generic headings.
+
+Only the failed-content adviser calls claude-opus-5-5, with per-call Nous fallback
+anthropic/claude-opus-5.5. Normal writer, reviewer, routing and research models stay
+unchanged; Session rejects explicit Opus requests for normal stages. Nous fallback
+keeps Opus for advice, never silently downgrading to the normal Sonnet default.
+Native Opus uses supported adaptive thinking, medium effort and structured output.
+
+Free catalog reads on 2026-11-13 verified both model IDs and capabilities. Official
+Anthropic pricing and the public Nous catalog list $4/M input and $20/M output;
+Anthropic cache reads are $0.20/M and five-minute writes $5/M. Existing Session
+budgets and the single 1,800-token adviser call remain in effect. No paid Opus
+or other live generation was run. Offline regression suite: 321 tests passed;
+pip check and git diff --check passed before the tooling installation changes.
+
+
+## Requested coding tools installation — 2026-11-13
+
+Installed all six requested packages: Karpathy, Ponytail (verified matching
+DietrichGebert marketplace), Matt Pocock's 38 skills, Addy Osmani agent-skills,
+ECC 2.2.3 and official-marketplace Superpowers. Claude CLI was absent; local CLI
+2.1.323 was installed with an isolated writable configuration. Plugins are project
+scoped; Matt skills target Codex and Claude Code. Existing Karpathy guidance and
+project instructions were preserved. The public plugin registry settings, skills,
+source hashes and upstream Matt license are versioned; credentials/caches are not.
+
+ECC is configured with minimal hooks. Its production dependencies were installed
+manually from the lockfile after the plugin manager declined override handling.
+Ponytail's optional ledger/export are disabled. No live coding agent/model session
+or bundled browser MCP was launched. Installation is not a continuous bug monitor;
+reload the relevant coding agent to discover the installed packages. See
+CODING_TOOLS_INSTALLATION.md and its machine-readable inventory for verification.
