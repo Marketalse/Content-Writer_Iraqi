@@ -207,6 +207,11 @@ def diagnostic_report(pid: str, actor: int) -> dict:
                        'source_urls': [source['url'] for source in research.get('sources', [])]}
     out['failure_code'] = failure_code(record)
     out['failure_category'] = failure_category(record)
+    advice=record.get('topic_advice') or {}
+    out['topic_adviser']={key:advice[key] for key in ('status','reason','provider','model') if key in advice}
+    out['topic_adviser'].setdefault('status','not_run')
+    out['topic_adviser']['suggestion_count']=len(advice.get('suggestions') or [])
+
     out['validation_checks'] = validation_checks(record)
     out['structure_details'] = safe_structure(record)
     out['next_action'] = failure_summary(record)

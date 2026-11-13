@@ -424,3 +424,20 @@ conversation. Legacy formats are reachable through the additional-formats menu.
 Brief fields feature_id, strategy_id and structure_id carry the selection through
 all AI stages. Invalid combinations stop before calls; guidance examples such as
 3–6 points and two-second hooks do not become universal rejection gates.
+
+
+## Senior topic adviser for withheld drafts
+
+Telegram opts into one adviser call after eligible content rejections, using the
+configured WRITER_MODEL tier (default Sonnet) and existing Nous failover. It proposes
+up to three related angles, why they address the review and whether research is
+needed. A voice rejection is explained as a wording problem; suggestions do not
+certify a topic or script. Safety/topic-preservation failures do not trigger advice.
+
+The call shares existing resource limits and usage accounting. If it cannot run,
+the creator sees that explanation in addition to the original failure. No automatic
+topic switch occurs. A creator's single-use selection restarts quota checks and the
+full research/writing/review flow with the current brief. /diagnose exposes adviser
+status and model metadata without the private suggestion bodies. Programmatic
+run_pipeline callers can opt in using suggest_topics=True; the default stays false
+for offline evaluation and batch compatibility. No new Render setting is required.

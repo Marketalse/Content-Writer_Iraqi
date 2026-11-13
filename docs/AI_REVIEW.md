@@ -279,3 +279,35 @@ including «لا حبيبي». They are allowed contextually, never mandatory or
 review must not fail a script solely for using one. The earlier rejected sample is
 still a negative example of overall delivery, not a universal phrase ban. No invented
 experience or exclusivity claim is licensed by the phrase bank.
+
+
+## Senior topic adviser — 2026-11-13
+
+Confirmed gap: a senior-model adviser had been proposed conversationally but was not
+implemented. The screenshot shows a mandatory voice rejection and only the failure
+message. Telegram now enables one bounded adviser call after eligible withheld
+content failures. It uses the configured writer-tier model (Sonnet by default),
+including the existing funded Nous route. The original topic, brief, current draft,
+actual review feedback and evidence are supplied. Voice failures explicitly remain
+writing/voice issues, not proof that the topic itself is bad.
+
+The adviser returns 1–3 tightly related angles, reasons and research flags. It cannot
+approve the rejected draft, promise a passing score or bypass safety. Safety or
+topic-preservation failures and provider/system failures do not trigger alternatives.
+Manual-preview delivery keeps its existing policy; this feature targets withheld
+content. Advising shares the existing Session call, time, token, observed-spend and
+known-pricing checks. Unavailable advice has a separate fixed reason, preserving the
+original failure. No static suggestions are substituted for a failed model response.
+
+Creator-only buttons use server-side suggestions, a nonce, selection snapshot and
+single-use consumption. Choosing an angle re-enters normal quota, research routing,
+writing, validation and independent review. It does not publish or change topic
+without selection. Suggestions are stored with the attempt; diagnostics expose only
+adviser status, model/provider, failure reason and count, not suggestion text.
+Library/batch callers must explicitly opt in with suggest_topics=True; Telegram
+opts in automatically. Regression checks use synthetic responses and the registered
+Telegram Application boundary, not live provider or Telegram access.
+
+Local verification: 317 offline tests passed; dependency consistency and whitespace
+checks passed. Adviser output is capped at 1,800 reserved tokens and uses the same
+Session limits as generation. Live model/Telegram behavior remains unverified.
