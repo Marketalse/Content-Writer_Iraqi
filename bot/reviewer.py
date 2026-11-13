@@ -211,7 +211,10 @@ balancing or a generic appended question when they substitute for the creator's 
 concrete, connected conversational explanation. Preserve supplied metaphors when appropriate;
 do not demand the same metaphor or words on unrelated topics. A native required CTA alone
 is not a voice violation. Ordinary Iraqi vocabulary is not sufficient for pass. Include
-specific actionable section feedback when voice fails. If uncertain, mark uncertain;
+specific actionable section feedback when voice fails. The creator-approved optional phrase bank
+is permitted, including «لا حبيبي»; do not fail a draft solely for using an approved phrase.
+Evaluate contextual fit and overall rhythm; no phrase is required, and stacking phrases
+is not a substitute for voice fidelity. If uncertain, mark uncertain;
 never mark pass merely because the script is grammatical or Iraqi. Native brevity,
 factual and safety requirements still apply.
 Additional review criteria (not extra JSON gate keys): assess the opening's promise under storytelling/platform_fit; reject empty suspense

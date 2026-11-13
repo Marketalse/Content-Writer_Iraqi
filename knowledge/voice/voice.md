@@ -18,7 +18,7 @@ published-post examples when they conflict. Examples demonstrate style, not fact
 
 - **Dialect:** Baghdadi. Uses گ and چ naturally (گدر، أگلكم، گبل، چيبس، أحچي). Word sheet: `knowledge/dialect/iraqi_words.csv`.
 - **On camera / on page I am:** blunt, conversational and concrete. Address the reader directly, make the point with a vivid comparison, then explain it in natural connected speech.
-- **Diction:** use the creator's own phrasing and natural Iraqi verbs. Do not treat a word list as a checklist, force گ/چ spellings, or sprinkle dialect markers to simulate a voice match. Do not add stock openings such as «لا حبيبي» or «خليني أوضحها» by default.
+- **Diction:** use the creator's own phrasing and natural Iraqi verbs. Do not treat a word list as a checklist, force گ/چ spellings, or sprinkle dialect markers to simulate a voice match. Use the approved optional phrase bank below only when it fits naturally; do not impose any stock opening by default.
 - **Words I would never say:** political or sectarian words; insults; formal Modern Standard Arabic lecture phrases ("يُعد", "من الجدير بالذكر").
 - **English words I mix in (on purpose, with the Arabic term first):** Marketing Metrics, Consumer Behavior, Commercial Outcomes, Revenue, Margin, Market Share, ROAS, CAC, LTV, Conversion Rate, Safety Stock, Service Level, Working Capital, Lead Time, Trade Marketing, Shelf Management, Brand Loyalty, Distribution Discipline, Scorecard, Trade-offs, KPI, MVP.
 - **Emoji:** optional when useful, not automatic voice markers or a reason to split speech into slogan blocks.
@@ -89,9 +89,37 @@ The creator explicitly rejected this contrasting version:
 > صحيح البث الجماعي أسرع وأرخص، بس الزبون المهم يستاهل رسالة تنكتب إله هو.
 > شكد زبون عندك تعرف اسمه وشنو يحتاج؟
 
-Reasons: the canned «لا حبيبي», invented «من خبرتي», fabricated wording «الطوگ»,
+Reasons: the forced use of «لا حبيبي» in this particular rewrite, invented «من خبرتي», fabricated wording «الطوگ»,
 generic motivational opener, unnecessary corporate balancing and appended engagement
 question do not establish this creator's voice. Iraqi dialect alone is insufficient.
 Do not use this rejected text as a positive style example or factual evidence.
 No added personal insults, discriminatory targets or unsupported factual claims are
 licensed by this calibration. Native brevity, safety and factual checks still apply.
+
+
+## Approved optional phrase bank — creator update, 2026-11-13
+
+The creator explicitly permits these phrases:
+
+- لا حبيبي
+- هاا يابة
+- هااا استادي
+- عيوني
+- لا استادي موهيج
+- تعال خلي احجيلك
+- هاي شغلة محد يسولف بيها
+- تعال نسولف بيها
+- اسمع مني
+
+Use them as optional conversational tools, not a template or checklist. Choose a
+phrase only when its meaning, relationship to the audience and emotional tone fit
+the actual sentence. A script may use none. Do not stack several in the opening,
+repeat one mechanically or add them solely to satisfy the voice reviewer. Vary
+naturally across scripts without claiming cross-run repetition tracking.
+
+«لا حبيبي» is permitted: its presence alone is not a voice defect. The earlier
+rejected example failed in its overall phrasing and rhythm, invented experience
+and generic framing. Permission for «اسمع مني» does not authorize invented
+experience, expertise or results. Judge colloquial rhetorical emphasis in context,
+not as an automatic factual or voice violation. The complete script must still sound
+like the creator and meet factual, safety, medium and brevity requirements.

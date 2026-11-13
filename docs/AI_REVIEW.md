@@ -272,3 +272,10 @@ formats and fail/uncertain gate enforcement at high scores with manual previews 
 pip check and git diff --check passed. These checks establish prompt wiring and strict
 delivery policy, not 100% subjective style accuracy. No live model or Telegram calls
 were made. Render must load the new profile through redeployment.
+
+
+Creator follow-up: added the nine explicitly supplied phrases as an optional bank,
+including «لا حبيبي». They are allowed contextually, never mandatory or a checklist;
+review must not fail a script solely for using one. The earlier rejected sample is
+still a negative example of overall delivery, not a universal phrase ban. No invented
+experience or exclusivity claim is licensed by the phrase bank.

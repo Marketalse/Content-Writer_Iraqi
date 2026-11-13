@@ -16,6 +16,10 @@ class VoiceCalibrationTests(unittest.TestCase):
                 self.assertIn(APPROVED,prompt)
                 self.assertIn('explicitly rejected',prompt)
                 self.assertIn('takes precedence',prompt)
+                for phrase in ('لا حبيبي','هاا يابة','هااا استادي','عيوني','لا استادي موهيج',
+                               'تعال خلي احجيلك','هاي شغلة محد يسولف بيها','تعال نسولف بيها','اسمع مني'):
+                    self.assertIn(phrase,prompt)
+                self.assertIn('A script may use none',prompt)
                 self.assertNotIn('**Credibility:** one line that says the experience',prompt)
                 self.assertNotIn('**Opening:** a challenge or a reset',prompt)
 
