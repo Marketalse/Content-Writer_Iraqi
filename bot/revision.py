@@ -195,7 +195,7 @@ def payload(**values) -> str:
 async def execute(fmt: str, system: str, topic: str, angle: str,
                   settings: Settings | None = None, verified_facts: tuple[tuple[str, str], ...] = (),
                   analyst_notes: str = "", clarification_allowed: bool = True, brief: Brief | None = None,
-                  research: bool = False):
+                  research: bool = False, suggest_topics: bool = False):
     """Return Checked, Session, analyst notes. Caller supplies trusted fact/provenance pairs.
 
     Optional live research precedes planning. No automatic publication takes place.
@@ -541,4 +541,29 @@ async def execute(fmt: str, system: str, topic: str, angle: str,
         checked.calls = session.calls
         checked.review_history = history
         checked.manual_review_ready = cfg.show_review_drafts and manual_review_eligible(checked)
+        from topic_adviser import eligible, schema as adviser_schema, parse as parse_advice, SYSTEM as ADVISER_SYSTEM, ROOT as ADVISER_ROOT
+        if suggest_topics and eligible(checked) and not checked.manual_review_ready:
+            gates=history[-1].get('gates',{}) if history else {}
+            checked.topic_advice={'status':'started','voice_issue':gates.get('voice_preservation')!='pass' if gates else False}
+            try:
+                advice = await session.call('adviser', ADVISER_SYSTEM + '\nCreator calibration (style only):\n'
+                    + (ADVISER_ROOT / 'knowledge/voice/voice.md').read_text(encoding='utf-8'),
+                    payload(topic=topic, angle=angle, brief=brief.data(), current_draft=checked.text,
+                            failure_code=checked.failure_code, reviews=history, research=checked.research,
+                            verified_facts=verified_facts), model=WRITER_MODEL,
+                    max_tokens=1800, output_schema=adviser_schema())
+                if not advice.usage_known:
+                    raise LimitReached('unknown_pricing')
+                if advice.refused or advice.truncated:
+                    raise ValueError('incomplete adviser response')
+                suggestions=parse_advice(advice.text, checked.failure_code=='research_unsupported'
+                    or gates.get('factual_integrity','uncertain')!='pass')
+                checked.topic_advice.update(status='ready',suggestions=suggestions,
+                    provider=advice.provider,model=advice.model)
+            except (ValueError, TypeError, KeyError, OSError, LLMError, TimeoutError, LimitReached) as error:
+                reason=(error.code if isinstance(error,LLMError) else
+                        'provider_timeout' if isinstance(error,TimeoutError) else
+                        str(error) if isinstance(error,LimitReached) else 'invalid_response')
+                checked.topic_advice.update(status='unavailable',reason=reason)
+
     return checked, session, notes

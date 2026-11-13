@@ -91,3 +91,7 @@ Open `test_reports/fixes/index.html` for a page that refreshes every five second
 Generated reports are ignored by Git; CI uploads them as the `audit-fix-report` artifact.
 Watch mode only runs while its process is alive. Offline success is separate from live
 credentials, actual GitHub/Render settings and deployment.
+
+عند حجب مسودة لأسباب تحريرية، البوت يستشير الموديل المتقدم ضمن الحدود المتبقية
+ويقترح زوايا قريبة. اختار اقتراح حتى نعيد الكتابة والفحوصات؛ الاقتراح مو ضمان
+لاجتياز الجودة. إذا المستشار ما گدر يشتغل، البوت يوضح السبب.

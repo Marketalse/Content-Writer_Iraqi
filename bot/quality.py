@@ -205,6 +205,7 @@ class Checked:
     failure_code: str = ""
     reviewed_artifact_hash: str = ""
     manual_review_ready: bool = False
+    topic_advice: dict = field(default_factory=dict)
 
 async def generate_checked(fmt: str, system: str, topic: str,
                            angle: str = "", notes: str = "") -> Checked:

@@ -33,8 +33,8 @@ async def run_pipeline(fmt: str, system: str, topic: str, angle: str,
                        *, settings: Settings | None = None,
                        verified_facts: tuple[tuple[str, str], ...] = (),
                        clarification_allowed: bool = True, brief: Brief | None = None,
-                       research: bool = False) -> Run:
+                       research: bool = False, suggest_topics: bool = False) -> Run:
     start = monotonic()
     checked, session, notes = await execute(fmt, system, topic, angle, settings, verified_facts,
-                                        clarification_allowed=clarification_allowed, brief=brief, research=research)
+                                        clarification_allowed=clarification_allowed, brief=brief, research=research, suggest_topics=suggest_topics)
     return Run(checked, session.calls, notes, round((monotonic() - start) * 1000, 2), session.timings)

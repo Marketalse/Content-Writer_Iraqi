@@ -127,6 +127,22 @@ class RegisteredWorkflowTests(unittest.IsolatedAsyncioTestCase):
             await self.send(callback='ly:b:strategy')
         self.pipeline.assert_not_awaited()
 
+    async def test_registered_adviser_button_requires_choice_and_dispatches_new_topic(self):
+        await self.send(text='/start')
+        await self.send(callback='ly:f:story')
+        await self.send(callback='ly:p:story:story')
+        await self.send(callback='ly:s:story:insight')
+        await self.send(callback='ly:n:story:insight:insight')
+        self.state['topic_advice']={'token':'1234abcd',
+            'suggestions':[{'topic':'شلون نخصص أول رد للزبون؟','reason':'زاوية عملية','needs_research':False}],
+            'selection':app._advice_selection(self.state)}
+        with patch.object(app,'on_text',AsyncMock()) as writer:
+            await self.send(callback='advice:1234abcd:0')
+        writer.assert_awaited_once()
+        self.assertEqual(writer.call_args.kwargs['topic_override'],'شلون نخصص أول رد للزبون؟')
+        self.assertNotIn('topic_advice',self.state)
+        self.pipeline.assert_not_awaited()
+
     async def test_old_inline_buttons_enter_platform_chooser_instead_of_old_angle_flow(self):
         menu=await self.send(callback='fmt:story')
         self.assertEqual(self.state['menu_stage'],'platform')

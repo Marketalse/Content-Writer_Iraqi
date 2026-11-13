@@ -15,6 +15,7 @@ Environment variables (see .env.example):
 """
 
 import logging
+import secrets
 import json
 import os
 import re
@@ -103,7 +104,7 @@ def _structure_keyboard(fmt: str) -> InlineKeyboardMarkup:
 
 
 def _clear_selection(data: dict) -> None:
-    for key in ('feature_id', 'strategy_id', 'family', 'menu_stage', 'format', 'angle', 'structure_id',
+    for key in ('topic_advice', 'feature_id', 'strategy_id', 'family', 'menu_stage', 'format', 'angle', 'structure_id',
                 'pending_clarification', 'content_brief'):
         data.pop(key, None)
 
@@ -521,36 +522,81 @@ async def on_angle_chosen(update: Update, context: ContextTypes.DEFAULT_TYPE):
                                  reply_markup=_structure_keyboard(fmt))
 
 
-async def on_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
+def _advice_selection(data):
+    return {key: data.get(key) for key in ('format','angle','feature_id','strategy_id','structure_id')} | {
+        'brief': data.get('content_brief', Brief()).data()}
+
+
+async def _show_topic_advice(message, data, advice):
+    from topic_adviser import render
+    text=render(advice)
+    if not text:
+        return
+    keyboard=None
+    if advice.get('status')=='ready':
+        token=secrets.token_hex(4)
+        data['topic_advice']={'token':token,'suggestions':advice['suggestions'],
+                             'selection':_advice_selection(data)}
+        keyboard=InlineKeyboardMarkup([[InlineKeyboardButton(f'اختار الاقتراح {i+1}',
+                    callback_data=f'advice:{token}:{i}')]
+                    for i in range(len(advice['suggestions']))])
+    chunks=list(_chunks(text))
+    for i,chunk in enumerate(chunks):
+        await message.reply_text(chunk,reply_markup=keyboard if i==len(chunks)-1 else None)
+
+
+async def on_advice_chosen(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query=update.callback_query
+    await query.answer()
     if not _allowed_chat(update):
         return
+    match=re.fullmatch(r'advice:([0-9a-f]{8}):([0-2])',query.data)
+    advice=context.chat_data.get('topic_advice') or {}
+    if (not match or advice.get('token')!=match[1]
+            or advice.get('selection')!=_advice_selection(context.chat_data)
+            or int(match[2])>=len(advice.get('suggestions',[]))):
+        await query.message.reply_text('هذا الاقتراح انتهى أو تغيّرت الاختيارات. دز موضوعك من جديد.')
+        return
+    topic=advice['suggestions'][int(match[2])]['topic']
+    context.chat_data.pop('topic_advice',None)
+    context.chat_data.pop('pending_clarification',None)
+    await on_text(update,context,topic_override=topic)
+
+
+async def on_text(update: Update, context: ContextTypes.DEFAULT_TYPE, *, topic_override=None):
+    if not _allowed_chat(update):
+        return
+    message = getattr(update, 'message', None) or getattr(getattr(update, 'callback_query', None), 'message', None)
+    if message is None:
+        return
+    context.chat_data.pop('topic_advice', None)
     if context.chat_data.get('feature_id'):
         from layer_navigation import show_current
         from content_layers import validate_selection
         if context.chat_data.get('menu_stage') != 'topic':
-            await show_current(update.message, context.chat_data, FORMATS)
+            await show_current(message, context.chat_data, FORMATS)
             return
         try:
             validate_selection(context.chat_data.get('format'), context.chat_data['feature_id'],
                                context.chat_data.get('strategy_id'), context.chat_data.get('structure_id'))
         except (ValueError, KeyError):
             _clear_selection(context.chat_data)
-            await update.message.reply_text('اختار نوع المحتوى من جديد.', reply_markup=_format_keyboard())
+            await message.reply_text('اختار نوع المحتوى من جديد.', reply_markup=_format_keyboard())
             return
     fmt = context.chat_data.get("format")
     angle = context.chat_data.get("angle")
     if not fmt:
         family = context.chat_data.get('family')
-        await update.message.reply_text("اختار المنصة 👇" if family else "گبل شي اختار نوع المحتوى 👇",
+        await message.reply_text("اختار المنصة 👇" if family else "گبل شي اختار نوع المحتوى 👇",
             reply_markup=_platform_keyboard(family) if family else _format_keyboard())
         return
     if not angle:
-        await update.message.reply_text("شنو الستايل اللي تريده؟" if is_story(fmt) else "اختار الزاوية 👇",
+        await message.reply_text("شنو الستايل اللي تريده؟" if is_story(fmt) else "اختار الزاوية 👇",
                                         reply_markup=_angle_keyboard(fmt, scoped=bool(context.chat_data.get("family"))))
         return
 
     if context.chat_data.get('family') and not context.chat_data.get('structure_id'):
-        await update.message.reply_text("اختار البنية قبل الموضوع 👇", reply_markup=_structure_keyboard(fmt))
+        await message.reply_text("اختار البنية قبل الموضوع 👇", reply_markup=_structure_keyboard(fmt))
         return
 
     try:
@@ -561,15 +607,15 @@ async def on_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
             selected_angle = angle_description(fmt, angle)
     except KeyError:
         context.chat_data.pop("angle", None)
-        await update.message.reply_text("اختار الستايل من جديد.", reply_markup=_angle_keyboard(fmt, scoped=bool(context.chat_data.get("family"))))
+        await message.reply_text("اختار الستايل من جديد.", reply_markup=_angle_keyboard(fmt, scoped=bool(context.chat_data.get("family"))))
         return
     cid = _chat_id(update)
     ok, msg = pilot_check(cid)
     if not ok:
-        await update.message.reply_text(msg)
+        await message.reply_text(msg)
         return
 
-    topic = update.message.text.strip()
+    topic = (topic_override if topic_override is not None else message.text).strip()
     pending = context.chat_data.pop("pending_clarification", None)
     resuming = bool(pending and pending["format"] == fmt and pending["angle"] == angle)
     if resuming:
@@ -589,13 +635,13 @@ async def on_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         brief.validate_format(fmt)
     except ValueError:
-        await update.message.reply_text("إعدادات البريف ما تناسب الفورمات. عدل /brief أو استخدم /brief reset.")
+        await message.reply_text("إعدادات البريف ما تناسب الفورمات. عدل /brief أو استخدم /brief reset.")
         return
     system = build_system_prompt(fmt, brief=brief) if "content_brief" in context.chat_data or brief.story_intent != "auto" or brief.structure_id else SYSTEM_PROMPTS[fmt]
-    status = await update.message.reply_text("أراجع طلبك وأحدد إذا يحتاج بحث أو كتابة مباشرة… ⏳")
+    status = await message.reply_text("أراجع طلبك وأحدد إذا يحتاج بحث أو كتابة مباشرة… ⏳")
     try:
         run = await run_pipeline(fmt, system, topic, selected_angle,
-                                 clarification_allowed=not resuming, brief=brief, research=True)
+                                 clarification_allowed=not resuming, brief=brief, research=True, suggest_topics=True)
     except Exception:
         log.error("pipeline failed (%s)", type(sys.exc_info()[1]).__name__)
         await status.edit_text("صار خطأ بالاتصال بالموديل. جرب مرة ثانية بعد شوية.")
@@ -638,7 +684,7 @@ async def on_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "delivery_status": ("approved" if checked.status == "accepted" else
                             "manual_review" if manual_draft else "withheld"),
         "build": runtime, "planning": checked.planning, "research": checked.research,
-        "routing": checked.routing,
+        "routing": checked.routing, "topic_advice": checked.topic_advice,
         "objective": brief.purpose, "story_mode": brief.story_mode, "story_intent": brief.story_intent,
         "structure_id": brief.structure_id, "feature_id": brief.feature_id, "strategy_id": brief.strategy_id,
         "journey_stage": brief.journey_stage, "distribution": brief.distribution,
@@ -657,7 +703,7 @@ async def on_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     if any(timing.get('fallback_reason') == 'provider_credit_exhausted' for timing in run.timings):
-        await update.message.reply_text(
+        await message.reply_text(
             '⚠️ رصيد Anthropic غير كافي أو حد الصرف مستنفد. انتقلت المحاولة إلى Nous البديل؛ '
             'بعدها نطبق نفس فحوصات الجودة قبل عرض المحتوى.')
 
@@ -674,6 +720,7 @@ async def on_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
             'failure_code': checked.failure_code, 'failures': checked.failures,
             'structure_details': checked.structure_details,
             'review_history': checked.review_history, 'stage_timings': run.timings}, pid))
+        await _show_topic_advice(message, context.chat_data, checked.topic_advice)
         return
 
     await status.delete()
@@ -681,25 +728,25 @@ async def on_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     warning = manual_review_warning(checked) + "\n\n" if manual_draft else ""
     chunk_size = TELEGRAM_LIMIT - len(warning.encode('utf-16-le')) // 2
     for part in _chunks(delivered, size=chunk_size):
-        await update.message.reply_text(warning + part)
+        await message.reply_text(warning + part)
     if checked.failures and not manual_draft:
-        await update.message.reply_text("⚠️ تحقق يدوي قبل النشر:\n- " + "\n- ".join(checked.failures))
+        await message.reply_text("⚠️ تحقق يدوي قبل النشر:\n- " + "\n- ".join(checked.failures))
     if checked.production_plan:
         for part in _chunks(render_plan(checked.production_plan), size=chunk_size):
-            await update.message.reply_text(warning + part)
+            await message.reply_text(warning + part)
     if checked.owner_note:
-        await update.message.reply_text("📝 ملاحظة لك (لا تنشرها):\n" + checked.owner_note)
+        await message.reply_text("📝 ملاحظة لك (لا تنشرها):\n" + checked.owner_note)
     if checked.research.get('sources'):
         sources = '📚 مصادر البحث (راجع تاريخ القرار ونطاق تطبيقه):\n' + '\n'.join(
             source['url'] for source in checked.research['sources'])
         for part in _chunks(sources):
-            await update.message.reply_text(part, disable_web_page_preview=True)
+            await message.reply_text(part, disable_web_page_preview=True)
     if manual_draft:
-        await update.message.reply_text(
+        await message.reply_text(
             f"رقم المسودة: {pid}\nهاي مسودة غير معتمدة وتحتاج مراجعتك وتعديلك. "
             "لنسخة جديدة دز الموضوع ويا ملاحظاتك، أو /format حتى تغيّر الاختيارات.")
         return
-    await update.message.reply_text(
+    await message.reply_text(
         f"رقم المنشور: {pid}\nبعد ما تنشره اكتب: /published {pid}\n"
         "تريد نعيده بشكل ثاني؟ دزلي ملاحظتك، أو /format حتى تغير النوع."
     )
@@ -743,6 +790,7 @@ def create_application(token: str, *, request=None):
     app.add_handler(CommandHandler("experiment", cmd_experiment))
     app.add_handler(CommandHandler("example", cmd_example))
     app.add_handler(CommandHandler("pilot", cmd_pilot))
+    app.add_handler(CallbackQueryHandler(on_advice_chosen, pattern=r"^advice:"))
     app.add_handler(CallbackQueryHandler(on_layer_chosen, pattern=r"^ly:"))
     app.add_handler(CallbackQueryHandler(on_back, pattern=r"^back:"))
     app.add_handler(CallbackQueryHandler(on_family_chosen, pattern=r"^fam:"))

@@ -70,6 +70,24 @@ class NousFailoverTests(unittest.IsolatedAsyncioTestCase):
                              writer_schema(writer_fields('tiktok_video')))
             self.assertEqual(run.checked.text, good)
 
+    async def test_senior_topic_adviser_uses_funded_nous_and_preserves_voice_block(self):
+        from topic_adviser import schema
+        gates=dict.fromkeys(GATES,'pass');gates['voice_preservation']='fail'
+        review=json.dumps({'scores':dict.fromkeys(DIMENSIONS,8),'gates':gates,'issues':[]})
+        advice=json.dumps({'suggestions':[{'topic':'شلون نخصص أول رد للزبون؟',
+                          'reason':'زاوية قريبة تركّز على مثال عملي بصوتك.','needs_research':False}]})
+        api=AsyncMock(side_effect=[response(STORY),response(review),response(advice)])
+        with patch.object(llm._anthropic.messages,'create',AsyncMock(side_effect=rejection())), \
+             patch.object(llm,'_nous',NS(chat=NS(completions=NS(create=api)))):
+            run=await run_pipeline('story','voice','التواصل ويا الزبائن','question',
+                brief=Brief(story_intent='ask_audience'),settings=Settings(analyst=False),suggest_topics=True)
+        self.assertEqual(run.checked.failure_code,'critical_gate')
+        self.assertEqual(run.checked.topic_advice['status'],'ready')
+        self.assertEqual(run.checked.topic_advice['provider'],'nous')
+        self.assertEqual(run.checked.topic_advice['model'],'anthropic/claude-sonnet-5.5')
+        self.assertEqual(api.call_args_list[-1].kwargs['response_format']['json_schema']['schema'],schema())
+        self.assertEqual(api.await_count,3)
+
     async def test_unknown_fallback_pricing_still_blocks_further_calls(self):
         primary = AsyncMock(side_effect=rejection())
         api = AsyncMock(return_value=response(routed('write').text))
