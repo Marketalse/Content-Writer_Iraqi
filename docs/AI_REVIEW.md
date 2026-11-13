@@ -202,3 +202,19 @@ preservation, placeholders and existing Telegram delivery with production/manual
 Validation uses offline synthetic responses; no live Telegram or provider calls.
 
 Local validation: 291 offline tests passed; pip check and git diff --check passed.
+
+
+## Plain-language failure categories — 2026-11-13
+
+Generation failures now start with a fixed Arabic category: content did not pass,
+AI service/model-response problem, application/settings problem, resource limit,
+or cause not yet established. Existing safe explanations, billing distinctions,
+review gate reasons, field diagnostics and review IDs remain available. Authorized
+/diagnose output includes failure_category. Rejected or malformed content is not
+presented as proof of a coding defect. Generic response/routing/research failures
+remain uncertain unless a typed provider failure identifies the service problem.
+
+Storage and unexpected handler errors now return a simple technical message without
+exposing exception text. This changes messages only; scoring, retry and delivery
+approval policies remain unchanged. Local verification: 296 offline tests passed;
+pip check and git diff --check passed. No live provider or Telegram calls were made.

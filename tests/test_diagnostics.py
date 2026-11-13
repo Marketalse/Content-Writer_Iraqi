@@ -11,7 +11,7 @@ import bot as app
 import editorial
 import postlog
 from briefs import Brief
-from diagnostics import diagnostic_report, failure_code, failure_message
+from diagnostics import diagnostic_report, failure_code, failure_message, failure_category
 from llm import Result, LLMError
 from pipeline import run_pipeline
 from reviewer import DIMENSIONS, GATES
@@ -167,3 +167,36 @@ class DiagnosisCommandTests(unittest.IsolatedAsyncioTestCase):
                  patch.object(app,'diagnostic_report',side_effect=ValueError('PRIVATE_OTHER_CHAT')):
                 await app.cmd_diagnose(update,SimpleNamespace(chat_data={}))
             self.assertNotIn('PRIVATE',update.message.reply_text.call_args.args[0])
+
+
+class SimpleFailureCategoryTests(unittest.TestCase):
+    def test_content_rejection_does_not_claim_code_or_model_broke(self):
+        record={'failure_code':'creative_threshold'}
+        self.assertEqual(failure_category(record),'content')
+        self.assertTrue(failure_message(record,'test').startswith('📝'))
+
+    def test_provider_and_billing_errors_are_distinct_from_content(self):
+        for code in ('provider_credit_exhausted','provider_timeout','invalid_review_json','writer_truncated'):
+            self.assertEqual(failure_category({'failure_code':code}),'model')
+        self.assertIn('رصيد',failure_message({'failure_code':'provider_credit_exhausted'},'test'))
+
+    def test_technical_errors_limits_and_unknowns_are_not_blindly_called_code_bugs(self):
+        for code,expected in (('storage_error','application'),('application_error','application'),
+                              ('unknown_pricing','application'),('resource_limit','limit'),
+                              ('routing_unavailable','unknown'),('invalid_response','unknown'),
+                              ('research_unavailable','unknown'),('unrecognized','unknown')):
+            self.assertEqual(failure_category({'failure_code':code}),expected)
+        self.assertEqual(failure_category({'quality_status':'accepted'}),'accepted')
+
+    def test_diagnostic_report_includes_safe_category(self):
+        with patch('diagnostics.authorized_post',return_value={'failure_code':'creative_threshold'}):
+            self.assertEqual(diagnostic_report('test',123)['failure_category'],'content')
+
+class UnexpectedHandlerMessageTests(unittest.IsolatedAsyncioTestCase):
+    async def test_unexpected_exception_gets_safe_technical_message(self):
+        message=SimpleNamespace(reply_text=AsyncMock())
+        await app.on_handler_error(SimpleNamespace(message=message),
+                                   SimpleNamespace(error=RuntimeError('PRIVATE_ERROR')))
+        text=message.reply_text.call_args.args[0]
+        self.assertIn('مشكلة تقنية',text)
+        self.assertNotIn('PRIVATE_ERROR',text)
