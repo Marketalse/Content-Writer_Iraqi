@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Content Workshop · Your voice, clearly written</title><link rel="stylesheet" href="/assets/workshop.css"><script src="/assets/workshop.js" defer></script></head>
+<body>
+<div class="app">
+<aside class="side"><a class="brand" href="/"><span class="logo">ك</span><span><b>Content Workshop</b><small>Your voice. A clearer script.</small></span></a>
+<button class="primary" id="new-script">＋ New script</button>
+<nav aria-label="Main navigation"><button class="nav on" data-view="create">✦ <span>Create</span></button><button class="nav" data-view="library">▤ <span>My drafts</span></button><button class="nav" data-view="progress">◷ <span>Project progress</span></button></nav>
+<div class="side-bottom"><span class="dot"></span> Private preview<p>One voice. One complete journey.<br>Built for a focused first release.</p><button id="logout" class="text-button">Sign out</button></div></aside>
+<main>
+<div class="topbar"><span>WORKSPACE / <b id="breadcrumb">CREATE</b></span><span class="pill">Owner preview · Milestone 1</span></div>
+<div id="demo-notice" class="notice" hidden>Interactive demo — sample output only. No AI calls, credit use, research or quality review.</div>
+<div id="error" class="notice error" role="alert" hidden></div>
+<section id="view-create" class="view">
+<header><div class="eyebrow">FROM AN IDEA TO SOMETHING WORTH SAYING</div><h1>What’s on your mind?</h1><p>Bring the topic. We’ll shape the script around your voice.</p></header>
+<div class="workspace"><div>
+<form id="create-form" class="card"><div class="section-title"><span class="step">01</span><h2>Start with your topic</h2></div>
+<label class="sr-only" for="topic">Topic</label><textarea id="topic" class="arabic topic" dir="auto" maxlength="4000" required placeholder="شنو الفكرة اللي تريد تحچي عنها؟"></textarea>
+<div class="hint">A rough idea is enough. Add real details or a source if the topic needs them.</div>
+<div class="section-title spaced"><span class="step">02</span><h2>Choose how to tell it</h2></div>
+<label for="strategy">Writing treatment</label><select id="strategy" required></select>
+<div class="section-title spaced"><span class="step">03</span><h2>Where will it live?</h2></div>
+<div class="destinations"><div class="destination selected"><span class="destination-icon">◎</span><b>Instagram Story</b><small>One idea · about 30 seconds</small><span class="selected-mark">✓</span></div><div class="destination upcoming"><span class="destination-icon">▷</span><b>Reel & Post</b><small>Next after Story validation</small></div></div>
+<div class="submit-row"><span class="hint">Research when needed. Review before delivery.</span><button class="primary" id="generate" type="submit">Generate script <span>↗</span></button></div></form>
+<div class="card working" id="working" role="status" aria-live="polite" hidden><div class="spinner"></div><div><b>Your script is being prepared</b><p>Checking the topic, writing, then reviewing. This can take a few minutes.</p></div></div>
+<article id="result" class="card result" hidden aria-live="polite"><div class="result-header"><div><span id="result-badge" class="pill"></span><h2 id="result-title">Your Story script</h2></div><button id="copy" class="secondary" hidden>Copy script</button></div>
+<p id="result-message" class="arabic" dir="auto"></p><div id="result-notices"></div><div id="script" class="arabic script" dir="rtl" hidden></div>
+<div id="sources" hidden><h3>Sources</h3><ul id="source-list"></ul></div><div id="suggestions" hidden><h3>Try a related angle</h3><div id="suggestion-list"></div></div>
+<form id="edit-form" class="edit-form" hidden><label for="edit">Want to change something?</label><textarea id="edit" class="arabic" dir="auto" maxlength="1500" placeholder="مثلاً: قصّر النص وخلي البداية أكثر مباشرة" required></textarea><button id="edit-submit" class="secondary" type="submit">Revise & review again ↗</button></form>
+<form id="clarify-form" class="edit-form" hidden><label for="answer">Add the missing detail</label><textarea id="answer" class="arabic" dir="auto" maxlength="1500" required></textarea><button class="secondary" type="submit">Continue writing ↗</button></form>
+<div class="result-meta"><span id="request-ref"></span><span id="result-score"></span></div></article>
+</div><aside class="context"><div class="card voice-card"><span class="eyebrow">YOUR VOICE, NOT A TEMPLATE</span><div class="voice-avatar">ك</div><h2>Your calibrated voice</h2><p>Iraqi. Direct. Conversational.<br>Grounded in your approved examples.</p><div class="voice-detail"><span>Writing treatment</span><b id="treatment-summary">Single insight</b></div><div class="voice-detail"><span>Destination</span><b>Instagram Story</b></div><div class="voice-detail"><span>Before delivery</span><b>Structure + voice + quality checks</b></div></div><div class="note"><h3>A focused first step</h3><p>This preview uses your existing voice profile. Separate creator profiles come next.</p></div></aside></div></section>
+<section id="view-library" class="view" hidden><header><div class="eyebrow">PICK UP WHERE YOU LEFT OFF</div><h1>My drafts</h1><p>Your requests and reviewed results, together.</p></header><div id="library-list" class="library-list"></div></section>
+<section id="view-progress" class="view" hidden><header><div class="eyebrow">THE PATH TO INVITED TESTING</div><h1>A clear plan. Visible progress.</h1><p>Engineering checks and human acceptance are tracked separately.</p></header><div id="milestones"></div><p class="hint">This milestone snapshot is updated with releases. Job status updates automatically while a request runs.</p></section>
+</main></div>
+<div class="login-cover" id="login-cover" hidden><form id="login-form" class="card login-card"><span class="logo">ك</span><h1>Your private workshop</h1><p>Sign in with the preview password configured by the workspace owner.</p><label for="password">Preview password</label><input id="password" type="password" autocomplete="current-password" required maxlength="200"><p id="login-error" class="error" role="alert"></p><button class="primary" type="submit">Open workshop ↗</button></form></div>
+<div id="toast" role="status" hidden></div>
+</body></html>

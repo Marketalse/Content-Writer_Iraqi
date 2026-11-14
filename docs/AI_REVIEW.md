@@ -392,3 +392,85 @@ Limits: no paid/live model call, live Telegram message, new source research or R
 deployment was performed. Excel upload import and dynamic chat editing of held records
 are not implemented. Mapping compatibility does not guarantee a generated script's
 quality score. Deployment status is reported separately after GitHub CI.
+
+## Beta readiness planning review — 2026-11-14
+
+Reviewed main 0eb04d6 against the requested creator-facing product. Current status:
+working prototype requiring integration and live acceptance validation. A roadmap,
+current-state matrix and proposed release gates are in BETA_RELEASE_ROADMAP.md.
+
+Confirmed high-priority product gap: prompts/reviewer/adviser read the shared owner
+voice; approved_examples filters by format/mode/intent without a creator identity.
+This is unsuitable as independent creator voice onboarding. Existing post access is
+scoped; this observation does not assert a demonstrated cross-chat history leak.
+
+Confirmed recovery limitation: revision.execute stops on mandatory review blockers
+unless can_repair_format permits format repair. Low-score revisions therefore do not
+mean uncertain voice gets an editorial repair. Shared voice and limited blocker
+recovery are evidence-backed design gaps; they do not prove the cause of every
+historical model rejection. Multiple current/legacy entry paths and memory-only menu
+state require an integration/restart acceptance plan. Existing research/fallback and
+feedback implementations should be validated/reused, not reported as absent.
+
+Rechecked: 332 offline tests passed; pip check passed. Latest recorded release/main
+CI is successful. No live Telegram, provider, search, Render or human acceptance
+checks were run in this review. No application, deployment, scoring or delivery
+behavior changed. Roadmap targets are proposals, not measured results. Files remain
+local planning documents until committed; no implementation or release was performed.
+
+
+## Content Workshop interface reuse assessment — 2026-11-14
+
+Statically reviewed Marketalse/Content_Workshop ec65d20. Confirmed reusable browser
+screens for creation, progress, structured results, library and human edit tracking.
+The server is explicitly local/single-user with a shared session token, threaded
+memory jobs and local file storage; hosted accounts and per-creator isolation remain
+work. Its committee flags research claims but does not perform external search in
+that orchestration. Its unpassed-draft display, general Opus selection, scoring and
+orthography differ from current requirements. Preserve the current engine's policies
+through an adapter rather than merging independent loops.
+
+Saved WEB_INTERFACE_REUSE_ASSESSMENT.md and updated the local beta roadmap with the
+recommended web-first direction. No app behavior changed, no dependencies installed,
+no legacy tests/browser/live APIs exercised, no merge/push/deployment. The current
+bot's earlier 332-test result does not establish the old dashboard or integration
+works. git diff --check passed for planning changes.
+
+## M1 private web Story journey — 2026-11-14
+
+Started the execution plan in PROJECT_EXECUTION.md and a release-maintained six-
+milestone snapshot in web/progress.json. Adapted the Content Workshop ec65d20 palette,
+sidebar/card layout and create/history/edit interactions into a smaller web interface.
+New web_service.py calls the existing run_pipeline with the normal selected Story
+brief, research, independent review and failure-only advice. No second generation
+loop, model-selection UI or review-policy relaxation was added. The exact final text
+must match its reviewed fingerprint, pass native checks, intent and mandatory gates,
+and meet creative thresholds before it reaches the web copy field. Manual-review
+and blocked drafts stay withheld. Edit requests preserve topic and re-enter checks;
+clarification and advice use explicit parent jobs and validated actions.
+
+webapp.py is a separate, single-owner FastAPI preview. Live mode requires a preview
+password; session cookies are HttpOnly/SameSite, Secure on HTTPS. Model keys remain
+server-side. Added origin/body guards, bounded sign-in attempts, safe errors and input
+validation without echoing private input. SQLite jobs preserve history/idempotency;
+one active job and a daily admission limit bound preview use. Interrupted jobs are
+marked on restart and never silently rerun. This is separate from Telegram quotas.
+Existing bot entry point and Render worker configuration were preserved.
+
+Verified: 346 offline tests passed; pip check passed. New tests cover real ASGI routes,
+private sessions, idempotency, redacted failure output, unsafe input, durable restart
+handling, quota/admission behavior, exact-artifact delivery, edits, clarification and
+advice context, plus the real pipeline with only model transport mocked. CI now installs
+optional web requirements as well as bot requirements. Headless Chromium exercised
+nine desktop/mobile interface checks against explicit demo mode: form/treatment,
+sample-only output, edit submission, library reopen, six milestones, mobile submission,
+no horizontal overflow and no JavaScript errors. Screenshots/report are under ignored
+test_reports/web/. Demo has no model calls/score and uses separate storage.
+
+Limits: no live AI, Telegram, research, Vercel or Render requests/deployment were run.
+The demo edit returns a fixed sample, not evidence of genuine model editing; pipeline
+edit context is verified offline. Multi-creator identity/profiles, hosted job ownership,
+retention/deletion and Vercel proxy/origin configuration remain later tasks. Existing
+owner profile/examples are intentionally used only in this protected preview. Shared
+engine budgets remain bounded and are not an exact provider billing cap. Source/demo
+checks establish an owner preview, not readiness for public testing.

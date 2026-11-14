@@ -105,3 +105,12 @@ credentials, actual GitHub/Render settings and deployment.
 والبنية والبريف. تبقى منصة النشر الحالية إذا تناسب ميزة الموضوع؛ وإلا تُستخدم
 الصيغة الصالحة المحددة في السجل. اختيار الموضوع يعرض معاينة، وزر التأكيد فقط يبدأ
 المسار المعتاد للبحث عند الحاجة والكتابة والمراجعة. [التفاصيل وحدود الاستيراد](docs/TOPIC_LIBRARY.md).
+
+## Web preview and execution plan
+
+The first web milestone supports Instagram Story through the existing writing engine,
+with private preview sign-in, history, clarification, related-topic choices and reviewed
+edit requests. [Run the owner preview](docs/WEB_PREVIEW.md).
+[Goals, milestones and tasks](docs/PROJECT_EXECUTION.md) track progress toward invited
+creator testing. Demo mode is sample-only; multi-creator accounts and voice profiles
+are subsequent milestones.
