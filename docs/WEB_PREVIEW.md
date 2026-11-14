@@ -79,3 +79,35 @@ checks and screenshots go to ignored `test_reports/web/`. Browser dependencies a
 not needed by the application or the offline CI suite. They were installed separately
 under /tmp for this verification. Headless checks do not exercise a signed-in desktop
 or the user's own browser.
+
+
+## Vercel → Render connection
+
+The root `vercel.json` now builds a static frontend from `web/`, rewrites `/assets/*`
+to its emitted static files, and proxies `/api/*` plus `/health` to
+`https://content-writer-iraqi.onrender.com`. All AI orchestration stays on Render;
+Vercel needs no Anthropic key for this architecture. The browser uses relative API
+paths so its session cookie remains on the frontend origin. No public CORS is enabled.
+
+In Vercel use this repository, root directory blank, and the **Other** framework
+preset. The repository config declares the static output/build/install commands.
+Remove conflicting dashboard overrides if Vercel asks. Use the production website
+URL from **Visit** or **Domains**, not the Vercel account/project dashboard URL.
+
+On Render add `WEB_PUBLIC_ORIGIN=https://your-exact-production-site.vercel.app`
+(or the exact HTTPS custom domain) and redeploy the new backend commit. No path,
+query, fragment, credentials or wildcard. Only that explicit origin plus the backend's
+own origin may submit forms. Other preview domains are deliberately rejected; update
+the setting if changing the primary frontend domain. A configured HTTPS public origin
+also forces Secure session cookies even when a reverse proxy terminates TLS upstream.
+
+Keep `WEB_DEMO=1` during connection checks. Verify the public Vercel `/health` returns
+`{ "status": "ok", "mode": "demo" }`, then test Create/history/edit from that frontend.
+Only later enable protected live mode. On 14 November the supplied Render `/health`,
+HTML, JS, CSS and demo config returned 200; this proves the deployed demo responds,
+not live AI quality. The Vercel side still needs deployment and the exact origin setting.
+The code change alone cannot modify either provider's dashboard environment settings.
+
+The UI handles non-JSON proxy errors with a safe starting/unavailable message instead
+of showing HTML or a JSON parsing exception. The Free Render instance can cold-start
+and has no durable disk, so it remains suitable only for disposable demo testing.

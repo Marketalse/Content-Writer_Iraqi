@@ -55,11 +55,17 @@ def main():
         phone.locator('#script').wait_for(state='visible')
         assert phone.evaluate('document.documentElement.scrollWidth<=window.innerWidth')
         phone.screenshot(path=str(out/'workshop-mobile.png'),full_page=True)
+        # Reverse proxies/cold starts may return HTML instead of the JSON API envelope.
+        page.route('**/api/config',lambda route:route.fulfill(status=503,content_type='text/html',body='<html>private upstream error</html>'))
+        page.reload()
+        page.locator('#error').wait_for(state='visible')
+        assert 'starting or unavailable' in page.locator('#error').inner_text()
+        assert 'private upstream error' not in page.locator('#error').inner_text()
         assert not errors,errors
         browser.close()
     report={'mode':'demo','paid_model_calls':0,'passed':True,
         'checks':['desktop create','treatment selection','sample-only output','edit submission',
-                  'library reopen','six milestones','mobile create','no horizontal overflow','no JavaScript errors']}
+                  'library reopen','six milestones','mobile create','no horizontal overflow','no JavaScript errors','safe non-JSON proxy failure']}
     (out/'browser.json').write_text(json.dumps(report,indent=2)+'\n')
     print(json.dumps(report))
 
