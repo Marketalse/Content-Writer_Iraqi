@@ -238,11 +238,28 @@ class VercelBridgeTests(unittest.TestCase):
     def test_vercel_static_files_and_api_rewrites_match_frontend_requests(self):
         root=Path(__file__).resolve().parents[1]
         config=json.loads((root/'vercel.json').read_text())
-        self.assertIsNone(config['framework']);self.assertEqual(config['outputDirectory'],'web')
+        self.assertIsNone(config['framework']);self.assertEqual(config['outputDirectory'],'dist')
+        self.assertEqual(config['buildCommand'],'node scripts/build_web.mjs')
         rules={r['source']:r['destination'] for r in config['rewrites']}
         self.assertEqual(rules['/api/:path*'],'https://content-writer-iraqi.onrender.com/api/:path*')
         self.assertEqual(rules['/health'],'https://content-writer-iraqi.onrender.com/health')
         self.assertEqual(rules['/assets/:path*'],'/:path*')
         for name in ('index.html','workshop.js','workshop.css','progress.json'):
-            self.assertTrue((root/config['outputDirectory']/name).is_file())
+            self.assertTrue((root/'web'/name).is_file())
         self.assertNotIn('VERCEL_TOKEN',json.dumps(config));self.assertNotIn('ANTHROPIC_API_KEY',json.dumps(config))
+
+
+class StaticFrontendBuildTests(unittest.TestCase):
+    def test_build_creates_only_public_assets_and_matches_vercel_output(self):
+        import shutil
+        import subprocess
+        if not shutil.which('node'):self.skipTest('Node is required for the Vercel frontend build')
+        root=Path(__file__).resolve().parents[1]
+        with tempfile.TemporaryDirectory() as folder:
+            destination=Path(folder)/'dist'
+            result=subprocess.run(['node',str(root/'scripts/build_web.mjs'),str(destination)],
+                cwd=folder,capture_output=True,text=True,timeout=10)
+            self.assertEqual(result.returncode,0,result.stderr)
+            self.assertEqual({p.name for p in destination.iterdir()},
+                             {'index.html','workshop.js','workshop.css','progress.json'})
+            for item in destination.iterdir():self.assertEqual(item.read_bytes(),(root/'web'/item.name).read_bytes())

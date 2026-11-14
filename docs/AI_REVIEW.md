@@ -501,3 +501,22 @@ Verification for this routing change: 350 offline tests and pip/diff checks pass
 ten headless demo-browser checks passed, including a synthetic non-JSON proxy failure.
 Used configuration fields passed validation against the fetched Vercel schema. These
 checks do not establish that a Vercel deployment or cross-provider live login works.
+
+## Follow-up: missing Vercel output directory — 2026-11-14
+
+The owner supplied Vercel's actual error: “No Output Directory named web found after
+the Build completed.” PR37 was merged by the owner; Vercel's status on e01c980 remained
+failed. This proves output resolution failed, but private project root/override values
+and full build logs remain unavailable, so a specific setting is not asserted as the
+confirmed root cause.
+
+Replace the placeholder echo build with scripts/build_web.mjs. It resolves web source
+relative to itself, validates required assets, creates dist and copies only four public
+frontend files. vercel.json selects dist; CI executes the same build. A regression runs
+the builder from a different working directory and verifies file bytes/allowlist. The
+owner must leave Vercel Root Directory blank and use Other/no conflicting overrides.
+
+Verification: Node built all four files; 351 offline tests passed; pip/diff checks passed.
+The prior ten demo-browser checks cover the unchanged frontend interaction. This change
+is a deployment build correction, not evidence of a successful Vercel deployment or
+live AI availability. Latest provider deployment status is reported separately.
