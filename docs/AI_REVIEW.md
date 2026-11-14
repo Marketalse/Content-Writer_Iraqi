@@ -520,3 +520,22 @@ Verification: Node built all four files; 351 offline tests passed; pip/diff chec
 The prior ten demo-browser checks cover the unchanged frontend interaction. This change
 is a deployment build correction, not evidence of a successful Vercel deployment or
 live AI availability. Latest provider deployment status is reported separately.
+
+## Authenticated Vercel setup — 2026-11-14
+
+Followed https://vercel.com/get-started.md. Installed CLI 65.16.0 and verified login
+as marketalse/team Shakarchi. Official plugin installation failed because this managed
+Codex marketplace lacks it; installed the documented standalone fallback (nine skills).
+Added the global official MCP endpoint and verified authenticated documentation search
+and list_teams through HTTPS MCP using CLI sign-in. Native Codex OAuth separately timed
+out waiting for its callback; native client activation is not claimed complete.
+
+Authenticated project inspection confirmed rootDirectory=bot and Python preset. Cleared
+those and command/output overrides, preserving other settings. The failed build log
+explicitly tried /vercel/path0/bot/scripts/build_web.mjs. The corrected preview redeploy
+reached READY; PR38 now has both GitHub tests and Vercel checks passing. Deployment
+protection remains enabled; unauthenticated preview requests go to Vercel sign-in.
+No protected-preview API success, live AI use, or Render environment change is claimed.
+Render WEB_PUBLIC_ORIGIN still needs the intended frontend address for form submissions.
+User-wide setup report is outside the repository at /workspace/vercel-tools/SETUP_REPORT.md;
+credentials are stored privately and never printed/committed. Existing project reused.
