@@ -10,7 +10,7 @@ KEYS = ('feature_id','strategy_id')
 
 def root_keyboard():
     return Markup([[Button(label,callback_data='ly:f:'+key)] for key,(label,_) in FEATURES.items()]
-                  + [[Button('➕ فورمات إضافية / الاختيارات السابقة',callback_data='ly:legacy')]])
+                  + [[Button('📚 مواضيع المحتوى',callback_data='bank:home')], [Button('➕ فورمات إضافية / الاختيارات السابقة',callback_data='ly:legacy')]])
 
 
 def platform_keyboard(feature, formats):
