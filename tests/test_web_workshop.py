@@ -263,3 +263,23 @@ class StaticFrontendBuildTests(unittest.TestCase):
             self.assertEqual({p.name for p in destination.iterdir()},
                              {'index.html','workshop.js','workshop.css','progress.json'})
             for item in destination.iterdir():self.assertEqual(item.read_bytes(),(root/'web'/item.name).read_bytes())
+
+
+class WebHardeningTests(unittest.TestCase):
+    def test_demo_mode_refuses_live_password_or_origin(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / 'demo.sqlite'
+            with self.assertRaises(ValueError):
+                create_app(path=path, password=PASSWORD, demo=True)
+            with patch.dict(os.environ, {'WEB_PUBLIC_ORIGIN': 'https://workshop.vercel.app'}):
+                with self.assertRaises(ValueError):
+                    create_app(path=path, password='', demo=True)
+            # Plain demo without live settings still starts.
+            create_app(path=path, password='', demo=True)
+
+    def test_unauthenticated_oversized_post_is_rejected_before_body_is_read(self):
+        with tempfile.TemporaryDirectory() as folder:
+            app = create_app(path=Path(folder) / 'jobs.sqlite', password=PASSWORD, demo=False)
+            response = TestClient(app).post('/api/jobs', content=b'x' * 40000,
+                                            headers={'content-type': 'application/json'})
+            self.assertEqual(response.status_code, 401)
