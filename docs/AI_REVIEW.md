@@ -569,13 +569,20 @@ claim that valid neutral questions are routinely withheld was overstated.
 `bot/webapp.py:53` and `:104`: when `WEB_DEMO=1`, every `/api/` route skips the session
 check. This is intended for the no-cost demo, but a misconfigured deployment with the
 flag set would expose the job API without a password. Impact is limited because demo
-mode makes no model calls. Mitigation: refuse to start with `WEB_DEMO=1` when
-`WEB_PUBLIC_ORIGIN` or a live password is configured.
+mode makes no model calls.
+
+Status: fixed. `create_app` now refuses demo mode when a live password or
+`WEB_PUBLIC_ORIGIN` is also set. Regression: `WebHardeningTests` in
+`tests/test_web_workshop.py`.
 
 ### Low — request body is read before authentication (by reading)
 
-`bot/webapp.py:95-103` buffers up to 32 KB from unauthenticated clients before the
-session check at line 104. The size is bounded, so impact is minor.
+`bot/webapp.py:95-103` buffered up to 32 KB from unauthenticated clients before the
+session check. The size is bounded, so impact was minor.
+
+Status: fixed. The session check now runs before any body is read; an unauthenticated
+oversized POST returns 401. Regression: `WebHardeningTests` in
+`tests/test_web_workshop.py`.
 
 ### Note — private Starlette attribute (by reading)
 

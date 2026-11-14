@@ -64,6 +64,9 @@ def create_app(*,path=None,password=None,demo=None,generate=None):
                 or any(c.isspace() for c in public_origin) or parsed.port not in (None,443)):
             raise ValueError('WEB_PUBLIC_ORIGIN must be one exact HTTPS origin')
         public_origin='https://'+parsed.netloc.lower()
+    # Demo mode disables API authentication; refuse it when live settings are also present.
+    if demo and (public_origin or password):
+        raise ValueError('WEB_DEMO=1 disables sign-in; do not combine it with a live preview password or origin')
     daily_limit=int(os.getenv('WEB_DAILY_LIMIT','20'))
     if not 1<=daily_limit<=100:raise ValueError('invalid web daily limit')
     filename='web-demo.sqlite3' if demo else 'web-preview.sqlite3'
@@ -92,6 +95,12 @@ def create_app(*,path=None,password=None,demo=None,generate=None):
             if public_origin:allowed.add(public_origin)
             if origin and origin.rstrip('/') not in allowed:
                 return JSONResponse({'message':'هذا الطلب يحتاج ينفتح من نفس صفحة الورشة.'},status_code=403)
+        # Check the session before buffering any body, so unauthenticated clients cannot make us read it.
+        if request.url.path.startswith('/api/') and request.url.path!='/api/session' and not demo:
+            expiry=sessions.get(request.cookies.get('workshop_session',''),0)
+            if expiry<time.monotonic():
+                return JSONResponse({'message':'سجّل دخول للمعاينة الخاصة.'},status_code=401)
+        if request.method not in ('GET','HEAD','OPTIONS'):
             try:size=int(request.headers.get('content-length','0'))
             except ValueError:size=100001
             # Read the bounded body too; Content-Length may be missing or dishonest.
@@ -101,10 +110,6 @@ def create_app(*,path=None,password=None,demo=None,generate=None):
                 body.extend(part)
                 if len(body)>32000:return JSONResponse({'message':'الطلب أطول من الحد المسموح.'},status_code=413)
             request._body=bytes(body)
-        if request.url.path.startswith('/api/') and request.url.path!='/api/session' and not demo:
-            expiry=sessions.get(request.cookies.get('workshop_session',''),0)
-            if expiry<time.monotonic():
-                return JSONResponse({'message':'سجّل دخول للمعاينة الخاصة.'},status_code=401)
         response=await call_next(request)
         response.headers['Cache-Control']='no-store'
         response.headers['X-Content-Type-Options']='nosniff'
