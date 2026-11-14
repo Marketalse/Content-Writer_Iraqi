@@ -104,7 +104,7 @@ def _structure_keyboard(fmt: str) -> InlineKeyboardMarkup:
 
 
 def _clear_selection(data: dict) -> None:
-    for key in ('topic_advice', 'feature_id', 'strategy_id', 'family', 'menu_stage', 'format', 'angle', 'structure_id',
+    for key in ('bank_pending', 'bank_topic_id', 'topic_advice', 'feature_id', 'strategy_id', 'family', 'menu_stage', 'format', 'angle', 'structure_id',
                 'pending_clarification', 'content_brief'):
         data.pop(key, None)
 
@@ -522,6 +522,93 @@ async def on_angle_chosen(update: Update, context: ContextTypes.DEFAULT_TYPE):
                                  reply_markup=_structure_keyboard(fmt))
 
 
+async def _prepare_bank_topic(message, context, topic_id, *, edit=False):
+    from topic_library import load_topics
+    from topic_navigation import preview
+    send=message.edit_message_text if edit else message.reply_text
+    context.chat_data.pop('bank_pending',None)
+    try:
+        item=load_topics().get(topic_id)
+    except (OSError,ValueError,TypeError):
+        await send('مكتبة المواضيع مو متاحة هسه. صاحب البوت يحتاج يراجع ملف المكتبة.')
+        return
+    if item is None:
+        await send('ما لگيت هذا المعرف. افتح /topics واختار موضوع.')
+        return
+    if item.hold:
+        await send('هذا الموضوع يحتاج تفاصيل قبل الكتابة:\n'+item.title+'\n'+item.research_note+
+                   '\n'+item.note+'\nتگدر ترجع للمكتبة: /topics')
+        return
+    fmt=item.chosen_format(context.chat_data.get('format'))
+    brief=item.brief(fmt)
+    _clear_selection(context.chat_data)
+    context.chat_data.update(feature_id=item.feature_id,strategy_id=item.strategy_id,
+        structure_id=item.structure_id,format=fmt,angle=item.strategy_id,
+        menu_stage='topic',content_brief=brief,bank_topic_id=item.id)
+    token=secrets.token_hex(4)
+    context.chat_data['bank_pending']={'id':item.id,'token':token,
+                                      'selection':_advice_selection(context.chat_data)}
+    text,keyboard=preview(item,fmt,FORMATS,token)
+    await send(text,reply_markup=keyboard)
+
+
+async def cmd_topics(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not _allowed_chat(update):return
+    from topic_library import load_topics
+    from topic_navigation import home
+    try:
+        text,keyboard=home(load_topics())
+    except (OSError,ValueError,TypeError):
+        await update.message.reply_text('مكتبة المواضيع مو متاحة هسه. صاحب البوت يحتاج يراجع ملف المكتبة.')
+        return
+    await update.message.reply_text(text,reply_markup=keyboard)
+
+
+async def cmd_topic(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not _allowed_chat(update):return
+    parts=update.message.text.split()
+    if len(parts)!=2:
+        await update.message.reply_text('اكتب المعرف مثل: /topic CONT-568 أو افتح /topics')
+        return
+    await _prepare_bank_topic(update.message,context,parts[1].upper())
+
+
+async def on_bank_chosen(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query=update.callback_query
+    await query.answer()
+    if not _allowed_chat(update):return
+    from topic_library import load_topics
+    from topic_navigation import home,page
+    parts=query.data.split(':')
+    if len(parts)==3 and parts[1]=='select':
+        await _prepare_bank_topic(query,context,parts[2],edit=True)
+        return
+    try:
+        topics=load_topics()
+        if parts==['bank','home']:
+            context.chat_data.pop('bank_pending',None)
+            text,keyboard=home(topics)
+        elif len(parts)==4 and parts[1]=='page' and parts[3].isdigit():
+            context.chat_data.pop('bank_pending',None)
+            text,keyboard=page(topics,parts[2],int(parts[3]))
+        elif len(parts)==4 and parts[1]=='run':
+            pending=context.chat_data.get('bank_pending') or {}
+            item=topics.get(parts[2])
+            if (not item or item.hold or pending.get('id')!=parts[2]
+                    or pending.get('token')!=parts[3]
+                    or pending.get('selection')!=_advice_selection(context.chat_data)):
+                await query.message.reply_text('انتهى هذا الاختيار أو تغيّرت الإعدادات. اختار الموضوع من /topics مرة ثانية.')
+                return
+            context.chat_data.pop('bank_pending',None)
+            await on_text(update,context,topic_override=item.title,bank_topic_id=item.id)
+            return
+        else:return
+    except (OSError,ValueError,TypeError):
+        await query.message.reply_text('تعذّر فتح هذا الاختيار. ارجع للمكتبة: /topics')
+        return
+    await query.edit_message_text(text,reply_markup=keyboard)
+
+
 def _advice_selection(data):
     return {key: data.get(key) for key in ('format','angle','feature_id','strategy_id','structure_id')} | {
         'brief': data.get('content_brief', Brief()).data()}
@@ -563,12 +650,13 @@ async def on_advice_chosen(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await on_text(update,context,topic_override=topic)
 
 
-async def on_text(update: Update, context: ContextTypes.DEFAULT_TYPE, *, topic_override=None):
+async def on_text(update: Update, context: ContextTypes.DEFAULT_TYPE, *, topic_override=None, bank_topic_id=None):
     if not _allowed_chat(update):
         return
     message = getattr(update, 'message', None) or getattr(getattr(update, 'callback_query', None), 'message', None)
     if message is None:
         return
+    context.chat_data.pop('bank_pending',None)
     pending_advice=context.chat_data.get('topic_advice')
     if topic_override is None and pending_advice:
         choice=re.fullmatch(r'(?:الاقتراح\s*)?([0-9٠-٩])',message.text.strip())
@@ -584,6 +672,11 @@ async def on_text(update: Update, context: ContextTypes.DEFAULT_TYPE, *, topic_o
             topic_override=pending_advice['suggestions'][index]['topic']
             context.chat_data.pop('pending_clarification',None)
     context.chat_data.pop('topic_advice', None)
+    if (topic_override is None and context.chat_data.get('bank_topic_id')
+            and not context.chat_data.get('pending_clarification')):
+        # A new custom topic must not inherit a previous library topic's material.
+        context.chat_data.pop('content_brief',None)
+        context.chat_data.pop('bank_topic_id',None)
     if context.chat_data.get('feature_id'):
         from layer_navigation import show_current
         from content_layers import validate_selection
@@ -689,6 +782,7 @@ async def on_text(update: Update, context: ContextTypes.DEFAULT_TYPE, *, topic_o
                    and all(t["status"] == "ok" for t in run.timings))
     record = {
         "chat_id": cid, "format": fmt, "angle": angle, "topic": topic, "provider": checked.provider,
+        "topic_id": bank_topic_id or context.chat_data.get("bank_topic_id", ""),
         "attempts": checked.attempts, "failures": checked.failures,
         "quality_status": checked.status, "review_history": checked.review_history,
         "transport_normalized": checked.transport_normalized,
@@ -790,6 +884,8 @@ def create_application(token: str, *, request=None):
     app = builder.build()
     app.add_error_handler(on_handler_error)
     app.add_handler(CommandHandler("start", cmd_start))
+    app.add_handler(CommandHandler("topics", cmd_topics))
+    app.add_handler(CommandHandler("topic", cmd_topic))
     app.add_handler(CommandHandler("format", cmd_format))
     app.add_handler(CommandHandler("cancel", cmd_cancel))
     app.add_handler(CommandHandler("published", cmd_published))
@@ -804,6 +900,7 @@ def create_application(token: str, *, request=None):
     app.add_handler(CommandHandler("experiment", cmd_experiment))
     app.add_handler(CommandHandler("example", cmd_example))
     app.add_handler(CommandHandler("pilot", cmd_pilot))
+    app.add_handler(CallbackQueryHandler(on_bank_chosen, pattern=r"^bank:"))
     app.add_handler(CallbackQueryHandler(on_advice_chosen, pattern=r"^advice:"))
     app.add_handler(CallbackQueryHandler(on_layer_chosen, pattern=r"^ly:"))
     app.add_handler(CallbackQueryHandler(on_back, pattern=r"^back:"))

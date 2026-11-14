@@ -89,7 +89,7 @@ class RegisteredWorkflowTests(unittest.IsolatedAsyncioTestCase):
             menu = await self.send(text='/start')
             self.assertIn('1/3',menu['text'])
             self.assertEqual([row[0]['callback_data'] for row in menu['reply_markup']['inline_keyboard']],
-                             ['ly:f:'+key for key in ('post','story','reel','live')]+['ly:legacy'])
+                             ['ly:f:'+key for key in ('post','story','reel','live')]+['bank:home','ly:legacy'])
             await self.send(callback='ly:legacy')
             menu = await self.send(callback='fam:'+family)
             self.assertIn('2/5',menu['text'])
@@ -141,6 +141,24 @@ class RegisteredWorkflowTests(unittest.IsolatedAsyncioTestCase):
         writer.assert_awaited_once()
         self.assertEqual(writer.call_args.kwargs['topic_override'],'شلون نخصص أول رد للزبون؟')
         self.assertNotIn('topic_advice',self.state)
+        self.pipeline.assert_not_awaited()
+
+    async def test_registered_topic_library_requires_confirmation(self):
+        from topic_library import load_topics
+        item=next(t for t in load_topics().values() if t.ready)
+        menu=await self.send(text='/topics')
+        self.assertIn('145',menu['text'])
+        await self.send(callback='bank:page:'+item.pillar_id+':0')
+        menu=await self.send(text='/topic '+item.id)
+        self.assertIn(item.title,menu['text'])
+        self.assertEqual(self.state['content_brief'].data(),item.brief().data())
+        callback=menu['reply_markup']['inline_keyboard'][0][0]['callback_data']
+        with patch.object(app,'on_text',AsyncMock()) as writer:
+            await self.send(callback=callback)
+            writer.assert_awaited_once()
+            self.assertEqual(writer.call_args.kwargs,{'topic_override':item.title,'bank_topic_id':item.id})
+            await self.send(callback=callback)
+            self.assertEqual(writer.await_count,1)
         self.pipeline.assert_not_awaited()
 
     async def test_old_inline_buttons_enter_platform_chooser_instead_of_old_angle_flow(self):

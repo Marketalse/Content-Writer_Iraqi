@@ -357,3 +357,38 @@ Ponytail's optional ledger/export are disabled. No live coding agent/model sessi
 or bundled browser MCP was launched. Installation is not a continuous bug monitor;
 reload the relevant coding agent to discover the installed packages. See
 CODING_TOOLS_INSTALLATION.md and its machine-readable inventory for verification.
+
+## Bot-compatible topic library — 2026-11-14
+
+Confirmed compatibility gap: the rewritten spreadsheet had editorial feature/strategy
+labels but no supported Telegram Excel-import path, and the legacy batch runner only
+supports three formats without all content layers. Added a packaged, validated JSON
+bank and `/topics` / `/topic CONT-ID` handlers rather than presenting that spreadsheet
+as directly importable. The root menu links to the six-pillar library.
+
+All 145 original IDs have valid menu-native feature/format/strategy/structure tuples.
+Current compatible destinations are preserved; source recommendation conflicts are
+resolved explicitly in each record's format_note. The brief carries audience, angle,
+outline and research guidance as unverified editorial material, with no fabricated
+citations or approved evidence. Four ambiguous topics are held; four source Used
+entries require explicit rewrite confirmation; the remaining 137 are defined/unused.
+
+Preview is free of model/quota calls. A token and full selection snapshot bind the
+confirmation to the selected topic. Replay, changed settings, back navigation and
+reset cannot reuse it. Confirmation invokes the existing pipeline with research and
+failure advice enabled. New custom text clears previous library source material;
+clarification/adviser continuations retain their relevant context. Diagnostics retain
+the safe topic ID alongside the normal run ID. Existing quality/delivery gates and
+Opus-only failure adviser scope are unchanged.
+
+Verification: 332 offline tests passed, including all 145 Brief JSON round-trips,
+writer/reviewer configuration, every browse page, held/used behavior, registered
+Telegram dispatch, full handler-to-pipeline handoff, and stale-confirmation rejection.
+`pip check` passed. Export validation: seven-sheet bot-ready Excel, CSV and JSON;
+145 unique IDs; all four prior workbook sheets (including 32-column original archive)
+preserved; no formulas introduced. No runtime Excel dependency was added.
+
+Limits: no paid/live model call, live Telegram message, new source research or Render
+deployment was performed. Excel upload import and dynamic chat editing of held records
+are not implemented. Mapping compatibility does not guarantee a generated script's
+quality score. Deployment status is reported separately after GitHub CI.

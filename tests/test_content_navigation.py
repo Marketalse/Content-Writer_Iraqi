@@ -73,7 +73,7 @@ class NavigationTests(unittest.IsolatedAsyncioTestCase):
         with patch.object(app,'_allowed_chat',return_value=True):
             await app.cmd_start(upd,ctx)
         self.assertFalse(ctx.chat_data)
-        self.assertEqual(callbacks(upd.message.reply_text.call_args.kwargs['reply_markup']), ['ly:f:'+key for key in ('post','story','reel','live')]+['ly:legacy'])
+        self.assertEqual(callbacks(upd.message.reply_text.call_args.kwargs['reply_markup']), ['ly:f:'+key for key in ('post','story','reel','live')]+['bank:home','ly:legacy'])
 
     async def test_every_family_platform_route_requires_structure_before_topic(self):
         for family, (_, formats) in FAMILIES.items():
