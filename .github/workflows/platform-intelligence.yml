@@ -13,6 +13,8 @@ jobs:
         with:
           python-version: "3.12"
       - run: pip install -r bot/requirements-web.txt
+      - name: Build static web frontend
+        run: node scripts/build_web.mjs
       - name: Compile edited modules
         run: python -m compileall -q bot tests
       - name: Verify audit fixes and full no-network suite

@@ -501,3 +501,41 @@ Verification for this routing change: 350 offline tests and pip/diff checks pass
 ten headless demo-browser checks passed, including a synthetic non-JSON proxy failure.
 Used configuration fields passed validation against the fetched Vercel schema. These
 checks do not establish that a Vercel deployment or cross-provider live login works.
+
+## Follow-up: missing Vercel output directory — 2026-11-14
+
+The owner supplied Vercel's actual error: “No Output Directory named web found after
+the Build completed.” PR37 was merged by the owner; Vercel's status on e01c980 remained
+failed. This proves output resolution failed, but private project root/override values
+and full build logs remain unavailable, so a specific setting is not asserted as the
+confirmed root cause.
+
+Replace the placeholder echo build with scripts/build_web.mjs. It resolves web source
+relative to itself, validates required assets, creates dist and copies only four public
+frontend files. vercel.json selects dist; CI executes the same build. A regression runs
+the builder from a different working directory and verifies file bytes/allowlist. The
+owner must leave Vercel Root Directory blank and use Other/no conflicting overrides.
+
+Verification: Node built all four files; 351 offline tests passed; pip/diff checks passed.
+The prior ten demo-browser checks cover the unchanged frontend interaction. This change
+is a deployment build correction, not evidence of a successful Vercel deployment or
+live AI availability. Latest provider deployment status is reported separately.
+
+## Authenticated Vercel setup — 2026-11-14
+
+Followed https://vercel.com/get-started.md. Installed CLI 65.16.0 and verified login
+as marketalse/team Shakarchi. Official plugin installation failed because this managed
+Codex marketplace lacks it; installed the documented standalone fallback (nine skills).
+Added the global official MCP endpoint and verified authenticated documentation search
+and list_teams through HTTPS MCP using CLI sign-in. Native Codex OAuth separately timed
+out waiting for its callback; native client activation is not claimed complete.
+
+Authenticated project inspection confirmed rootDirectory=bot and Python preset. Cleared
+those and command/output overrides, preserving other settings. The failed build log
+explicitly tried /vercel/path0/bot/scripts/build_web.mjs. The corrected preview redeploy
+reached READY; PR38 now has both GitHub tests and Vercel checks passing. Deployment
+protection remains enabled; unauthenticated preview requests go to Vercel sign-in.
+No protected-preview API success, live AI use, or Render environment change is claimed.
+Render WEB_PUBLIC_ORIGIN still needs the intended frontend address for form submissions.
+User-wide setup report is outside the repository at /workspace/vercel-tools/SETUP_REPORT.md;
+credentials are stored privately and never printed/committed. Existing project reused.

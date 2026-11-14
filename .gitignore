@@ -7,3 +7,6 @@ data/
 output/
 test_reports/
 knowledge/topics/*.csv
+
+# Generated Vercel frontend output
+dist/

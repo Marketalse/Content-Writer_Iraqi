@@ -83,7 +83,7 @@ or the user's own browser.
 
 ## Vercel → Render connection
 
-The root `vercel.json` now builds a static frontend from `web/`, rewrites `/assets/*`
+The root `vercel.json` now builds a static frontend from `web/` into `dist/`, rewrites `/assets/*`
 to its emitted static files, and proxies `/api/*` plus `/health` to
 `https://content-writer-iraqi.onrender.com`. All AI orchestration stays on Render;
 Vercel needs no Anthropic key for this architecture. The browser uses relative API
@@ -111,3 +111,20 @@ The code change alone cannot modify either provider's dashboard environment sett
 The UI handles non-JSON proxy errors with a safe starting/unavailable message instead
 of showing HTML or a JSON parsing exception. The Free Render instance can cold-start
 and has no durable disk, so it remains suitable only for disposable demo testing.
+
+
+### Fix: Vercel cannot find its output directory
+
+The reported build error was “No Output Directory named web found.” The checked-in
+build now runs `node scripts/build_web.mjs`, which creates `dist/` and verifies/copies
+only index.html, CSS, JavaScript and the progress snapshot. vercel.json selects dist
+as output, and CI runs the same build. It resolves source paths relative to its own
+location rather than assuming the command's working directory.
+
+Vercel project settings must use the repository root (Root Directory blank), Framework
+Preset Other, and no conflicting build/output overrides. If overrides must be enabled,
+Build Command is `node scripts/build_web.mjs` and Output Directory is `dist`.
+Deploy the latest commit after changing settings, not an earlier failed deployment.
+The reported error establishes a missing resolved build directory, not whether a
+specific dashboard root setting or stale commit caused it; those private values
+have not been inspected here.

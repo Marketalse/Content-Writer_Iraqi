@@ -8,7 +8,7 @@ Primary interface: web. One shared editorial engine; Telegram remains available.
 
 | Milestone | Goal | Status and exit check |
 |---|---|---|
-| M1 — Owner web preview | One complete Instagram Story journey | Implemented; 350 offline tests and desktop/mobile demo checks passed; live model/deployment acceptance remains pending |
+| M1 — Owner web preview | One complete Instagram Story journey | Implemented; 351 offline tests and desktop/mobile demo checks passed; live model/deployment acceptance remains pending |
 | M2 — Creator voice and identity | Independent creators have separate confirmed voice profiles | Planned; two distinct creators must never share private examples/history |
 | M3 — Editorial reliability | Match failures to bounded repairs | Existing controls partial; recurring voice/format/research examples need calibrated recovery |
 | M4 — Hosted release operations | Durable and observable multi-user web service | Preview persistence exists; Vercel/backend deployment, account authorization and multi-user operations pending |
@@ -29,7 +29,7 @@ Primary interface: web. One shared editorial engine; Telegram remains available.
 - [x] T1.10 SQLite history, duplicate-start protection, one active job, daily admission cap.
 - [x] T1.11 Mark interrupted jobs on restart; never silently restart paid work.
 - [x] T1.12 Explicit no-cost demo, isolated from live generation and live job storage.
-- [x] T1.13 Full offline regression suite (350 tests) and ten desktop/mobile demo checks passed.
+- [x] T1.13 Full offline regression suite (351 tests) and ten desktop/mobile demo checks passed.
 - [x] T1.14 Configure PR/main CI to install web dependencies and run the full suite.
   Actual release outcomes are tracked separately by GitHub checks and the release report.
 - [ ] T1.15 Owner live acceptance on a deployed preview, including edit and source verification.
