@@ -139,9 +139,10 @@ cannot be verified, return unsupported. The summary must identify the source for
 its date, units, applicability and any conflict with the user's premise. Prefer one or two
 well-supported relevant figures over a list of loosely related statistics.
 Validate the topic's factual premise; do not repeat a disproven or unsupported premise as fact.
-For ask_audience, research only any factual context needed. Do not invent a statistic or a
-generalization just to introduce a question. A pure preference question needs no factual claim;
-use research as background, not as a lesson or an answer to the audience question.
+For ask_audience, research only the factual context the premise needs, and cite it. Do not invent
+a statistic or a generalization just to introduce a question; use research as background, not as a
+lesson or an answer to the audience question. A ready result must include citations, so leave out
+any claim you cannot cite rather than marking the topic ready without sources.
 Return unsupported if adequate relevant evidence cannot be found. Never invent citations.
 Return ONLY JSON, no markdown: {"status":"ready|needs_clarification|unsupported",
 "clarification":"one Iraqi question if needed, otherwise empty",

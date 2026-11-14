@@ -165,3 +165,21 @@ class ResearchPipelineTests(unittest.IsolatedAsyncioTestCase):
         system = reviewer_system('story', story_intent='ask_audience', structure_id='question')
         self.assertIn('preference', system)
         self.assertIn('official primary source', system)
+
+
+class ResearchContractTests(unittest.TestCase):
+    """Prompt and parser must agree: a ready research result always carries citations."""
+
+    def test_prompt_does_not_promise_ready_without_citations(self):
+        from research import RESEARCH_SYSTEM
+        self.assertNotIn('needs no factual claim', RESEARCH_SYSTEM)
+        self.assertIn('A ready result must include citations', RESEARCH_SYSTEM)
+
+    def test_ready_without_citations_is_rejected_and_cited_ready_passes(self):
+        uncited = llm.Result(json.dumps({'status': 'ready', 'clarification': '', 'summary': 'x'}),
+                             'mock', stop_reason='end_turn')
+        with self.assertRaisesRegex(ValueError, 'lacks cited evidence'):
+            parse_research(uncited)
+        cited = NS(text=uncited.text, refused=False, truncated=False, stop_reason='end_turn',
+                   search_failed=False, sources=[{'url': 'https://example.org/a'}], search_requests=1)
+        self.assertEqual(parse_research(cited)['status'], 'ready')

@@ -539,3 +539,56 @@ No protected-preview API success, live AI use, or Render environment change is c
 Render WEB_PUBLIC_ORIGIN still needs the intended frontend address for form submissions.
 User-wide setup report is outside the repository at /workspace/vercel-tools/SETUP_REPORT.md;
 credentials are stored privately and never printed/committed. Existing project reused.
+
+## Code review (local clone of main 3e8bf5d) — 2026-11-14
+
+Scope: web preview API (`bot/webapp.py`) and research-result validation
+(`bot/research.py`). Not a full audit; Telegram handlers, revision loop and
+Render/Vercel configuration were not reviewed line by line.
+
+### Medium — research prompt contradicted the parser (reproduced, fixed)
+
+`bot/research.py` `parse_research` rejects a `status=ready` result without sources or
+search requests (`research lacks cited evidence`). `RESEARCH_SYSTEM` said a pure
+preference question "needs no factual claim", which invited exactly that result.
+Reproduction before the fix: a `ready` JSON with no sources raised that error.
+
+Fix: the prompt now says a ready result must include citations and that uncited claims
+must be left out. The citation gate itself is unchanged. Regression tests in
+`tests/test_research.py` (`ResearchContractTests`) cover both the prompt wording and the
+parser behavior.
+
+Narrower reach than first stated: `revision.py` only calls research when the facilitator
+(`parse_route`) sets a factual flag, and it routes pure preference questions to `write`
+with no research call. So a preference-only topic reaches this path only through a
+misrouting or fallback, where requiring citations is the intended behavior. The original
+claim that valid neutral questions are routinely withheld was overstated.
+
+### Low — demo mode disables all web API authentication (design, by reading)
+
+`bot/webapp.py:53` and `:104`: when `WEB_DEMO=1`, every `/api/` route skips the session
+check. This is intended for the no-cost demo, but a misconfigured deployment with the
+flag set would expose the job API without a password. Impact is limited because demo
+mode makes no model calls. Mitigation: refuse to start with `WEB_DEMO=1` when
+`WEB_PUBLIC_ORIGIN` or a live password is configured.
+
+### Low — request body is read before authentication (by reading)
+
+`bot/webapp.py:95-103` buffers up to 32 KB from unauthenticated clients before the
+session check at line 104. The size is bounded, so impact is minor.
+
+### Note — private Starlette attribute (by reading)
+
+`bot/webapp.py:103` sets `request._body`. The offline ASGI tests pass with the pinned
+`fastapi<1` range, but a future Starlette change could break body replay silently.
+Fragility, not a current defect.
+
+### Validation
+
+- `python -m unittest discover -s tests` (Python 3.12.5, temp venv with
+  `bot/requirements-web.txt`): 351 tests passed.
+- `pip check`: no broken requirements.
+- Reproduction command above run once; no provider, Telegram, Render or Vercel calls.
+
+Not verified: live model output quality, production credentials, deployment state.
+Changes from this review: this section only. No application code changed.
