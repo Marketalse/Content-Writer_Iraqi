@@ -195,3 +195,54 @@ class WebHTTPTests(unittest.TestCase):
 
     def test_live_start_requires_explicit_owner_password(self):
         with self.assertRaises(ValueError):create_app(path=self.path,password='',demo=False)
+
+
+class VercelBridgeTests(unittest.TestCase):
+    def test_frontend_origin_is_rejected_until_explicitly_configured(self):
+        with tempfile.TemporaryDirectory() as folder, patch.dict(os.environ,{'WEB_PUBLIC_ORIGIN':''}):
+            with TestClient(create_app(path=Path(folder)/'jobs.sqlite',password=PASSWORD,demo=False),
+                            base_url='https://backend.example') as client:
+                response=client.post('/api/session',json={'password':PASSWORD},
+                                     headers={'Origin':'https://workshop.vercel.app'})
+                self.assertEqual(response.status_code,403)
+
+    def test_configured_proxy_origin_login_cookie_and_generation(self):
+        generator=AsyncMock(return_value={'state':'blocked','copy':'','message':'fixture','suggestions':[]})
+        with tempfile.TemporaryDirectory() as folder,patch.dict(os.environ,{'WEB_PUBLIC_ORIGIN':'https://workshop.vercel.app/'}):
+            with TestClient(create_app(path=Path(folder)/'jobs.sqlite',password=PASSWORD,demo=False,generate=generator),
+                            base_url='https://backend.example') as client:
+                origin={'Origin':'https://workshop.vercel.app'}
+                response=client.post('/api/session',json={'password':PASSWORD},headers=origin)
+                self.assertEqual(response.status_code,200,response.text)
+                cookie=response.headers['set-cookie'].lower()
+                self.assertIn('secure',cookie);self.assertIn('httponly',cookie)
+                self.assertIn('samesite=strict',cookie);self.assertNotIn('domain=',cookie)
+                response=client.post('/api/jobs',headers=origin,json={'request_id':str(uuid4()),'topic':'اختبار الوصلة','strategy_id':'insight'})
+                self.assertEqual(response.status_code,202,response.text)
+                self.assertEqual(client.get('/api/jobs').status_code,200)
+                hostile={'Origin':'https://another-project.vercel.app'}
+                self.assertEqual(client.post('/api/session',json={'password':PASSWORD},headers=hostile).status_code,403)
+                self.assertEqual(client.delete('/api/session',headers=hostile).status_code,403)
+                self.assertEqual(client.delete('/api/session',headers=origin).status_code,200)
+                self.assertEqual(client.get('/api/jobs').status_code,401)
+
+    def test_invalid_frontend_origins_fail_closed(self):
+        with tempfile.TemporaryDirectory() as folder:
+            for value in ('*','https://*.vercel.app','http://workshop.vercel.app',
+                          'https://workshop.vercel.app/path','https://user:pass@workshop.vercel.app',
+                          'https://workshop.vercel.app?query=1','https://workshop.vercel.app#fragment',
+                          'https://workshop.vercel.app:1234','https://a.example https://b.example'):
+                with self.subTest(value=value),patch.dict(os.environ,{'WEB_PUBLIC_ORIGIN':value}):
+                    with self.assertRaises(ValueError):create_app(path=Path(folder)/'jobs.sqlite',password=PASSWORD,demo=False)
+
+    def test_vercel_static_files_and_api_rewrites_match_frontend_requests(self):
+        root=Path(__file__).resolve().parents[1]
+        config=json.loads((root/'vercel.json').read_text())
+        self.assertIsNone(config['framework']);self.assertEqual(config['outputDirectory'],'web')
+        rules={r['source']:r['destination'] for r in config['rewrites']}
+        self.assertEqual(rules['/api/:path*'],'https://content-writer-iraqi.onrender.com/api/:path*')
+        self.assertEqual(rules['/health'],'https://content-writer-iraqi.onrender.com/health')
+        self.assertEqual(rules['/assets/:path*'],'/:path*')
+        for name in ('index.html','workshop.js','workshop.css','progress.json'):
+            self.assertTrue((root/config['outputDirectory']/name).is_file())
+        self.assertNotIn('VERCEL_TOKEN',json.dumps(config));self.assertNotIn('ANTHROPIC_API_KEY',json.dumps(config))

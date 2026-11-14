@@ -474,3 +474,30 @@ retention/deletion and Vercel proxy/origin configuration remain later tasks. Exi
 owner profile/examples are intentionally used only in this protected preview. Shared
 engine budgets remain bounded and are not an exact provider billing cap. Source/demo
 checks establish an owner preview, not readiness for public testing.
+
+## Vercel/Render routing — 2026-11-14
+
+Verified the supplied https://content-writer-iraqi.onrender.com deployment: /health,
+HTML, JS, CSS and /api/config returned 200; health/config identify explicit demo mode.
+No model call was performed. Vercel's latest observed GitHub status was failure;
+private deployment logs/settings were not available, so its exact cause is not claimed.
+
+Added vercel.json for an explicit static web/ build and asset mapping, with API/health
+rewrites to that Render backend. Added WEB_PUBLIC_ORIGIN as one explicitly configured
+HTTPS frontend origin; retained same-origin protection for direct backend access and
+rejected arbitrary other Vercel domains. Secure session cookies are forced when that
+HTTPS frontend is configured. No permissive CORS, credentials in frontend config,
+new token bridge or alternate AI orchestration was introduced. The UI now handles
+non-JSON proxy/cold-start errors without displaying raw upstream HTML.
+
+Four regression tests cover the former unconfigured-origin rejection, configured
+proxy origin login/generation/logout with cookie attributes, invalid origin settings,
+and static output/asset/API routing. Full verification results are recorded with the
+release. The account URL vercel.com/shakarchi and v0.app project editor are not website
+origins; the actual production website URL is still needed to set Render's variable.
+No Vercel/Render dashboard setting was changed or live AI tested by this work.
+
+Verification for this routing change: 350 offline tests and pip/diff checks passed;
+ten headless demo-browser checks passed, including a synthetic non-JSON proxy failure.
+Used configuration fields passed validation against the fetched Vercel schema. These
+checks do not establish that a Vercel deployment or cross-provider live login works.

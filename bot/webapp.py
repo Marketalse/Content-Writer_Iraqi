@@ -10,6 +10,7 @@ import time
 from contextlib import asynccontextmanager
 from pathlib import Path
 from uuid import UUID
+from urllib.parse import urlsplit
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, JSONResponse
@@ -53,6 +54,16 @@ def create_app(*,path=None,password=None,demo=None,generate=None):
     password=password if password is not None else os.getenv('WEB_PREVIEW_PASSWORD','')
     if not demo and not 32<=len(password)<=200:
         raise ValueError('Configure WEB_PREVIEW_PASSWORD with 32–200 characters in secure environment settings')
+    # External rewrites preserve the browser Origin while the backend Host differs.
+    # Trust only the explicitly configured HTTPS frontend, never arbitrary *.vercel.app.
+    public_origin=os.getenv('WEB_PUBLIC_ORIGIN','').strip().rstrip('/')
+    if public_origin:
+        parsed=urlsplit(public_origin)
+        if (parsed.scheme!='https' or not parsed.hostname or parsed.username or parsed.password
+                or parsed.path or parsed.query or parsed.fragment or '*' in parsed.netloc
+                or any(c.isspace() for c in public_origin) or parsed.port not in (None,443)):
+            raise ValueError('WEB_PUBLIC_ORIGIN must be one exact HTTPS origin')
+        public_origin='https://'+parsed.netloc.lower()
     daily_limit=int(os.getenv('WEB_DAILY_LIMIT','20'))
     if not 1<=daily_limit<=100:raise ValueError('invalid web daily limit')
     filename='web-demo.sqlite3' if demo else 'web-preview.sqlite3'
@@ -77,7 +88,9 @@ def create_app(*,path=None,password=None,demo=None,generate=None):
         # Same-origin cookie requests only. No public CORS or tokens in page source/URLs.
         if request.method not in ('GET','HEAD','OPTIONS'):
             origin=request.headers.get('origin')
-            if origin and origin.rstrip('/')!=str(request.base_url).rstrip('/'):
+            allowed={str(request.base_url).rstrip('/')}
+            if public_origin:allowed.add(public_origin)
+            if origin and origin.rstrip('/') not in allowed:
                 return JSONResponse({'message':'هذا الطلب يحتاج ينفتح من نفس صفحة الورشة.'},status_code=403)
             try:size=int(request.headers.get('content-length','0'))
             except ValueError:size=100001
@@ -128,7 +141,7 @@ def create_app(*,path=None,password=None,demo=None,generate=None):
         session=secrets.token_urlsafe(32);sessions[session]=now+12*3600
         response=JSONResponse({'ok':True})
         response.set_cookie('workshop_session',session,max_age=12*3600,httponly=True,
-                            secure=request.url.scheme=='https',samesite='strict')
+                            secure=bool(public_origin) or request.url.scheme=='https',samesite='strict')
         return response
 
     @app.delete('/api/session')

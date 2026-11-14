@@ -8,7 +8,8 @@ function toast(message){text($('#toast'),message);$('#toast').hidden=false;setTi
 async function api(path,options={}){
  let response;
  try{response=await fetch('/api/'+path,{...options,headers:{'Content-Type':'application/json',...(options.headers||{})}});}catch(e){throw new Error('Connection interrupted. Your request may still be running. Reopen My drafts before starting again.');}
- const body=await response.json();
+ let body;
+ try{body=await response.json();}catch(e){throw new Error('The writing service is starting or unavailable. Please wait a moment and try again.');}
  if(response.status===401){$('#login-cover').hidden=false;throw new Error(body.message||'Please sign in.');}
  if(!response.ok)throw new Error(body.message||'The request could not be completed.');
  return body;
