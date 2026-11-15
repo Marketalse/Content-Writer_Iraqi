@@ -36,6 +36,12 @@ Primary interface: web. One shared editorial engine; Telegram remains available.
 
 ## Next implementation slice
 
+Recovery priority (15 November 2026): complete T1.15 owner live acceptance first.
+Use [the recovery roadmap](project/ROADMAP.md) and [Kanban cards](project/KANBAN.md)
+for task dependencies and evidence. M2 begins only after the Story gate passes.
+
+### Previously proposed subsequent slice
+
 M2 identity + private voice profiles, followed by the hosted frontend/backend connection.
 Keep a Story-first scope until the full journey is accepted; then extend native rendering
 and the UI to Reel/Post. Do not change the existing Telegram deployment just to preview

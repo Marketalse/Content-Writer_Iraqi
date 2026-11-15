@@ -1,5 +1,9 @@
 # Content-Writer_Iraqi
 
+**Start here:** [Project brief, MVP, architecture, roadmap and Kanban tracker](docs/project/START_HERE.md).
+Current focus: prove one owner web Story journey before multi-creator features.
+The Telegram setup and detailed feature references below remain supported.
+
 مولّد محتوى باللهجة العراقية (ستوري، كاروسيل، ريلز، لينكدإن) مربوط بتلگرام، مبني على Claude API.
 
 ## البنية
