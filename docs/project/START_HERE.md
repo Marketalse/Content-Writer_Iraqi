@@ -1,6 +1,6 @@
 # Get this project on track
 
-Reviewed baseline: `main` at `2ebfc52`, 16 November 2026 (Baghdad).
+Reviewed baseline: `main` at `2ebfc52`, 15 November 2026 (Baghdad).
 
 **Product:** help an Iraqi Arabic creator turn one topic into a useful, reviewed script that sounds like them, then edit and copy it for manual publication.
 

@@ -1,6 +1,6 @@
 # Kanban cards
 
-Snapshot: 16 November 2026 (Baghdad). Source: [tracker.csv](tracker.csv). WIP limit: one.
+Snapshot: 15 November 2026 (Baghdad). Source: [tracker.csv](tracker.csv). WIP limit: one.
 
 Statuses describe this recovery plan; Done requires evidence, and Backlog means deferred.
 

@@ -1,7 +1,7 @@
 # What happened to main
 
 Evidence: `git log --reverse`, first-parent history, current modules and documentation.
-Baseline `2ebfc52` on 14 November 2026; reviewed 16 November (Baghdad).
+Baseline `2ebfc52` on 14 November 2026; reviewed 15 November (Baghdad).
 41 pull-request merge commits appear on the first-parent line after the initial commit.
 This is an evolution analysis, not evidence of a production incident or broken deployment.
 

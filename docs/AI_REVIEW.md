@@ -601,11 +601,10 @@ Not verified: live model output quality, production credentials, deployment stat
 Changes from this review: this section only. No application code changed.
 
 
-## Recovery and organization review — 16 November 2026 (Baghdad)
+## Recovery and organization review — 15 November 2026 (Baghdad)
 
-Execution UTC date: 15 November; the client timezone had crossed midnight at final verification.
-Reviewed baseline: `main` at `2ebfc52`. Changes are local on `docs/project-recovery` at
-verification time; no application runtime behavior, deployed configuration or schema changed.
+Reviewed baseline: `main` at `2ebfc52`. Changes were verified on `docs/project-recovery` and published for review in draft PR #42.
+No application runtime behavior, deployed configuration or schema changed.
 
 Scope: trace web/Telegram entry points through shared prompts/pipeline/revision/provider,
 quality/review/delivery boundaries; map storage, knowledge, skills, Git history and project
