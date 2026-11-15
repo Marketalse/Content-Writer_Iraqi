@@ -599,3 +599,48 @@ Fragility, not a current defect.
 
 Not verified: live model output quality, production credentials, deployment state.
 Changes from this review: this section only. No application code changed.
+
+
+## Recovery and organization review — 15 November 2026 (Baghdad)
+
+Reviewed baseline: `main` at `2ebfc52`. Changes were verified on `docs/project-recovery` and published for review in draft PR #42.
+No application runtime behavior, deployed configuration or schema changed.
+
+Scope: trace web/Telegram entry points through shared prompts/pipeline/revision/provider,
+quality/review/delivery boundaries; map storage, knowledge, skills, Git history and project
+plans. This is not a line-by-line security audit or a full Git-history secret scan.
+
+Findings:
+
+- **High release blocker, acceptance gap:** PROJECT_EXECUTION T1.15 lacks recorded owner
+  live acceptance while the proposed next slice starts M2. Recovery plan prioritizes M1
+  evidence before independent creator accounts. Not evidence of a failing live model.
+- **Medium configuration/documentation defect:** WEB_PREVIEW connection instructions mixed
+  demo mode with live origin settings, but `webapp.create_app` rejects that combination.
+  Confirmed by current guard and passing WebHardeningTests. Documentation now keeps live
+  origin/password empty in demo and sets them when enabling protected live mode.
+- **Medium future schema risk:** draft feedback RLS validates feedback.user_id, while job_id
+  references any existing job without checking matching owner. Add a same-owner constraint
+  or policy and two-user tests before applying the unapplied proposal. No current deployed
+  Supabase exposure established; schema remains unchanged.
+- **Release architecture gap:** render.yaml defines a Telegram worker, not the web service
+  targeted by Vercel rewrites. Verify separate service/durable storage/deployed commit before
+  protected live acceptance. A public demo response does not establish these properties.
+
+Validation in Python 3.12.14 venv:
+
+- `.venv/bin/python -m pip check`: no broken requirements.
+- `.venv/bin/python -m unittest discover -s tests`: 355 passed at baseline.
+- `.venv/bin/python scripts/verify_fixes.py`: audit checks verified locally, full offline
+  suite rerun (see generated ignored test_reports/fixes artifacts).
+- `node scripts/build_web.mjs`: four public files built successfully.
+- `.venv/bin/python scripts/verify_web_browser.py`: ten desktop/mobile demo checks passed
+  against local WEB_DEMO=1 with Chromium; zero paid model calls.
+- `git diff --check`: passed at final verification.
+- Public GET probes: Render /health returned 200, mode=demo; /api/config returned 200,
+  demo=true, feature=Story. Vercel /health and /api/config each timed out at 20 seconds
+  from this environment. Timeouts do not prove a global outage.
+
+No paid model, Telegram generation, authenticated production generation, Supabase migration,
+provider price/model validation or hosting-dashboard changes were exercised. Documentation,
+tracker, env template and ignore changes do not make the multi-user product complete.

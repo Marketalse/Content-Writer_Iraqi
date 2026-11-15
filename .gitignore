@@ -10,3 +10,23 @@ knowledge/topics/*.csv
 
 # Generated Vercel frontend output
 dist/
+
+# Local environment variants; keep the safe template versioned
+.env.*
+!.env.example
+
+# Local state, exports and database sidecars
+*.sqlite
+*.sqlite3
+*.sqlite3-*
+*.db
+*.db-*
+knowledge/feedback/reach_log.csv
+
+# Local tooling and test caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.DS_Store

@@ -101,7 +101,10 @@ own origin may submit forms. Other preview domains are deliberately rejected; up
 the setting if changing the primary frontend domain. A configured HTTPS public origin
 also forces Secure session cookies even when a reverse proxy terminates TLS upstream.
 
-Keep `WEB_DEMO=1` during connection checks. Verify the public Vercel `/health` returns
+Keep `WEB_DEMO=1` during sample-only connection checks, with both
+`WEB_PREVIEW_PASSWORD` and `WEB_PUBLIC_ORIGIN` empty. Do not apply the live origin
+setting above until switching to protected live mode (`WEB_DEMO=0`); the application
+rejects demo mode combined with either live setting. Verify the public Vercel `/health` returns
 `{ "status": "ok", "mode": "demo" }`, then test Create/history/edit from that frontend.
 Only later enable protected live mode. On 14 November the supplied Render `/health`,
 HTML, JS, CSS and demo config returned 200; this proves the deployed demo responds,
